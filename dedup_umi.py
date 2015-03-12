@@ -96,31 +96,31 @@ import CGAT.Experiment as E
 import random
 import collections
 import itertools
-
-def breadth_first_search(node, graph):
-    '''Returns all nodes reachable from node in graph
-    where graph is an adjecency list implemented as a dictionary'''
-
-    found = set()
-    queue = list()
-    queue.append(node)
-    while len(queue) != 0:
-        current, queue = queue[-1], queue[:-1]
-        found.add(current)
-        for child in graph[current]:
-            if child not in found:
-                queue.append(child)
-    return found
+import pandas as pd
+import numpy as np
 
 
-def connected_components(graph):
-    '''Takes a graph as a dictionary based adjencency list
-    and returns a list of sets, where each set is repesents
-    a connected component in the graph'''
+def breadth_first_search(node, adj_list):
+    searched = set()
+    components = set()
+    queue = set()
+    queue.update((node,))
+    components.update((node,))
+    
+    while len(queue)>0:
+        components.update(adj_list[node])
+        queue.update(adj_list[node])
+        searched.update((node,))
+        queue.difference_update(searched)
+        if len(queue)>0:
+            node=(list(queue))[0]
+    return components
 
+
+def connected_components(graph, counts):
     found = list()
     components = list()
-    for node in graph:
+    for node in sorted(graph, key=lambda x: counts[x], reverse=True):
         if node not in found:
             component = breadth_first_search(node, graph)
             found.extend(component)
@@ -136,13 +136,15 @@ def edit_dist(first, second):
     return dist
 
 
-def get_adj_list(umis, threshold=1):
+def get_adj_list(umis, counts, threshold=1):
     '''Returns dictionary where each entry represents the nodes
     adjecent to the dictionary key'''
-
-    return {umi: [umi2 for umi2 in umis
-                  if 0 < edit_dist(umi, umi2) <= threshold]
-            for umi in umis}
+    
+    # TS - added threshold for difference in counts
+    # adjacency list is therefore directional
+    return {umi: [umi2 for umi2 in umis if
+                  0 < edit_dist(umi, umi2) <= threshold and
+                  counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
 
 def remove_umis(adj_list, cluster, nodes):
@@ -157,38 +159,56 @@ def remove_umis(adj_list, cluster, nodes):
     return cluster - nodes_to_remove
 
 
-def get_best(cluster, adj_list, counts):
+def get_best(cluster, counts):
     '''Finds the nodes that best explain the cluster by successively
     removing more and more nodes until the cluster is explained.
     Nodes are removed in order of their count. '''
-
     if len(cluster) == 1:
-        return list(cluster)
-
-    sorted_nodes = sorted(cluster, key=lambda x: counts[x],
-                          reverse=True)
-
-    for i in range(len(sorted_nodes) - 1):
-        if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
-            return sorted_nodes[:i+1]
+        return list(cluster)[0]
+    else:
+        return max(cluster, key=lambda x: counts[x])
 
 
 def cluster_and_reduce(bundle, threshold=1):
-    ''' Recieves a bundle of reads, clusters them on edit distance
-    and selects connected clusters using the edit distance threshold.
-    Within each cluster the UMIs with the highest reads are progressively
-    selected, until the whole cluster is explained. Yeilds the selected
-    reads '''
+    ''' Recieves a bundle of reads, clusters them by edit distance and counts.
+    Within each cluster the UMIs with the highest reads are selected.
+    Yeilds the selected reads '''
 
     umis = bundle.keys()
     counts = {umi: bundle[umi]["count"] for umi in umis}
 
-    adj_list = get_adj_list(umis, threshold)
-    clusters = connected_components(adj_list)
+    adj_list = get_adj_list(umis, counts, threshold)
+    clusters = connected_components(adj_list, counts)
 
     for cluster in clusters:
-        for umi in get_best(cluster, adj_list, counts):
-            yield bundle[umi]["read"]
+        parent_umi = get_best(cluster, counts)
+
+        yield bundle[parent_umi]["read"]
+
+
+def cluster_and_reduce_with_stats(bundle, threshold=1):
+    ''' Recieves a bundle of reads, clusters them on edit distance
+    and selects connected clusters using the edit distance threshold.
+    Within each cluster the UMI with the highest reads is selected.
+    Returns the selected reads, umis and counts'''
+
+    umis = bundle.keys()
+    counts = {umi: bundle[umi]["count"] for umi in umis}
+
+    adj_list = get_adj_list(umis, counts, threshold)
+    clusters = connected_components(adj_list, counts)
+
+    reads = []
+    umis = []
+    umi_counts = []
+
+    for cluster in clusters:
+        parent_umi = get_best(cluster, counts)
+        reads.append(bundle[parent_umi]["read"])
+        umis.append(parent_umi)
+        umi_counts.append(sum([counts[x] for x in cluster]))
+
+    return reads, umis, umi_counts
 
 
 def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
@@ -198,7 +218,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
     is a umi. Each dictionary contains a "read" entry with the best read, and a
     count entry with the number of reads with that position/spliced/strand/umi
     combination'''
-    
+
     last_pos = 0
     last_chr = ""
     reads_dict = collections.defaultdict(
@@ -206,12 +226,12 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
             lambda: collections.defaultdict(dict)))
     read_counts = collections.defaultdict(
         lambda: collections.defaultdict(dict))
-    
+
     if chrom:
         inreads = insam.fetch(reference=chrom)
     else:
         inreads = insam.fetch()
-        
+
     for read in inreads:
 
         if subset:
@@ -253,13 +273,13 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
         if start > (last_pos+1000) and not read.tid == last_chr:
 
             out_keys = [x for x in reads_dict.keys() if x <= start-1000]
-            
+
             for p in out_keys:
                 for bundle in reads_dict[p].itervalues():
                     yield bundle
                 del reads_dict[p]
                 del read_counts[p]
-            
+ 
             last_pos = start
             last_chr = read.tid
 
@@ -279,7 +299,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
         else:
             if reads_dict[pos][key][umi]["read"].mapq > read.mapq:
                 continue
-                
+
             if reads_dict[pos][key][umi]["read"].mapq < read.mapq:
                 reads_dict[pos][key][umi]["read"] = read
                 read_counts[pos][key][umi] = 0
@@ -302,6 +322,64 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                 for bundle in reads_dict[p].itervalues():
                     yield bundle
 
+class random_read_generator:
+    ''' class to generate umis at random based on the 
+    distributon of umis in a bamfile '''
+
+    def __init__(self, bamfile):
+        inbam = pysam.Samfile(bamfile)
+        self.umis = [None] * (inbam.mapped/2)
+        self.inbam = inbam.fetch()
+        self.max = (inbam.mapped /10) - int((inbam.mapped /2)*0.1)
+        self.filled = 0
+                
+    def fillto(self, n):
+        
+        for i in range(self.filled, n+1):
+            try:
+                read = self.inbam.next()
+                while read.is_unmapped or read.is_read2:
+                    read = self.inbam.next()
+            except:
+                print i
+                raise 
+                
+            self.umis[i] = get_umi(read)
+            
+        self.filled = n
+        
+    def getUmis(self, n):
+        '''get n umis at random'''
+        
+        umis = []
+        for umi in range(n):
+            
+            i = random.randrange(0,self.max)
+            if i > self.filled:
+                self.fillto(i)
+            
+            umis.append(self.umis[i])
+            
+        assert len(umis) == n
+        return umis
+
+
+def aggregateStatsDF(stats_df):
+    ''' return a data from with aggregated counts per UMI'''
+
+    agg_df_dict={}
+
+    agg_df_dict['total_counts'] = stats_df.pivot_table(
+        columns="UMI", values="counts", aggfunc=np.sum)
+
+    agg_df_dict['median_counts'] = stats_df.pivot_table(
+        columns="UMI", values="counts", aggfunc=np.median)
+
+    agg_df_dict['times_observed'] = stats_df.pivot_table(
+        columns="UMI", values="counts", aggfunc=len)
+
+    return pd.DataFrame(agg_df_dict)
+
 
 def get_umi(read):
     return read.qname.split("_")[-1]
@@ -309,7 +387,7 @@ def get_umi(read):
 
 def get_average_umi_distance(umis):
     if len(umis) == 1:
-        return None
+        return -1
     dists = [edit_dist(*pair) for pair in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
 
@@ -361,12 +439,10 @@ def main(argv=None):
     parser.add_option("--paired", dest="paired", action="store_true",
                       default=False,
                       help="Use second-in-pair position when deduping")
-    parser.add_option("--output-stats", dest="stats", action="store_true",
-                      default=False,
-                      help="Output histogram of average pairwise edit"
-                           " distances between UMIs at one base, and after"
-                           " clustering (if applicable) to log file")
- 
+    parser.add_option("--output-stats", dest="stats", type="string",
+                      default=None,
+                      help="Specify location to output stats")
+
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
 
@@ -398,8 +474,15 @@ def main(argv=None):
 
     nInput, nOutput = 0, 0
 
-    pre_cluster_stats = collections.defaultdict(int)
-    post_cluster_stats = collections.defaultdict(int)
+    if options.stats and not options.ignore_umi:
+        # set up arrays to hold stats data
+        stats_pre_df_dict = {"UMI":[], "counts":[]}
+        stats_post_df_dict = {"UMI":[], "counts":[]}
+        pre_cluster_stats = []
+        post_cluster_stats = []
+        pre_cluster_stats_null = []
+        post_cluster_stats_null = []
+        read_gn = random_read_generator(infile.filename)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
@@ -419,43 +502,122 @@ def main(argv=None):
             E.debug("Read %i input reads" % nInput)
 
         if options.stats:
+            # generate pre-dudep stats
             average_distance = get_average_umi_distance(bundle.keys())
-            pre_cluster_stats[average_distance] += 1
-
+            pre_cluster_stats.append(average_distance)
+            cluster_size = len(bundle)
+            random_umis = read_gn.getUmis(cluster_size)
+            average_distance_null = get_average_umi_distance(random_umis)
+            pre_cluster_stats_null.append(average_distance_null)
+            
         if options.ignore_umi or not options.cluster_umis:
             for umi in bundle:
                 outfile.write(bundle[umi]["read"])
-    
+
         else:
-            post_cluster_umis = []
-            for read in cluster_and_reduce(bundle, options.threshold):
-                outfile.write(read)
-                post_cluster_umis.append(read.qname.split("_")[-1])
 
             if options.stats:
-                average_distance = get_average_umi_distance(post_cluster_umis)
-                post_cluster_stats[average_distance] += 1
-    
-    if options.stats:
-        outlines = ["\t".join(["Single_UMI",
-                               str(pre_cluster_stats[None]),
-                               str(post_cluster_stats[None])])]
-        max_cluster_size = max(pre_cluster_stats.keys() +
-                               post_cluster_stats.keys())
-        distances = set(pre_cluster_stats.keys() + post_cluster_stats.keys())
-        
-        for i in range(int(max_cluster_size)+1):
-            indexes = [key for key in distances if i <= key < i+1]
-            pre_cluster_sum = sum([pre_cluster_stats[index]
-                                   for index in indexes])
-            post_cluster_sum = sum([post_cluster_stats[index]
-                                    for index in indexes])
-            outlines.append("\t".join(map(str, [i,
-                                                pre_cluster_sum,
-                                                post_cluster_sum])))
+                # collect pre-dudep stats 
+                stats_pre_df_dict['UMI'].extend(bundle)
+                stats_pre_df_dict['counts'].extend(
+                    [bundle[UMI]['count'] for UMI in bundle])
 
-        header = ["average_distance\tpre_cluster\tpost_cluster"]
-        options.stderr.write("\n".join(header + outlines) + "\n")
+                # dedup using umis and write out deduped bam
+                reads, umis, umi_counts = cluster_and_reduce_with_stats(bundle, 1)
+                for read in reads:
+                    outfile.write(read)
+                    if options.paired:
+                    # TS - write out paired end mate
+                        outfile.write(infile.mate(read))
+
+                # collect post-dudep stats        
+                post_cluster_umis = [x.qname.split("_")[-1] for x in reads]
+                stats_post_df_dict['UMI'].extend(umis)
+                stats_post_df_dict['counts'].extend(umi_counts)
+                    
+                average_distance = get_average_umi_distance(post_cluster_umis)
+                post_cluster_stats.append(average_distance)
+                
+                cluster_size = len(post_cluster_umis)
+                random_umis = read_gn.getUmis(cluster_size)
+                average_distance_null = get_average_umi_distance(random_umis)
+                post_cluster_stats_null.append(average_distance_null)
+
+            else:
+                # dedup on umi without collecting stats
+                for read in cluster_and_reduce(bundle, options.threshold):
+                    outfile.write(read)
+                    if options.paired:
+                    # TS - write out paired end mate
+                        outfile.write(infile.mate(read))
+
+    if options.stats:
+        
+        stats_pre_df = pd.DataFrame(stats_pre_df_dict)
+        stats_post_df = pd.DataFrame(stats_post_df_dict)
+
+        # generate histograms of counts per UMI at each position        
+        UMI_counts_df_pre = pd.DataFrame(stats_pre_df.pivot_table(
+            columns=stats_pre_df["counts"], values="counts", aggfunc=len))
+        UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
+            columns=stats_post_df["counts"], values="counts", aggfunc=len))
+
+        UMI_counts_df_pre.columns=["instances"]
+        UMI_counts_df_post.columns=["instances"]
+
+        UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
+                                  how='left', left_index=True, right_index=True,
+                                  sort=True, suffixes=["_pre", "_post"])                                
+        # TS - if count value not observed either pre/post-dedup,
+        # merge will leave an empty cell and the column will be cast as a float
+        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+        # --> Missing data casting rules and indexing
+        # so, back fill with zeros and convert back to int
+        UMI_counts_df = UMI_counts_df.fillna(0).astype(int)
+
+        UMI_counts_df.to_csv(
+            options.stats + "_per_umi_per_position.tsv", sep="\t")
+
+        # aggregate stats pre/post per UMI
+        agg_pre_df = aggregateStatsDF(stats_pre_df)
+        agg_post_df = aggregateStatsDF(stats_post_df)
+
+        agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
+                          left_index=True, right_index=True,
+                          sort=True, suffixes=["_pre", "_post"])
+
+        # TS - see comment above regarding missing values
+        agg_df = agg_df.fillna(0).astype(int)
+        agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
+
+        # bin distances into integer bins
+        cluster_bins = range(-1, int(max(pre_cluster_stats))+1)
+
+        def bin_clusters(cluster_list, bins=cluster_bins):
+            return np.digitize(cluster_list, bins, right=True)
+
+        pre_cluster_binned = bin_clusters(pre_cluster_stats)
+        post_cluster_binned = bin_clusters(post_cluster_stats)
+        pre_cluster_null_binned = bin_clusters(pre_cluster_stats_null)
+        post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
+
+        # tally counts across bins
+        pre_cluster_tally = np.bincount(pre_cluster_binned)
+        post_cluster_tally = np.bincount(post_cluster_binned)
+        pre_cluster_null_tally = np.bincount(pre_cluster_null_binned)
+        post_cluster_null_tally = np.bincount(post_cluster_null_binned)
+
+
+        edit_distance_df = pd.DataFrame({"pre": pre_cluster_tally,
+                                         "pre_null": pre_cluster_null_tally,
+                                         "post": post_cluster_tally,
+                                         "post_null": post_cluster_null_tally,
+                                         "edit_distance": cluster_bins})
+        # TS - set lowest bin (-1) to "Single_UMI"
+        edit_distance_df['edit_distance'][0] = "Single_UMI"
+
+        edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
+                                index=False, sep="\t")
 
     # write footer and output benchmark information.
     E.info("Number of reads in: %i, Number of reads out: %i" %
