@@ -99,9 +99,11 @@ import itertools
 import pandas as pd
 import numpy as np
 
+
 def print_size_locals(loc):
     for var, obj in loc.items():
         print var, sys.getsizeof(obj)
+
 
 def breadth_first_search(node, adj_list):
     searched = set()
@@ -119,6 +121,7 @@ def breadth_first_search(node, adj_list):
             
     return found
 
+
 def edit_dist(first, second):
     ''' returns the edit distance/hamming distances between
     its two arguements '''
@@ -126,14 +129,28 @@ def edit_dist(first, second):
     dist = sum([not a == b for a, b in zip(first, second)])
     return dist
 
+
 def get_umi(read):
     return read.qname.split("_")[-1]
+
 
 def get_average_umi_distance(umis):
     if len(umis) == 1:
         return -1
     dists = [edit_dist(*pair) for pair in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
+
+
+def remove_umis(adj_list, cluster, nodes):
+    '''removes the specified nodes from the cluster and returns
+    the remaining nodes '''
+
+    # list incomprehension: for x in nodes: for node in adj_list[x]: yield node
+    nodes_to_remove = set([node
+                           for x in nodes
+                           for node in adj_list[x]] + nodes)
+
+    return cluster - nodes_to_remove
 
 
 class ClusterAndReducer:
@@ -174,6 +191,7 @@ class ClusterAndReducer:
             if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
                 return sorted_nodes[:i+1]
 
+
     def _get_best_directional_adjacency(self, cluster, counts):
 
         if len(cluster) == 1:
@@ -187,8 +205,13 @@ class ClusterAndReducer:
         if len(cluster) == 1:
             return list(cluster)
         else:
-            threshold = np.median(counts.values())/10
+            threshold = np.median(counts.values())/100
             return [read for read in cluster if counts[read] > threshold]
+
+            
+    def _get_best_null(self, cluster, counts):
+        # TS - return list of al umis
+        return list(cluster)
 
 
     ######## "get_adj_list" methods ##########
@@ -204,7 +227,7 @@ class ClusterAndReducer:
                       counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
     def _get_adj_list_null(self, umis, counts):
-        # TS - if no need for adjacency network
+        # TS - if no need for adjacency 
         return None
 
 
@@ -288,7 +311,7 @@ class ClusterAndReducer:
         return reads, final_umis, umi_counts
 
 
-    def __init__(self, cluster_method = "directional_adjacency"):
+    def __init__(self, cluster_method = "directional-adjacency"):
 
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
@@ -296,7 +319,7 @@ class ClusterAndReducer:
             self.get_best = self._get_best_adjacency
             self.reduce_clusters = self._reduce_clusters_adjacency
 
-        elif cluster_method == "directional_adjacency":
+        elif cluster_method == "directional-adjacency":
             self.get_adj_list = self._get_adj_list_directional_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_directional_adjacency
@@ -306,6 +329,12 @@ class ClusterAndReducer:
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
             self.get_best = self._get_best_percentile
+            self.reduce_clusters = self._reduce_clusters_no_network
+
+        if cluster_method == "unique":
+            self.get_adj_list = self._get_adj_list_null
+            self.get_connected_components = self._get_connected_components_null
+            self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
 
 
@@ -325,7 +354,8 @@ class ClusterAndReducer:
 
 
 def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
-                chrom=None, spliced=False, soft_clip_threshold=0):
+                chrom=None, spliced=False, soft_clip_threshold=0,
+                per_contig=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -360,48 +390,69 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
         if read.is_read2:
             continue
 
-        is_spliced = False
+        # TS - some methods require deduping on a per contig
+        # (gene for transcriptome) basis, e.g Soumillon et al 2014
+        # to fit in with current workflow, simply assign pos and key as contig
+        if per_contig:
 
-        if read.is_reverse:
-            pos = read.aend
-            if read.cigar[-1][0] == 4:
-                pos = pos + read.cigar[-1][1]
-            start = read.pos
+            pos = read.tid
+            key = read.tid
+            if not read.tid == last_chr:
 
-            if ('N' in read.cigarstring or
-                (read.cigar[0][0] == 4 and
-                 read.cigar[0][1] > soft_clip_threshold)):
-                is_spliced = True
+                out_keys = reads_dict.keys()
+
+                for p in out_keys:
+                    for bundle in reads_dict[p].itervalues():
+                        yield bundle
+                    del reads_dict[p]
+                    del read_counts[p]
+
+                last_chr = read.tid
+
         else:
-            pos = read.pos
-            if read.cigar[0][0] == 4:
-                pos = pos - read.cigar[0][1]
-            start = pos
+            
+            is_spliced = False
+            
+            if read.is_reverse:
+                pos = read.aend
+                if read.cigar[-1][0] == 4:
+                    pos = pos + read.cigar[-1][1]
+                start = read.pos
 
-            if ('N' in read.cigarstring or
-                (read.cigar[-1][0] == 4 and
-                 read.cigar[-1][1] > soft_clip_threshold)):
-                is_spliced = True
+                if ('N' in read.cigarstring or
+                    (read.cigar[0][0] == 4 and
+                     read.cigar[0][1] > soft_clip_threshold)):
+                    is_spliced = True
+            else:
+                pos = read.pos
+                if read.cigar[0][0] == 4:
+                    pos = pos - read.cigar[0][1]
+                start = pos
 
-        if start > (last_pos+1000) and not read.tid == last_chr:
+                if ('N' in read.cigarstring or
+                    (read.cigar[-1][0] == 4 and
+                     read.cigar[-1][1] > soft_clip_threshold)):
+                    is_spliced = True
 
-            out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+            if start > (last_pos+1000) and not read.tid == last_chr:
 
-            for p in out_keys:
-                for bundle in reads_dict[p].itervalues():
-                    yield bundle
-                del reads_dict[p]
-                del read_counts[p]
- 
-            last_pos = start
-            last_chr = read.tid
+                out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+
+                for p in out_keys:
+                    for bundle in reads_dict[p].itervalues():
+                        yield bundle
+                    del reads_dict[p]
+                    del read_counts[p]
+
+                last_pos = start
+                last_chr = read.tid
+
+            key = (read.is_reverse, spliced & is_spliced, paired*read.tlen)
 
         if ignore_umi:
             umi = ""
         else:
             umi = read.qname.split("_")[-1]
-
-        key = (read.is_reverse, spliced & is_spliced, paired*read.tlen)
 
         try:
             reads_dict[pos][key][umi]["count"] += 1
@@ -442,30 +493,25 @@ class random_read_generator:
     def __init__(self, bamfile):
         inbam = pysam.Samfile(bamfile)
         self.inbam = inbam.fetch()
-        self.max = inbam.mapped / 20
-        self.umis = [None] * (inbam.mapped/2)
-        self.fillto(self.max)
-        
-    def fillto(self, n):
-        
-        for i in range(0, n+1):
+        self.umis = []
+        self.fill()
 
-            read = self.inbam.next()
+    def fill(self):
+        
+        for read in self.inbam:
 
-            while read.is_unmapped or read.is_read2:
-                read = self.inbam.next()
+            if read.is_unmapped:
+                continue
+
+            if read.is_read2:
+                continue
                 
-            self.umis[i] = get_umi(read)
-        
+            self.umis.append(get_umi(read))
 
     def getUmis(self, n):
         '''get n umis at random'''
 
-        umis = []
-        for umi in range(n):
-            
-            i = random.randrange(0, self.max)
-            umis.append(self.umis[i])
+        umis=random.sample(self.umis, n)
 
         return umis
 
@@ -531,12 +577,17 @@ def main(argv=None):
                       default=False,
                       help="Use second-in-pair position when deduping")
     parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional_adjacency", "percentile"),
-                      default="directional_adjacency",
+                      choices=("adjacency", "directional-adjacency",
+                               "percentile", "unique"),
+                      default="directional-adjacency",
                       help="method to use for umi deduping")
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=None,
                       help="Specify location to output stats")
+    parser.add_option("--per-contig", dest="per_contig", action="store_true",
+                      default=False,
+                      help=("dedup per contig,"
+                            " e.g for transcriptome where contig = gene"))
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
@@ -592,7 +643,8 @@ def main(argv=None):
                               paired=options.paired,
                               chrom=options.chrom,
                               spliced=options.spliced,
-                              soft_clip_threshold=options.soft):
+                              soft_clip_threshold=options.soft,
+                              per_contig=options.per_contig):
         
         nOutput += 1
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -693,7 +745,12 @@ def main(argv=None):
 
 
         # bin distances into integer bins
-        cluster_bins = range(-1, int(max(pre_cluster_stats))+1)
+        max_edit_distance = int(max(map(max,[pre_cluster_stats,
+                                             post_cluster_stats,
+                                             pre_cluster_stats_null,
+                                             post_cluster_stats_null])))
+
+        cluster_bins = range(-1, int(max_edit_distance)+2)
 
         def bin_clusters(cluster_list, bins=cluster_bins):
             return np.digitize(cluster_list, bins, right=True)
@@ -704,11 +761,14 @@ def main(argv=None):
         post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
 
         # tally counts across bins
-        pre_cluster_tally = np.bincount(pre_cluster_binned)
-        post_cluster_tally = np.bincount(post_cluster_binned)
-        pre_cluster_null_tally = np.bincount(pre_cluster_null_binned)
-        post_cluster_null_tally = np.bincount(post_cluster_null_binned)
-
+        pre_cluster_tally = np.bincount(pre_cluster_binned,
+                                        minlength=max_edit_distance + 3)
+        post_cluster_tally = np.bincount(post_cluster_binned,
+                                         minlength=max_edit_distance + 3)
+        pre_cluster_null_tally = np.bincount(pre_cluster_null_binned,
+                                             minlength=max_edit_distance + 3)
+        post_cluster_null_tally = np.bincount(post_cluster_null_binned,
+                                              minlength=max_edit_distance + 3)
 
         edit_distance_df = pd.DataFrame({"pre": pre_cluster_tally,
                                          "pre_null": pre_cluster_null_tally,
