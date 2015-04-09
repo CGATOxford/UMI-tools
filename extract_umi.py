@@ -67,11 +67,12 @@ Command line options
 
 
 import sys
-
+import re
 
 import CGAT.Experiment as E
 import CGAT.Fastq as Fastq
 import CGAT.IOTools as IOTools
+
 
 
 class Extractor:
@@ -120,10 +121,12 @@ class Extractor:
 
         read1.seq = self.joiner(sequence, sample)
         read1.quals = self.joiner(seq_qual, sample_qual)
-        read1.identifier = read1.identifier.split("/")[0] + " " + umi
+        read1.identifier = read1.identifier.split("/")[0] + "_" + umi
+        read1.identifier = read1.identifier.replace(" ", ":")
 
-        if not read2 is None:
-            read2.identifier = read2.identifier.split("/")[0] + " " + umi
+        if read2 is not None:
+            read2.identifier = read2.identifier.split("/")[0] + "_" + umi
+            read2.identifier = read2.identifier.replace(" ", ":")
             return (read1, read2)
         else:
             return read1
