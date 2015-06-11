@@ -355,7 +355,7 @@ class ClusterAndReducer:
 
 def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                 chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False):
+                per_contig=False, whole_contig=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -434,7 +434,12 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                      read.cigar[-1][1] > soft_clip_threshold)):
                     is_spliced = True
 
-            if start > (last_pos+1000) and not read.tid == last_chr:
+            if whole_contig:
+                do_output = not read.tid == last_chr
+            else:
+                do_output = start > (last_pos+1000) and not read.tid == last_chr
+
+            if do_output:
 
                 out_keys = [x for x in reads_dict.keys() if x <= start-1000]
 
@@ -588,6 +593,11 @@ def main(argv=None):
                       default=False,
                       help=("dedup per contig,"
                             " e.g for transcriptome where contig = gene"))
+    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
+                      default=False,
+                      help="Read whole contig before outputting bundles: guarantees that no reads"
+                           "are missed, but increases memory usage")
+
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
@@ -644,7 +654,8 @@ def main(argv=None):
                               chrom=options.chrom,
                               spliced=options.spliced,
                               soft_clip_threshold=options.soft,
-                              per_contig=options.per_contig):
+                              per_contig=options.per_contig,
+                              whole_contig=options.whole_contig):
         
         nOutput += 1
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -664,11 +675,12 @@ def main(argv=None):
             average_distance_null = get_average_umi_distance(random_umis)
             pre_cluster_stats_null.append(average_distance_null)
 
-            
         if options.ignore_umi:
             for umi in bundle:
                 outfile.write(bundle[umi]["read"])
-
+                # IMS: add paired output for ignore_umi:
+                if options.paired:
+                    outfile.write(infile.mate(bundle[umi]["read"]))
         else:
  
             # set up ClusterAndReducer functor with methods specific to
@@ -714,12 +726,12 @@ def main(argv=None):
         UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
             columns=stats_post_df["counts"], values="counts", aggfunc=len))
 
-        UMI_counts_df_pre.columns=["instances"]
-        UMI_counts_df_post.columns=["instances"]
+        UMI_counts_df_pre.columns = ["instances"]
+        UMI_counts_df_post.columns = ["instances"]
 
         UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
-                                  how='left', left_index=True, right_index=True,
-                                  sort=True, suffixes=["_pre", "_post"])                    
+                                 how='left', left_index=True, right_index=True,
+                                 sort=True, suffixes=["_pre", "_post"])
             
         # TS - if count value not observed either pre/post-dedup,
         # merge will leave an empty cell and the column will be cast as a float
@@ -743,12 +755,11 @@ def main(argv=None):
         agg_df = agg_df.fillna(0).astype(int)
         agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
-
         # bin distances into integer bins
-        max_edit_distance = int(max(map(max,[pre_cluster_stats,
-                                             post_cluster_stats,
-                                             pre_cluster_stats_null,
-                                             post_cluster_stats_null])))
+        max_edit_distance = int(max(map(max, [pre_cluster_stats,
+                                              post_cluster_stats,
+                                              pre_cluster_stats_null,
+                                              post_cluster_stats_null])))
 
         cluster_bins = range(-1, int(max_edit_distance)+2)
 
