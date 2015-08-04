@@ -491,14 +491,15 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                 for bundle in reads_dict[p].itervalues():
                     yield bundle
 
+
 class random_read_generator:
-    ''' class to generate umis at random based on the 
+    ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
     def __init__(self, bamfile):
         inbam = pysam.Samfile(bamfile)
         self.inbam = inbam.fetch()
-        self.umis = []
+        self.umis = collections.defaultdict(int)
         self.fill()
 
     def fill(self):
@@ -511,20 +512,24 @@ class random_read_generator:
             if read.is_read2:
                 continue
                 
-            self.umis.append(get_umi(read))
+            self.umis[get_umi(read)] += 1
+
+        self.observed_umis, freq = zip(*self.umis.iteritems())
+        total = sum(freq)
+        self.ps = [(x+0.0)/total for x in freq]
 
     def getUmis(self, n):
         '''get n umis at random'''
 
-        umis=random.sample(self.umis, n)
+        umi_sample = np.random.choice(self.observed_umis, p=self.ps)
 
-        return umis
+        return list(umi_sample)
 
 
 def aggregateStatsDF(stats_df):
     ''' return a data from with aggregated counts per UMI'''
 
-    agg_df_dict={}
+    agg_df_dict = {}
 
     agg_df_dict['total_counts'] = stats_df.pivot_table(
         columns="UMI", values="counts", aggfunc=np.sum)
