@@ -355,7 +355,7 @@ class ClusterAndReducer:
 
 def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                 chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False, whole_contig=False):
+                per_contig=False, whole_contig=False, detection_method="MAPQ"):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -474,11 +474,21 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
                 read_counts[pos][key][umi] = 0
                 continue
 
-            if reads_dict[pos][key][umi]["read"].opt("NH") < read.opt("NH"):
-                continue
-            elif reads_dict[pos][key][umi]["read"].opt("NH") > read.opt("NH"):
-                reads_dict[pos][key][umi]["read"] = read
-                read_counts[pos][key][umi] = 0
+            # TS: implemented different checks for multimapping here
+            if detection_method in ["NH", "X0"]:
+                tag = detection_method
+                if reads_dict[pos][key][umi]["read"].opt(tag) < read.opt(tag):
+                    continue
+                elif reads_dict[pos][key][umi]["read"].opt(tag) > read.opt(tag):
+                    reads_dict[pos][key][umi]["read"] = read
+                    read_counts[pos][key][umi] = 0
+
+            elif detection_method == "XT":
+                if reads_dict[pos][key][umi]["read"].opt("XT") == "U":
+                    continue
+                elif read.opt("XT") == "U":
+                    reads_dict[pos][key][umi]["read"] = read
+                    read_counts[pos][key][umi] = 0
 
             read_counts[pos][key][umi] += 1
             prob = 1.0/read_counts[pos][key][umi]
@@ -490,6 +500,31 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
     for p in reads_dict:
                 for bundle in reads_dict[p].itervalues():
                     yield bundle
+
+
+def detect_bam_features(bamfile, n_entries=1000):
+    ''' read the first n entries in the bam file and identify the tags
+    available detecting multimapping '''
+
+    inbam = pysam.Samfile(bamfile)
+    inbam = inbam.fetch(until_eof=True)
+
+    tags = ["NH", "X0", "XT"]
+    available_tags = {x: 1 for x in tags}
+
+    for n, read in enumerate(inbam):
+        if n > n_entries:
+            break
+
+        if read.is_unmapped:
+            continue
+
+        else:
+            for tag in tags:
+                if not read.has_tag(tag):
+                    available_tags[tag] = 0
+
+    return available_tags
 
 
 class random_read_generator:
@@ -602,7 +637,14 @@ def main(argv=None):
                       default=False,
                       help="Read whole contig before outputting bundles: guarantees that no reads"
                            "are missed, but increases memory usage")
-
+    parser.add_option("--multimapping-detection-method",
+                      dest="detection_method", type="choice",
+                      choices=("NH", "X0", "XT"),
+                      default=None,
+                      help=("Some aligners identify multimapping using bam "
+                            "tags. Setting this option to NH, X0 or XT will "
+                            "use these tags when selecting the best read "
+                            "amongst reads with the same position and umi"))
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
@@ -640,17 +682,31 @@ def main(argv=None):
 
     nInput, nOutput = 0, 0
 
+    if options.detection_method:
+        bam_features = detect_bam_features(infile.filename)
+
+        if not bam_features[options.detection_method]:
+            if sum.bam_features.values() == 0:
+                raise ValueError(
+                    "There are no bam tags available to detect multimapping. "
+                    "Do not set --multimapping-detection-method")
+            else:
+                raise ValueError(
+                    "The chosen method of detection for multimapping (%s) "
+                    "will not work with this bam. Multimapping can be detected"
+                    " for this bam using any of the following: %s" % (
+                        options.detection_method, ",".join(
+                            [x for x in bam_features if bam_features[x]])))
+
     if options.stats:
         # set up arrays to hold stats data
-        stats_pre_df_dict = {"UMI":[], "counts":[]}
-        stats_post_df_dict = {"UMI":[], "counts":[]}
+        stats_pre_df_dict = {"UMI": [], "counts": []}
+        stats_post_df_dict = {"UMI": [], "counts": []}
         pre_cluster_stats = []
         post_cluster_stats = []
         pre_cluster_stats_null = []
         post_cluster_stats_null = []
         read_gn = random_read_generator(infile.filename)
-        #for x in read_gn.__dict__.values():
-        #    print sys.getsizeof(x)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
@@ -660,8 +716,9 @@ def main(argv=None):
                               spliced=options.spliced,
                               soft_clip_threshold=options.soft,
                               per_contig=options.per_contig,
-                              whole_contig=options.whole_contig):
-        
+                              whole_contig=options.whole_contig,
+                              detection_method=options.detection_method):
+
         nOutput += 1
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 

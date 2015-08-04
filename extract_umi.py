@@ -178,7 +178,7 @@ def main(argv=None):
     else:
         
         read2s = Fastq.iterate(IOTools.openFile(options.read2_in))
-        read2_out = IOTools.openFile(options.read2_out)
+        read2_out = IOTools.openFile(options.read2_out, "w")
 
         for read1, read2 in zip(read1s, read2s):
             new_1, new_2 = processor(read1, read2)
