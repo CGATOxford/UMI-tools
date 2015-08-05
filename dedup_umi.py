@@ -41,12 +41,44 @@ The input file must be sorted.
 Options
 -------
 
---edit-distance-theshold
+--edit-distance-theshold (int)
        Often when looking at reads mapping to a similar base, you will
        find that the umis are more similar than you would expect. This
        option causes the clustering of umis within a threshold edit
        distance of each other, and then a search for the most common
        umis that will explain the cluster.
+
+--method (choice, string)
+      Method used to identify PCR duplicates within reads. All methods
+      start by identifying the reads with the same mapping position
+
+      Options are:
+
+      "unique"
+          return all unique UMIs
+
+      "percentile"
+          return all unique UMIs excluding UMIs with counts
+          < 1% of the median counts per mapping position
+
+      "cluster"
+          identify clusters of connected UMIs (based on hamming distance
+          threshold). Return the UMIs with the highest counts per cluster
+
+      "adjacency"
+          cluster UMIs as above. For each cluster, select and remove
+          the node(UMI) with the highest counts and remove all
+          connected nodes. Repeat with remaining nodes until no nodes
+          remain. Return all selected nodes(UMIs)
+
+      "directional-adjacency"
+          identify clusters of connected UMIs (based on hamming distance
+          threshold) and umi1 counts > (2* umi2 counts) - 1. Return the
+          UMIs with the highest counts per cluster
+
+--output-stats (filename prefix, string)  
+       Output edit distance statistics and UMI usage statistics
+       using this prefix
 
 --spliced-is-unique
        Causes two reads that start in the same position on the same
@@ -54,7 +86,7 @@ Options
        and the other is not. (Uses the 'N' cigar operation to test for
        splicing)
 
---soft-clip-threshold
+--soft-clip-threshold (int)
        Mappers that soft clip, will sometimes do so rather than mapping a
        spliced read if there is only a small overhang over the exon
        junction. By setting this option, you can treat reads with at least
@@ -64,12 +96,18 @@ Options
        Use the template length as a criteria when deduping. Currently only
        the first in pair read is output, although this might change.
 
+--whole-contig
+      Consider all alignments to a single contig together. This is useful if
+      you have aligned to a transcriptome multi-fasta
+
 --subset
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
 
 --chrom
       Only consider a single chromosome.
+
+ 
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
@@ -171,16 +209,15 @@ class ClusterAndReducer:
                               returns lists of umis and counts per umi also
 
     Note: The get_adj_list and connected_components methods are not required by
-    all custering methods. Where there are not required, the methods return None 
-    or the input parameters.
+    all custering methods. Where there are not required, the methods return
+    None or the input parameters.
 
     '''
 
-
     ######## "get_best" methods ##########
 
-    def _get_best_adjacency(self, cluster, adj_list, counts):
-
+    def _get_best_min_account(self, cluster, adj_list, counts):
+        ''' return the min UMI(s) need to account for cluster'''
         if len(cluster) == 1:
             return list(cluster)
 
@@ -191,16 +228,18 @@ class ClusterAndReducer:
             if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
                 return sorted_nodes[:i+1]
 
-
-    def _get_best_directional_adjacency(self, cluster, counts):
-
+    def _get_best_higher_counts(self, cluster, counts):
+        ''' return the UMI with the highest counts'''
         if len(cluster) == 1:
             return list(cluster)[0]
         else:
-            return max(cluster, key=lambda x: counts[x])
-
+            sorted_nodes = sorted(cluster, key=lambda x: counts[x],
+                                  reverse=True)
+            return sorted_nodes[0]
 
     def _get_best_percentile(self, cluster, counts):
+        ''' return all UMIs with counts >1% of the
+        median counts in the cluster '''
 
         if len(cluster) == 1:
             return list(cluster)
@@ -208,32 +247,37 @@ class ClusterAndReducer:
             threshold = np.median(counts.values())/100
             return [read for read in cluster if counts[read] > threshold]
 
-            
     def _get_best_null(self, cluster, counts):
-        # TS - return list of al umis
+        ''' return all UMIs in the cluster'''
+
         return list(cluster)
 
 
     ######## "get_adj_list" methods ##########
 
-    def _get_adj_list_adjacency(self, umis, counts):
+    def _get_adj_list_adjacency(self, umis, counts, threshold):
+        ''' identify all umis within hamming distance threshold'''
 
-        return {umi: [umi2 for umi2 in umis if edit_dist(umi, umi2) == 1] for umi in umis}
+        return {umi: [umi2 for umi2 in umis if
+                      edit_dist(umi, umi2) == threshold]
+                for umi in umis}
 
-
-    def _get_adj_list_directional_adjacency(self, umis, counts):
+    def _get_adj_list_directional_adjacency(self, umis, counts, threshold):
+        ''' identify all umis within the hamming distance threshold
+        and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         return {umi: [umi2 for umi2 in umis if edit_dist(umi, umi2) == 1 and
                       counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
-    def _get_adj_list_null(self, umis, counts):
-        # TS - if no need for adjacency 
+    def _get_adj_list_null(self, umis, counts, threshold):
+        ''' for methods which don't use a adjacency dictionary'''
         return None
 
 
     ######## "get_connected_components" methods ##########
 
     def _get_connected_components_adjacency(self, umis, graph, counts):
+        ''' find the connected UMIs within an adjacency dictionary'''
 
         found = list()
         components = list()
@@ -245,17 +289,18 @@ class ClusterAndReducer:
                 components.append(component)
 
         return components
-        
 
     def _get_connected_components_null(self, umis, adj_list, counts):
-        # TS - all UMIs at a position considered together
+        ''' for methods which don't use a adjacency dictionary'''
         return umis
 
 
     ######## "reduce_clusters" methods ##########
 
-    def _reduce_clusters_adjacency(self, bundle, clusters,
-                                   adj_list, counts, stats=False):
+    def _reduce_clusters_multiple(self, bundle, clusters,
+                                  adj_list, counts, stats=False):
+        ''' collapse clusters down to the UMI(s) which account for the cluster
+        using the adjacency dictionary and return the list of final UMIs'''
 
         # TS - the "adjacency" variant of this function requires an adjacency
         # list to identify the best umi, whereas the other variants don't
@@ -275,9 +320,10 @@ class ClusterAndReducer:
 
         return reads, final_umis, umi_counts
 
-
-    def _reduce_clusters_directional_adjacency(self, bundle, clusters,
-                                               adj_list, counts, stats=False):
+    def _reduce_clusters_single(self, bundle, clusters,
+                                adj_list, counts, stats=False):
+        ''' collapse clusters down to the UMI which accounts for the cluster
+        using the adjacency dictionary and return the list of final UMIs'''
 
         reads = []
         final_umis = []
@@ -293,9 +339,10 @@ class ClusterAndReducer:
 
         return reads, final_umis, umi_counts
 
-
     def _reduce_clusters_no_network(self, bundle, clusters,
                                     adj_list, counts, stats=False):
+        ''' collapse down to the UMIs which accounts for the cluster
+        and return the list of final UMIs'''
 
         reads = []
         final_umis = []
@@ -310,20 +357,26 @@ class ClusterAndReducer:
 
         return reads, final_umis, umi_counts
 
-
-    def __init__(self, cluster_method = "directional-adjacency"):
+    def __init__(self, cluster_method="directional-adjacency"):
+        ''' select the required class methods for the cluster_method'''
 
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_adjacency
-            self.reduce_clusters = self._reduce_clusters_adjacency
+            self.get_best = self._min_account
+            self.reduce_clusters = self._reduce_clusters_multiple
 
         elif cluster_method == "directional-adjacency":
             self.get_adj_list = self._get_adj_list_directional_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_directional_adjacency
-            self.reduce_clusters = self._reduce_clusters_directional_adjacency
+            self.get_best = self._get_best_higher_counts
+            self.reduce_clusters = self._reduce_clusters_single
+
+        elif cluster_method == "cluster":
+            self.get_adj_list = self._get_adj_list_adjacency
+            self.get_connected_components = self._get_connected_components_adjacency
+            self.get_best = self._get_best_higher_counts
+            self.reduce_clusters = self._reduce_clusters_single
 
         elif cluster_method == "percentile":
             self.get_adj_list = self._get_adj_list_null
@@ -337,13 +390,12 @@ class ClusterAndReducer:
             self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
 
-
-    def __call__(self, bundle, stats=False):
+    def __call__(self, bundle, threshold, stats=False):
 
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
-        
-        adj_list = self.get_adj_list(umis, counts)
+
+        adj_list = self.get_adj_list(umis, counts, threshold)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
 
@@ -556,7 +608,7 @@ class random_read_generator:
     def getUmis(self, n):
         '''get n umis at random'''
 
-        umi_sample = np.random.choice(self.observed_umis, p=self.ps)
+        umi_sample = np.random.choice(self.observed_umis, n, p=self.ps)
 
         return list(umi_sample)
 
@@ -623,7 +675,7 @@ def main(argv=None):
                       help="Use second-in-pair position when deduping")
     parser.add_option("--method", dest="method", type="choice",
                       choices=("adjacency", "directional-adjacency",
-                               "percentile", "unique"),
+                               "percentile", "unique", "cluster"),
                       default="directional-adjacency",
                       help="method to use for umi deduping")
     parser.add_option("--output-stats", dest="stats", type="string",
@@ -750,7 +802,8 @@ def main(argv=None):
             processor = ClusterAndReducer(options.method)
 
             # dedup using umis and write out deduped bam
-            reads, umis, umi_counts = processor(bundle, options.stats)
+            reads, umis, umi_counts = processor(bundle, options.threshold,
+                                                options.stats)
 
             for read in reads:
                 outfile.write(read)
