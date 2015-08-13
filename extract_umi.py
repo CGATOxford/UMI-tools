@@ -10,11 +10,24 @@ cgat_script_template.py - template for CGAT scripts
 Purpose
 -------
 
-Extract UMI barcode from a read and add it to the read name, leaving any sample
-barcode in place.
+Extract UMI barcode from a read and add it to the read name, leaving
+any sample barcode in place. Can deal with paired end reads and UMIs
+split across the paired ends
 
 Options
 -------
+
+
+--read2-in, --read2-out
+       Optionally a file with read pairs can be provided. The UMI will
+       be added to the read2 read name as well.  Assumes that reads
+       are in the same order. read2-out specifies the output file.
+
+--split-barcode
+       By default the UMI is assumed to be on the first read. Use this
+       option if the UMI is contained on both reads and specify the
+       pattern of the barcode/UMI on the second read using the option
+       ``--bc-pattern2``
 
 --bc-pattern
        Use this option to specify the format of the UMI/barcode. Use Ns to
@@ -35,14 +48,17 @@ Options
        GGGCTGATTGGATGGGCTAG
        1AFGGCG01DFH00B1FF0B
        +
---read2-in, --read2-out
-       Optionally a file with read pairs can be provided. The UMI will be
-       extracted from the first read, but added to the read2 read name as well.
-       Assumes that reads are in the same order. read2-out specifies the output
-       file.
+
+--bc-pattern2
+       Use this option to specify the format of the UMI/barcode for
+       the second read pair if required. If --bc-pattern2 is not
+       supplied, this defaults to the same pattern as --bc-pattern
+
 --3prime
        By default the barcode is assumed to be on the 5' end of the read, but
        use this option to sepecify that it is on the 3' end instead
+
+
 
 Usage:
 ------
@@ -67,7 +83,6 @@ Command line options
 
 
 import sys
-import re
 
 import CGAT.Experiment as E
 import CGAT.Fastq as Fastq
@@ -76,25 +91,34 @@ import CGAT.IOTools as IOTools
 
 
 class Extractor:
-    ''' A functor that extracts the UMI and the barcode from the read,
+    ''' A functor that extracts the UMI and the barcode from the read(s),
     adds it to the identifier and pastes back on the sample barcode'''
 
     bc_count = {}
 
-    def _extract_5prime(self, sequence):
-        return (sequence[:self.pattern_length], sequence[self.pattern_length:])
+    def _extract_5prime(self, sequence, read=1):
+        if read == 1:
+            return (sequence[:self.pattern_length],
+                    sequence[self.pattern_length:])
+        elif read == 2:
+            return (sequence[:self.pattern_length2],
+                    sequence[self.pattern_length2:])
 
-    def _extract_3prime(self, sequence):
-        return (sequence[-self.pattern_length:],
-                sequence[:-self.pattern_length])
+    def _extract_3prime(self, sequence, read=1):
+        if read == 1:
+            return (sequence[-self.pattern_length:],
+                    sequence[:-self.pattern_length])
+        if read == 2:
+            return (sequence[-self.pattern_length2:],
+                    sequence[:-self.pattern_length2])
 
     def _joiner_5prime(self, sequence, sample):
-        return  sample + sequence
-        
-    def _joiner_3prime(self, read, sequence, sample):
-        return sequence+sample
+        return sample + sequence
 
-    def __init__(self, pattern, prime3=False):
+    def _joiner_3prime(self, read, sequence, sample):
+        return sequence + sample
+
+    def __init__(self, pattern, pattern2, prime3=False):
 
         if prime3:
             self.extract = self._extract_3prime
@@ -106,27 +130,58 @@ class Extractor:
         self.pattern_length = len(pattern)
         self.umi_bases = [x for x in range(len(pattern)) if pattern[x] is "N"]
         self.bc_bases = [x for x in range(len(pattern)) if pattern[x] is "X"]
+        self.split = False
+
+        if pattern2:
+            print pattern2
+            self.pattern_length2 = len(pattern2)
+            self.split = True
+            self.umi_bases2 = [x for x in range(len(pattern2))
+                               if pattern2[x] is "N"]
+            self.bc_bases2 = [x for x in range(len(pattern2))
+                              if pattern2[x] is "X"]
 
     def __call__(self, read1, read2=None):
 
-        bc, sequence = self.extract(read1.seq)
-        bc_qual, seq_qual = self.extract(read1.quals)
+        bc1, sequence1 = self.extract(read1.seq)
+        bc_qual1, seq_qual1 = self.extract(read1.quals)
 
-        umi = "".join([bc[x] for x in self.umi_bases])
-        sample = "".join([bc[x] for x in self.bc_bases])
-        sample_qual = "".join([bc_qual[x] for x in self.bc_bases])
+        umi1 = "".join([bc1[x] for x in self.umi_bases])
+        sample1 = "".join([bc1[x] for x in self.bc_bases])
+        sample_qual1 = "".join([bc_qual1[x] for x in self.bc_bases])
+
+        if self.split:
+            bc2, sequence2 = self.extract(read2.seq, read=2)
+            bc_qual2, seq_qual2 = self.extract(read2.quals, read=2)
+
+            umi2 = "".join([bc2[x] for x in self.umi_bases2])
+            sample2 = "".join([bc2[x] for x in self.bc_bases2])
+            sample_qual2 = "".join([bc_qual2[x] for x in self.bc_bases2])
+
+            umi = umi1 + umi2
+            bc = "_".join((bc1, bc2))
+            sample = "_".join((sample1, sample2))
+
+            read2.seq = self.joiner(sequence2, sample2)
+            read2.quals = self.joiner(seq_qual2, sample_qual2)
+
+        else:
+            umi = umi1
+            bc = bc1
+            sample = sample1
 
         id = (bc, umi, sample)
         self.bc_count[id] = self.bc_count.get(id, 0) + 1
 
-        read1.seq = self.joiner(sequence, sample)
-        read1.quals = self.joiner(seq_qual, sample_qual)
+        read1.seq = self.joiner(sequence1, sample1)
+        read1.quals = self.joiner(seq_qual1, sample_qual1)
         read1.identifier = read1.identifier.split("/")[0] + "_" + umi
         read1.identifier = read1.identifier.replace(" ", ":")
 
         if read2 is not None:
             read2.identifier = read2.identifier.split("/")[0] + "_" + umi
             read2.identifier = read2.identifier.replace(" ", ":")
+
             return (read1, read2)
         else:
             return read1
@@ -145,7 +200,11 @@ def main(argv=None):
     parser = E.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
+    parser.add_option("--split-barcode", dest="split", action="store_true",
+                      help="barcode is split across read pair")
     parser.add_option("-p", "--bc-pattern", dest="pattern", type="string",
+                      help="Barcode pattern. Ns are random bases X's fixed")
+    parser.add_option("--bc-pattern2", dest="pattern2", type="string",
                       help="Barcode pattern. Ns are random bases X's fixed")
     parser.add_option("--read2-in", dest="read2_in", type="string",
                       help="file name for read pairs")
@@ -156,7 +215,9 @@ def main(argv=None):
     parser.add_option("--supress-stats", dest="stats", action="store_false",
                       help="Suppress the writing of stats to the log")
 
-    parser.set_defaults(pattern=None,
+    parser.set_defaults(split=False,
+                        pattern=None,
+                        pattern2=None,
                         read2_in=None,
                         read2_out=None,
                         prime3=False,
@@ -166,8 +227,25 @@ def main(argv=None):
 
     (options, args) = E.Start(parser, argv=argv)
 
-    #Initialise the processor
-    processor = Extractor(options.pattern, options.prime3)
+    # check options
+    if not options.pattern:
+        raise ValueError("must specify a pattern using ``--bc-pattern``")
+
+    if options.split:
+        if not options.read2_in:
+            raise ValueError("must specify a paired fastq ``--read2-in``")
+
+        if not options.pattern2:
+            options.pattern2 = options.pattern
+
+    if options.read2_in:
+        if not options.read2_out:
+            raise ValueError("must specify an output for the paired end "
+                             "``--read2-out``")
+
+
+    # Initialise the processor
+    processor = Extractor(options.pattern, options.pattern2, options.prime3)
     read1s = Fastq.iterate(options.stdin)
 
     if options.read2_in is None:
@@ -176,7 +254,7 @@ def main(argv=None):
             options.stdout.write(str(processor(read)) + "\n")
 
     else:
-        
+
         read2s = Fastq.iterate(IOTools.openFile(options.read2_in))
         read2_out = IOTools.openFile(options.read2_out, "w")
 

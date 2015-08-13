@@ -363,7 +363,7 @@ class ClusterAndReducer:
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._min_account
+            self.get_best = self._get_best_min_account
             self.reduce_clusters = self._reduce_clusters_multiple
 
         elif cluster_method == "directional-adjacency":
