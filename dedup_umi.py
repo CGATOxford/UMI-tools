@@ -73,7 +73,7 @@ Options
 
       "directional-adjacency"
           identify clusters of connected UMIs (based on hamming distance
-          threshold) and umi1 counts > (2* umi2 counts) - 1. Return the
+          threshold) and umi A counts > (2* umi B counts) - 1. Return the
           UMIs with the highest counts per cluster
 
 --output-stats (filename prefix, string)  
@@ -92,6 +92,12 @@ Options
        junction. By setting this option, you can treat reads with at least
        this many bases soft-clipped at the 3' end as spliced.
 
+--multimapping-detection-method (choice, string)
+       If the sam/bam contains tags to identify multimapping reads, you can
+       specify for use when selecting the best read at a given loci.
+       Supported tags are "NH", "X0" and "XT". If not specified, the read
+       with the highest mapping quality will be selected
+
 --paired
        Use the template length as a criteria when deduping. Currently only
        the first in pair read is output, although this might change.
@@ -105,9 +111,7 @@ Options
       for doing saturation analyses.
 
 --chrom
-      Only consider a single chromosome.
-
- 
+      Only consider a single chromosome. This is useful for debuggin purposes
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
