@@ -58,20 +58,24 @@ Options
        By default the barcode is assumed to be on the 5' end of the read, but
        use this option to sepecify that it is on the 3' end instead
 
-
+-L
+       Specify a log file to retain logging information and final statistics
+       
+--supress-stats
+	Supress logging of summary statistics
 
 Usage:
 ------
 
 For single ended reads
 
-      python extract_umi.py --bc-pattern=[PATTERN] [OPTIONS]
+      python extract_umi.py --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
 
 reads from stdin and outputs to stdout.
 
 For paired end reads:
 
-      python extract_umi.py --bc-pattern=[PATTERN] --read2-in=[FASTQIN] --read2-out=[FASTQOUT] [OPTIONS]
+      python extract_umi.py --bc-pattern=[PATTERN] --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
 
 reads end one from stdin and end two from FASTQIN and outputs end one to stdin
 and end two to FASTQOUT.
