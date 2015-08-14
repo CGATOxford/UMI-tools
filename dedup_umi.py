@@ -738,7 +738,7 @@ def main(argv=None):
         bam_features = detect_bam_features(infile.filename)
 
         if not bam_features[options.detection_method]:
-            if sum.bam_features.values() == 0:
+            if sum(bam_features.values()) == 0:
                 raise ValueError(
                     "There are no bam tags available to detect multimapping. "
                     "Do not set --multimapping-detection-method")
