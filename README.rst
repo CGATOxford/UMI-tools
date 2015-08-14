@@ -13,7 +13,7 @@ dedup_umi.py:     Implements a number of different UMI deduplication schemes.
                   are situations where `adjecency` might out perform. See simulation results at the 
                   `CGAT blog <https://cgatoxford.wordpress.com/2015/08/14/unique-molecular-identifiers-the-problem-the-solution-and-the-proof/>`_.
 
-Instalation
+Installation
 ------------
 
 Both tools are just python scripts. Type
