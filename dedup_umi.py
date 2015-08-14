@@ -112,16 +112,12 @@ Options
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
       in BAM format. Use these options to specify the use of SAM format for
-      inputs or outputs.
+      inputs or outputs. SAM input assumed if input from stdin. 
 
 Usage
 -----
 
     python dedup_umi.py -I infile.bam -O deduped.bam
-
-or
-
-    cat infile.bam | python dedup_umi.py > deduped.bam 2> deduped.log
 
 Command line options
 --------------------
@@ -705,7 +701,7 @@ def main(argv=None):
         in_name = options.stdin.name
         options.stdin.close()
     else:
-        in_name = "-"
+        raise ValueError("Input on standard in not currently supported")
 
     if options.stdout != sys.stdout:
         out_name = options.stdout.name
