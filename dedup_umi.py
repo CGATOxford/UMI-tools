@@ -99,8 +99,8 @@ Options
        with the highest mapping quality will be selected
 
 --paired
-       Use the template length as a criteria when deduping. Currently only
-       the first in pair read is output, although this might change.
+       Use the template length as a criteria when deduping and output both read
+       pairs
 
 --whole-contig
       Consider all alignments to a single contig together. This is useful if
@@ -121,11 +121,8 @@ Options
 Usage
 -----
 
-    python dedup_umi.py -I infile.bam -O deduped.bam
+    python dedup_umi.py -I infile.bam -L deduped.log > deduped.bam
 
-or
-
-    cat infile.bam | python dedup_umi.py > deduped.bam 2> deduped.log
 
 Command line options
 --------------------
