@@ -93,6 +93,16 @@ import CGAT.Fastq as Fastq
 import CGAT.IOTools as IOTools
 
 
+def addUMItoIdentifier(read, UMI):
+    '''extract the identifier from a read and append the UMI before
+    the first space'''
+
+    read_id = read.identifier.split(" ")
+    read_id[0] = read_id[0] + "_" + UMI
+    identifier = " ".join(read_id)
+
+    return identifier
+
 
 class Extractor:
     ''' A functor that extracts the UMI and the barcode from the read(s),
@@ -179,12 +189,10 @@ class Extractor:
 
         read1.seq = self.joiner(sequence1, sample1)
         read1.quals = self.joiner(seq_qual1, sample_qual1)
-        read1.identifier = read1.identifier.split("/")[0] + "_" + umi
-        read1.identifier = read1.identifier.replace(" ", ":")
+        read1.identifier = addUMItoIdentifier(read1, umi)
 
         if read2 is not None:
-            read2.identifier = read2.identifier.split("/")[0] + "_" + umi
-            read2.identifier = read2.identifier.replace(" ", ":")
+            read2.identifier = addUMItoIdentifier(read2, umi)
 
             return (read1, read2)
         else:
