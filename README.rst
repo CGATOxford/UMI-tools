@@ -10,8 +10,11 @@ extract_umi.py:   Flexible removal of UMI sequences from fastq reads.
 dedup_umi.py:     Implements a number of different UMI deduplication schemes. 
                   The recommended methods are `directional_adjecency` and `adjecency`. In general 
                   `directional_adjecency` seems to be less sensitive to starting conditions, but there 
-                  are situations where `adjecency` might out perform. See simulation results at the 
-                  `CGAT blog <https://cgatoxford.wordpress.com/2015/08/14/unique-molecular-identifiers-the-problem-the-solution-and-the-proof/>`_.
+                  are situations where `adjecency` might out perform.
+
+See simulation results at the `CGAT blog <https://cgatoxford.wordpress.com/2015/08/14/unique-molecular-identifiers-the-problem-the-solution-and-the-proof/>`_.
+
+`Genome Science 2015 poster <http://f1000research.com/posters/4-728>`_.
 
 Installation
 ------------
