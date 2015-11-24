@@ -39,12 +39,12 @@ Options
        Then the read:
 
        @HISEQ:87:00000000 read1
-       AAGGAAGCTGATTGGATGGGCTAG
+       AAGGTTGCTGATTGGATGGGCTAG
        DA1AEBFGGCG01DFH00B1FF0B
        +
 
        will become:
-       @HISEQ:87:00000000 read1 AAAA
+       @HISEQ:87:00000000_AATT read1
        GGGCTGATTGGATGGGCTAG
        1AFGGCG01DFH00B1FF0B
        +
