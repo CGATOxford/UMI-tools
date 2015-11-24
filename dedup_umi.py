@@ -133,6 +133,9 @@ Options
        Use the template length as a criteria when deduping and output both read
        pairs
 
+--read-length
+      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
+
 --whole-contig
       Consider all alignments to a single contig together. This is useful if
       you have aligned to a transcriptome multi-fasta
@@ -464,7 +467,8 @@ class ClusterAndReducer:
 
 def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False, whole_contig=False, detection_method="MAPQ"):
+                per_contig=False, whole_contig=False, read_length=False,
+                detection_method="MAPQ"):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -523,9 +527,9 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 last_chr = read.tid
 
         else:
-            
+
             is_spliced = False
-            
+
             if read.is_reverse:
                 pos = read.aend
                 if read.cigar[-1][0] == 4:
@@ -565,7 +569,13 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 last_pos = start
                 last_chr = read.tid
 
-            key = (read.is_reverse, spliced & is_spliced, paired*read.tlen)
+            if read_length:
+                r_length = read.query_length
+            else:
+                r_length = 0
+
+            key = (read.is_reverse, spliced & is_spliced,
+                   paired*read.tlen, r_length)
 
         if ignore_umi:
             umi = ""
@@ -765,6 +775,10 @@ def main(argv=None):
                       type="int",
                       help="Minimum mapping quality for a read to be retained",
                       default=0)
+    parser.add_option("--read-length", dest="read_length", action="store_true",
+                      default=False,
+                      help=("use read length in addition to position and UMI"
+                            "to identify possible duplicates"))
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
@@ -848,6 +862,7 @@ def main(argv=None):
                               soft_clip_threshold=options.soft,
                               per_contig=options.per_contig,
                               whole_contig=options.whole_contig,
+                              read_length=options.read_length,
                               detection_method=options.detection_method):
 
         nOutput += 1
