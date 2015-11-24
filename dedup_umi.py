@@ -996,10 +996,10 @@ def main(argv=None):
         post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
 
         edit_distance_df = pd.DataFrame({
-            "pre": tallyCounts(pre_cluster_binned, max_ed),
-            "pre_null": tallyCounts(pre_cluster_null_binned, max_ed),
-            "post": tallyCounts(post_cluster_binned, max_ed),
-            "post_null": tallyCounts(post_cluster_null_binned, max_ed),
+            "unique": tallyCounts(pre_cluster_binned, max_ed),
+            "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
+            options.method: tallyCounts(post_cluster_binned, max_ed),
+            "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
             "edit_distance": cluster_bins})
 
         # TS - set lowest bin (-1) to "Single_UMI"
