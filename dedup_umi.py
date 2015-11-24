@@ -55,30 +55,61 @@ Options
       Options are:
 
       "unique"
-          return all unique UMIs
+          Return all unique UMIs
 
       "percentile"
-          return all unique UMIs excluding UMIs with counts
+          Return all unique UMIs excluding UMIs with counts
           < 1% of the median counts per mapping position
 
       "cluster"
-          identify clusters of connected UMIs (based on hamming distance
+          Identify clusters of connected UMIs (based on hamming distance
           threshold). Return the UMIs with the highest counts per cluster
 
       "adjacency"
-          cluster UMIs as above. For each cluster, select and remove
+          Cluster UMIs as above. For each cluster, select and remove
           the node(UMI) with the highest counts and remove all
           connected nodes. Repeat with remaining nodes until no nodes
           remain. Return all selected nodes(UMIs)
 
       "directional-adjacency"
-          identify clusters of connected UMIs (based on hamming distance
+          Identify clusters of connected UMIs (based on hamming distance
           threshold) and umi A counts > (2* umi B counts) - 1. Return the
           UMIs with the highest counts per cluster
 
 --output-stats (filename prefix, string)  
        Output edit distance statistics and UMI usage statistics
-       using this prefix
+       using this prefix.
+
+       Output files are:
+
+       "[prefix]_stats_per_umi_per_position.tsv"
+           Histogram of counts per position per UMI pre- and post-deduplication
+
+       "[prefix]_stats_per_umi_per.tsv"
+           Table of stats per umi. Number of times UMI was observed,
+           total counts and median counts, pre- and post-deduplication
+
+       "[prefix]_stats_edit_distance.tsv"
+           Edit distance between UMIs at each position. Positions with a
+           single UMI are reported seperately. Pre- and post-deduplication and
+           inluding null expectations from random sampling of UMIs from the
+           UMIs observed across all positions.
+
+--further-stats
+       Output additional statistics on the toplogies of the UMI
+       clusters. Note: each position may contain multiple clusters of
+       connected UMIs(nodes). Further stats are only possible when
+       using "adjacency" or "cluster" methods
+
+       Output files use the same prefix as above:
+
+       "[prefix]_stats_topologies.tsv"
+           The number of clusters with a single node, a single "hub"
+           node connected to all other nodes or a more "complex"
+           topology
+
+       "[prefix]_stats_nodes.tsv"
+           Hisogram of the number of nodes per cluster
 
 --spliced-is-unique
        Causes two reads that start in the same position on the same
@@ -121,7 +152,7 @@ Options
 Usage
 -----
 
-    python dedup_umi.py -I infile.bam -O deduped.bam
+    python dedup_umi.py -I infile.bam -S deduped.bam
 
 Command line options
 --------------------
@@ -131,6 +162,7 @@ Command line options
 import sys
 import pysam
 import CGAT.Experiment as E
+import CGAT.IOTools as IOTools
 import random
 import collections
 import itertools
@@ -390,7 +422,7 @@ class ClusterAndReducer:
             self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
 
-    def __call__(self, bundle, threshold, stats=False):
+    def __call__(self, bundle, threshold, stats=False, further_stats=False):
 
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
@@ -399,14 +431,39 @@ class ClusterAndReducer:
 
         clusters = self.get_connected_components(umis, adj_list, counts)
 
-        reads, umis, umi_counts = self.reduce_clusters(bundle, clusters,
-                                                       adj_list, counts, stats)
+        reads, final_umis, umi_counts = self.reduce_clusters(
+            bundle, clusters, adj_list, counts, stats)
 
-        return reads, umis, umi_counts
+        if further_stats:
+            topologies = collections.Counter()
+            nodes = collections.Counter()
+
+            if len(clusters) == len(umis):
+                topologies["single node"] = len(umis)
+                nodes[1] = len(umis)
+            else:
+                for cluster in clusters:
+                    if len(cluster) == 1:
+                        topologies["single node"] += 1
+                        nodes[1] += 1
+                    else:
+                        most_con = max([len(adj_list[umi]) for umi in cluster])
+                        if most_con == (len(cluster) - 1):
+                            topologies["single hub"] += 1
+                            nodes[len(cluster)] += 1
+                        else:
+                            topologies["complex"] += 1
+                            nodes[len(cluster)] += 1
+
+        else:
+            topologies = None
+            nodes = None
+
+        return reads, final_umis, umi_counts, topologies, nodes
 
 
-def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
-                chrom=None, spliced=False, soft_clip_threshold=0,
+def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
+                paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, detection_method="MAPQ"):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
@@ -431,6 +488,10 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
 
         if subset:
             if random.random() >= subset:
+                continue
+
+        if quality_threshold:
+            if read.mapq < quality_threshold:
                 continue
 
         if read.is_unmapped:
@@ -548,10 +609,10 @@ def get_bundles(insam, ignore_umi=False, subset=None, paired=False,
             if random.random() < prob:
                 reads_dict[pos][key][umi]["read"] = read
 
-    # yeild remaining bundles
+    # yield remaining bundles
     for p in reads_dict:
-                for bundle in reads_dict[p].itervalues():
-                    yield bundle
+        for bundle in reads_dict[p].itervalues():
+            yield bundle
 
 
 def detect_bam_features(bamfile, n_entries=1000):
@@ -681,6 +742,9 @@ def main(argv=None):
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=None,
                       help="Specify location to output stats")
+    parser.add_option("--further-stats", dest="further_stats",
+                      action="store_true", default=False,
+                      help="Output further stats")
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
                       default=False,
                       help=("dedup per contig,"
@@ -697,6 +761,10 @@ def main(argv=None):
                             "tags. Setting this option to NH, X0 or XT will "
                             "use these tags when selecting the best read "
                             "amongst reads with the same position and umi"))
+    parser.add_option("--mapping-quality", dest="mapping_quality",
+                      type="int",
+                      help="Minimum mapping quality for a read to be retained",
+                      default=0)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
@@ -728,6 +796,14 @@ def main(argv=None):
             raise ValueError("'--output-stats' and '--ignore-umi' options"
                              " cannot be used together")
 
+    if options.further_stats:
+        if not options.stats:
+            raise ValueError("'--further-stats' options requires "
+                             "'--output-stats' option")
+        if options.method not in ["cluster", "adjacency"]:
+            raise ValueError("'--further-stats' only enabled with 'cluster' "
+                             "and 'adjacency' methods")
+
     infile = pysam.Samfile(in_name, in_mode)
     outfile = pysam.Samfile(out_name, out_mode,
                             template=infile)
@@ -758,11 +834,14 @@ def main(argv=None):
         post_cluster_stats = []
         pre_cluster_stats_null = []
         post_cluster_stats_null = []
+        topology_counts = collections.Counter()
+        node_counts = collections.Counter()
         read_gn = random_read_generator(infile.filename)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
                               subset=float(options.subset),
+                              quality_threshold=options.mapping_quality,
                               paired=options.paired,
                               chrom=options.chrom,
                               spliced=options.spliced,
@@ -796,14 +875,16 @@ def main(argv=None):
                 if options.paired:
                     outfile.write(infile.mate(bundle[umi]["read"]))
         else:
- 
+
             # set up ClusterAndReducer functor with methods specific to
             # specified options.method
             processor = ClusterAndReducer(options.method)
 
             # dedup using umis and write out deduped bam
-            reads, umis, umi_counts = processor(bundle, options.threshold,
-                                                options.stats)
+
+            reads, umis, umi_counts, topologies, nodes = processor(
+                bundle, options.threshold,
+                options.stats, options.further_stats)
 
             for read in reads:
                 outfile.write(read)
@@ -812,12 +893,13 @@ def main(argv=None):
                     outfile.write(infile.mate(read))
 
             if options.stats:
-                # collect pre-dudep stats 
+
+                # collect pre-dudupe stats
                 stats_pre_df_dict['UMI'].extend(bundle)
                 stats_pre_df_dict['counts'].extend(
                     [bundle[UMI]['count'] for UMI in bundle])
 
-                # collect post-dudep stats        
+                # collect post-dudupe stats        
                 post_cluster_umis = [x.qname.split("_")[-1] for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
@@ -830,12 +912,18 @@ def main(argv=None):
                 average_distance_null = get_average_umi_distance(random_umis)
                 post_cluster_stats_null.append(average_distance_null)
 
+                if options.further_stats:
+                    for c_type, count in topologies.most_common():
+                        topology_counts[c_type] += count
+                    for c_type, count in nodes.most_common():
+                        node_counts[c_type] += count
+
     if options.stats:
 
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
-        # generate histograms of counts per UMI at each position        
+        # generate histograms of counts per UMI at each position
         UMI_counts_df_pre = pd.DataFrame(stats_pre_df.pivot_table(
             columns=stats_pre_df["counts"], values="counts", aggfunc=len))
         UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
@@ -871,41 +959,51 @@ def main(argv=None):
         agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
         # bin distances into integer bins
-        max_edit_distance = int(max(map(max, [pre_cluster_stats,
-                                              post_cluster_stats,
-                                              pre_cluster_stats_null,
-                                              post_cluster_stats_null])))
+        max_ed = int(max(map(max, [pre_cluster_stats,
+                                   post_cluster_stats,
+                                   pre_cluster_stats_null,
+                                   post_cluster_stats_null])))
 
-        cluster_bins = range(-1, int(max_edit_distance)+2)
+        cluster_bins = range(-1, int(max_ed) + 2)
 
         def bin_clusters(cluster_list, bins=cluster_bins):
+            ''' take list of floats and return bins'''
             return np.digitize(cluster_list, bins, right=True)
+
+        def tallyCounts(binned_cluster, max_edit_distance):
+            ''' tally counts per bin '''
+            return np.bincount(binned_cluster,
+                               minlength=max_edit_distance + 3)
 
         pre_cluster_binned = bin_clusters(pre_cluster_stats)
         post_cluster_binned = bin_clusters(post_cluster_stats)
         pre_cluster_null_binned = bin_clusters(pre_cluster_stats_null)
         post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
 
-        # tally counts across bins
-        pre_cluster_tally = np.bincount(pre_cluster_binned,
-                                        minlength=max_edit_distance + 3)
-        post_cluster_tally = np.bincount(post_cluster_binned,
-                                         minlength=max_edit_distance + 3)
-        pre_cluster_null_tally = np.bincount(pre_cluster_null_binned,
-                                             minlength=max_edit_distance + 3)
-        post_cluster_null_tally = np.bincount(post_cluster_null_binned,
-                                              minlength=max_edit_distance + 3)
+        edit_distance_df = pd.DataFrame({
+            "pre": tallyCounts(pre_cluster_binned, max_ed),
+            "pre_null": tallyCounts(pre_cluster_null_binned, max_ed),
+            "post": tallyCounts(post_cluster_binned, max_ed),
+            "post_null": tallyCounts(post_cluster_null_binned, max_ed),
+            "edit_distance": cluster_bins})
 
-        edit_distance_df = pd.DataFrame({"pre": pre_cluster_tally,
-                                         "pre_null": pre_cluster_null_tally,
-                                         "post": post_cluster_tally,
-                                         "post_null": post_cluster_null_tally,
-                                         "edit_distance": cluster_bins})
         # TS - set lowest bin (-1) to "Single_UMI"
         edit_distance_df['edit_distance'][0] = "Single_UMI"
 
         edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
                                 index=False, sep="\t")
+
+        if options.further_stats:
+            with IOTools.openFile(options.stats + "_topologies.tsv", "w") as outf:
+                outf.write(
+                    "\n".join(["\t".join((x, str(y)))
+                               for x, y in topology_counts.most_common()]) + "\n")
+
+            with IOTools.openFile(options.stats + "_nodes.tsv", "w") as outf:
+                outf.write(
+                    "\n".join(["\t".join(map(str, (x, y))) for
+                               x, y in node_counts.most_common()]) + "\n")
+
 
     # write footer and output benchmark information.
     E.info("Number of reads in: %i, Number of reads out: %i" %
