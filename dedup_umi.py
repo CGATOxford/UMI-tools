@@ -750,7 +750,7 @@ def main(argv=None):
                       default="directional-adjacency",
                       help="method to use for umi deduping")
     parser.add_option("--output-stats", dest="stats", type="string",
-                      default=None,
+                      default=False,
                       help="Specify location to output stats")
     parser.add_option("--further-stats", dest="further_stats",
                       action="store_true", default=False,
