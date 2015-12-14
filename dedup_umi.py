@@ -886,9 +886,12 @@ def main(argv=None):
         if options.ignore_umi:
             for umi in bundle:
                 outfile.write(bundle[umi]["read"])
-                # IMS: add paired output for ignore_umi:
                 if options.paired:
-                    outfile.write(infile.mate(bundle[umi]["read"]))
+                    try:
+                        outfile.write(infile.mate(bundle[umi]["read"]))
+                    except:
+                        raise ValueError("Mate not found for read: %s" %
+                                         bundle[umi]["read"].query_name)
         else:
 
             # set up ClusterAndReducer functor with methods specific to
@@ -905,8 +908,11 @@ def main(argv=None):
                 outfile.write(read)
                 if options.paired:
                 # TS - write out paired end mate
-                    outfile.write(infile.mate(read))
-
+                    try:
+                        outfile.write(infile.mate(read))
+                    except:
+                        raise ValueError("Mate not found for read: %s" %
+                                         bundle[umi]["read"].query_name)
             if options.stats:
 
                 # collect pre-dudupe stats
