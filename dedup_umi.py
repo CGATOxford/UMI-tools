@@ -171,11 +171,16 @@ import collections
 import itertools
 import pandas as pd
 import numpy as np
+import resource
+import psutil
+import os
 
 
 def print_size_locals(loc):
     for var, obj in loc.items():
         print var, sys.getsizeof(obj)
+        process = psutil.Process(os.getpid())
+    print process.memory_info().rss/1024.0/1024.0
 
 
 def breadth_first_search(node, adj_list):
@@ -184,14 +189,14 @@ def breadth_first_search(node, adj_list):
     queue = set()
     queue.update((node,))
     found.update((node,))
-    
+
     while len(queue)>0:
         node=(list(queue))[0]
         found.update(adj_list[node])
         queue.update(adj_list[node])
         searched.update((node,))
         queue.difference_update(searched)
-            
+
     return found
 
 
@@ -654,9 +659,14 @@ class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile):
+    def __init__(self, bamfile, chrom):
         inbam = pysam.Samfile(bamfile)
-        self.inbam = inbam.fetch()
+
+        if chrom:
+            self.inbam = inbam.fetch(reference=chrom)
+        else:
+            self.inbam = inbam.fetch()
+
         self.umis = collections.defaultdict(int)
         self.fill()
 
@@ -783,6 +793,7 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = E.Start(parser, argv=argv)
 
+
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()
@@ -850,7 +861,7 @@ def main(argv=None):
         post_cluster_stats_null = []
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
-        read_gn = random_read_generator(infile.filename)
+        read_gn = random_read_generator(infile.filename, chrom=options.chrom)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
@@ -1024,7 +1035,6 @@ def main(argv=None):
                 outf.write(
                     "\n".join(["\t".join(map(str, (x, y))) for
                                x, y in node_counts.most_common()]) + "\n")
-
 
     # write footer and output benchmark information.
     E.info("Number of reads in: %i, Number of reads out: %i" %
