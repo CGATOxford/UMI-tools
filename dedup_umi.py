@@ -41,7 +41,7 @@ The input file must be sorted.
 Options
 -------
 
---edit-distance-theshold (int)
+--edit-distance-threshold (int)
        Often when looking at reads mapping to a similar base, you will
        find that the umis are more similar than you would expect. This
        option causes the clustering of umis within a threshold edit
@@ -734,7 +734,7 @@ def main(argv=None):
                       help="number of bases clipped from 5' end before"
                            "read os counted as spliced",
                       default=4)
-    parser.add_option("--edit-distance-theshold", dest="threshold",
+    parser.add_option("--edit-distance-threshold", dest="threshold",
                       type="int",
                       help="Edit distance theshold at which to join two UMIs"
                            "when clustering", default=1)
