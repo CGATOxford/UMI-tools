@@ -171,9 +171,6 @@ import collections
 import itertools
 import pandas as pd
 import numpy as np
-import resource
-import psutil
-import os
 
 def breadth_first_search(node, adj_list):
     searched = set()
