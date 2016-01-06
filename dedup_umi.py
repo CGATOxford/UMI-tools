@@ -175,14 +175,6 @@ import resource
 import psutil
 import os
 
-
-def print_size_locals(loc):
-    for var, obj in loc.items():
-        print var, sys.getsizeof(obj)
-        process = psutil.Process(os.getpid())
-    print process.memory_info().rss/1024.0/1024.0
-
-
 def breadth_first_search(node, adj_list):
     searched = set()
     found = set()
