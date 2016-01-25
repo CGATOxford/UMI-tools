@@ -161,7 +161,6 @@ Command line options
 --------------------
 
 '''
-
 import sys
 import pysam
 import CGAT.Experiment as E
@@ -172,6 +171,11 @@ import itertools
 import pandas as pd
 import numpy as np
 
+import pyximport
+pyximport.install(build_in_temp=False)
+from _dedup_umi import edit_distance
+
+
 def breadth_first_search(node, adj_list):
     searched = set()
     found = set()
@@ -179,8 +183,8 @@ def breadth_first_search(node, adj_list):
     queue.update((node,))
     found.update((node,))
 
-    while len(queue)>0:
-        node=(list(queue))[0]
+    while len(queue) > 0:
+        node = (list(queue))[0]
         found.update(adj_list[node])
         queue.update(adj_list[node])
         searched.update((node,))
@@ -191,7 +195,7 @@ def breadth_first_search(node, adj_list):
 
 def edit_dist(first, second):
     ''' returns the edit distance/hamming distances between
-    its two arguements '''
+    its two arguments '''
 
     dist = sum([not a == b for a, b in zip(first, second)])
     return dist
@@ -204,7 +208,7 @@ def get_umi(read):
 def get_average_umi_distance(umis):
     if len(umis) == 1:
         return -1
-    dists = [edit_dist(*pair) for pair in itertools.combinations(umis, 2)]
+    dists = [edit_distance(*pair) for pair in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
 
 
@@ -230,7 +234,7 @@ class ClusterAndReducer:
 
       ** connected_components ** - returns clusters of connected components
                                    using the edges in the adjacency list
-    
+
       ** get_best ** - returns the parent UMI(s) in the connected_components
 
       ** reduce_clusters ** - loops through the connected components in a
@@ -288,14 +292,15 @@ class ClusterAndReducer:
         ''' identify all umis within hamming distance threshold'''
 
         return {umi: [umi2 for umi2 in umis if
-                      edit_dist(umi, umi2) == threshold]
+                      edit_distance(umi, umi2) <= threshold]
                 for umi in umis}
 
     def _get_adj_list_directional_adjacency(self, umis, counts, threshold):
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
-        return {umi: [umi2 for umi2 in umis if edit_dist(umi, umi2) == 1 and
+        return {umi: [umi2 for umi2 in umis if
+                      edit_distance(umi, umi2) == 1 and
                       counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):
