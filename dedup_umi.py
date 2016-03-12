@@ -553,7 +553,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
             if whole_contig:
                 do_output = not read.tid == last_chr
             else:
-                do_output = start > (last_pos+1000) and not read.tid == last_chr
+                do_output = start > (last_pos+1000) or not read.tid == last_chr
 
             if do_output:
 
@@ -881,11 +881,17 @@ def main(argv=None):
 
         if options.stats:
             # generate pre-dudep stats
-            average_distance = get_average_umi_distance(bundle.keys())
-            pre_cluster_stats.append(average_distance)
             cluster_size = len(bundle)
-            random_umis = read_gn.getUmis(cluster_size)
-            average_distance_null = get_average_umi_distance(random_umis)
+
+            if cluster_size > 1:
+                average_distance = get_average_umi_distance(bundle.keys())
+                random_umis = read_gn.getUmis(cluster_size)
+                average_distance_null = get_average_umi_distance(random_umis)
+            else:
+                average_distance = 0
+                average_distance_null = 0
+
+            pre_cluster_stats.append(average_distance)          
             pre_cluster_stats_null.append(average_distance_null)
 
         if options.ignore_umi:
