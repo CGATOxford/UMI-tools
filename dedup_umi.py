@@ -870,7 +870,6 @@ def main(argv=None):
                               read_length=options.read_length,
                               detection_method=options.detection_method):
 
-        nOutput += 1
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
         if nOutput % 10000 == 0:
@@ -896,6 +895,7 @@ def main(argv=None):
 
         if options.ignore_umi:
             for umi in bundle:
+                nOutput += 1
                 outfile.write(bundle[umi]["read"])
                 if options.paired:
                     try:
@@ -917,6 +917,7 @@ def main(argv=None):
 
             for read in reads:
                 outfile.write(read)
+                nOutput += 1
                 if options.paired:
                 # TS - write out paired end mate
                     try:
