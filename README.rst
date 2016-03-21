@@ -27,7 +27,9 @@ enter repository and run:
 > python setup.py install
 
 To get help on umi_tools run
+
 .. code:: bash
-	  `umi_tools help`
+
+   `umi_tools help`
 
 umi_tools is dependent on `numpy`, `pandas` and `CGAT <https://www.cgat.org/downloads/public/cgat/documentation/cgat.html#cgat>`_.
