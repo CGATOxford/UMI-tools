@@ -21,12 +21,21 @@ Preprint on the way shortly...
 Installation
 ------------
 
-clone repository:
-> git clone git@github.com:CGATOxford/UMI-tools.git
+Clone git repository:
 
-enter repository and run:
-> python setup.py develop
-> python setup.py install
+.. code:: bash
+
+   git clone git@github.com:CGATOxford/UMI-tools.git
+
+Enter repository and run:
+
+.. code:: bash
+
+   python setup.py develop
+
+.. code:: bash
+
+   python setup.py install
 
 
 Help
