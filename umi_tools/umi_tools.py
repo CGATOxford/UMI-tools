@@ -106,10 +106,11 @@ def main(argv=None):
 
         if 'all' in argv[2:]:
             print("The list of all available commands is:\n")
-            print("%s\n" % printListInColumns(
-                sorted([os.path.basename(x)[:-3]
-                        for x in glob.glob(os.path.join(path, "*.py"))]),
-                3))
+            tools = [os.path.basename(x)[:-3]
+                     for x in glob.glob(os.path.join(path, "*.py"))]
+            tools = [x for x in tools if x[0] != "_" and
+                     x not in ["version", "umi_tools"]]
+            print("%s\n" % printListInColumns(tools, 3))
 
         else:
             for arg in argv[2:]:
