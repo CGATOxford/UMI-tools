@@ -85,7 +85,7 @@ Command line options
 
 import sys
 
-import Utilities as U
+import umi_tools.Utilities as U
 
 
 ###############################################################################
