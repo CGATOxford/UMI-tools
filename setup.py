@@ -59,7 +59,12 @@ major, minor1, minor2, s, tmp = sys.version_info
 if (major == 2 and minor1 < 7) or major < 2:
     raise SystemExit("""UMI-tools requires Python 2.7 or later.""")
 
-# rename tools to umi_tools
+# use requires.txt to identify requirements
+requires = []
+for requirement in (
+        l.strip() for l in open('requires.txt') if not l.startswith("#")):
+    requires.append(requirement)
+
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
 
@@ -114,12 +119,12 @@ setup(
     long_description='umi-tools: Tools for UMI analyses',
     classifiers=filter(None, classifiers.split("\n")),
     url="https://github.com/CGATOxford/UMI-tools",
-    #py_modules = ["dedup_umi", "_dedup_umi", "extract_umi"],
     # package contents
     packages=umi_tools_packages,
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
-    ext_modules=ext_modules,
+    # dependencies
+    install_requires=requires,
     cmdclass={'build_ext': build_ext},
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
