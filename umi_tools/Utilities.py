@@ -567,8 +567,7 @@ def Start(parser=None,
           argv=sys.argv,
           quiet=False,
           add_pipe_options=True,
-          return_parser=False,
-          log2stderr=False):
+          return_parser=False):
     """set up an experiment.
 
     The :py:func:`Start` method will set up a file logger and add some
@@ -616,9 +615,6 @@ def Start(parser=None,
 
     add_pipe_options : bool
         add common options for redirecting input/output
-
-    log2stderr : bool
-        send logging to stderr
 
     Returns
     -------
@@ -695,11 +691,15 @@ def Start(parser=None,
                          help="file where output is to go "
                          "[default = stdout].",
                          metavar="FILE")
+        group.add_option("--log2stderr", dest="log2stderr",
+                         action="store_true", help="send logging information"
+                         " to stderr [default = False].")
 
         parser.set_defaults(stderr=sys.stderr)
         parser.set_defaults(stdout=sys.stdout)
         parser.set_defaults(stdlog=sys.stdout)
         parser.set_defaults(stdin=sys.stdin)
+        parser.set_defaults(log2stderr=False)
 
     parser.add_option_group(group)
 
@@ -708,6 +708,8 @@ def Start(parser=None,
 
     if return_parser:
         return parser
+
+    global_options, global_args = parser.parse_args(argv[1:])
 
     if global_options.random_seed is not None:
         random.seed(global_options.random_seed)
@@ -720,17 +722,17 @@ def Start(parser=None,
                 global_options.stderr = global_options.stderr
             else:
                 global_options.stderr = openFile(global_options.stderr, "w")
-        if log2stderr:
+        if global_options.stdlog != sys.stdout:
+            global_options.stdlog = openFile(global_options.stdlog, "a")
+        elif global_options.log2stderr:
             global_options.stdlog = global_options.stderr
-        elif global_options.stdlog != sys.stdout:
-            global_options.stdlogW = openFile(global_options.stdlog, "a")
         if global_options.stdin != sys.stdin:
             global_options.stdin = openFile(global_options.stdin, "r")
     else:
         global_options.stderr = sys.stderr
         global_options.stdout = sys.stdout
         global_options.stdin = sys.stdin
-        if log2stderr:
+        if global_options.log2stderr:
             global_options.stdlog = sys.stderr
         else:
             global_options.stdlog = sys.stdout
@@ -870,5 +872,3 @@ def error(message):
 def critical(message):
     '''log critical message, see the :mod:`logging` module'''
     logging.critical(message)
-
-
