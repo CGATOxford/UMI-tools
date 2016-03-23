@@ -554,7 +554,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
             if whole_contig:
                 do_output = not read.tid == last_chr
             else:
-                do_output = start > (last_pos+1000) and not read.tid == last_chr
+                do_output = start > (last_pos+1000) or not read.tid == last_chr
 
             if do_output:
 
