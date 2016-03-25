@@ -451,7 +451,8 @@ class ClusterAndReducer:
                         nodes[1] += 1
                     else:
                         most_con = max([len(adj_list[umi]) for umi in cluster])
-                        if most_con == (len(cluster) - 1):
+                        
+                        if most_con == len(cluster):
                             topologies["single hub"] += 1
                             nodes[len(cluster)] += 1
                         else:
