@@ -197,7 +197,6 @@ class Extractor:
         self.split = False
 
         if pattern2:
-            print pattern2
             self.pattern_length2 = len(pattern2)
             self.split = True
             self.umi_bases2 = [x for x in range(len(pattern2))

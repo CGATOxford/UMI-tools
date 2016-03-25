@@ -166,6 +166,9 @@ import random
 import collections
 import itertools
 
+# required to make iteritems python2 and python3 compatible
+from future.utils import iteritems
+
 import pysam
 
 import pandas as pd
@@ -678,7 +681,7 @@ class random_read_generator:
 
             self.umis[get_umi(read)] += 1
 
-        self.observed_umis, freq = zip(*self.umis.iteritems())
+        self.observed_umis, freq = zip(*iteritems(self.umis))
         total = sum(freq)
         self.ps = [(x+0.0)/total for x in freq]
 

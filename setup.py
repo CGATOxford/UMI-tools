@@ -31,7 +31,7 @@ from setuptools import setup, find_packages, Extension
 
 from distutils.version import LooseVersion
 if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
-    print "Version detected:", LooseVersion(setuptools.__version__)
+    print ("Version detected:", LooseVersion(setuptools.__version__))
     raise ImportError(
         "UMI-tools requires setuptools 1.1 higher")
 
