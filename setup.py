@@ -125,7 +125,7 @@ setup(
     include_package_data=True,
     # dependencies
     install_requires=requires,
-    cmdclass={'build_ext': build_ext},
+    #cmdclass={'build_ext': build_ext},
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },
