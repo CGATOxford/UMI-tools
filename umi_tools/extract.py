@@ -5,7 +5,7 @@ extract.py - Extract UMI from fastq
 :Author: Ian Sudbery
 :Release: $Id$
 :Date: |today|
-:Tags: Python
+:Tags: Python UMI
 
 Purpose
 -------

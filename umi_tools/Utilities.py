@@ -340,6 +340,7 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
         return self._formatter(optparse._("Usage: %s\n") % usage)
 
     def format_option(self, option):
+
         # Ripped and modified from Python 2.6's optparse's HelpFormatter
         result = []
         opts = self.option_strings[option]
@@ -351,6 +352,7 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
             opts = "%*s%-*s  " % (self.current_indent, "", opt_width, opts)
             indent_first = 0
         result.append(opts)
+
         if option.help:
             help_text = self.expand_default(option)
             # Added expand program name
@@ -369,6 +371,7 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
                            for line in help_lines[1:]])
         elif opts[-1] != "\n":
             result.append("\n")
+
         return "".join(result)
 
 
@@ -636,6 +639,7 @@ def Start(parser=None,
     global_starting_time = time.time()
 
     group = OptionGroup(parser, "Script timing options")
+    print [x for x in dir(group)]
 
     group.add_option("--timeit", dest='timeit_file', type="string",
                      help="store timeing information in file [%default].")
@@ -659,7 +663,6 @@ def Start(parser=None,
     group.add_option("-?", dest="short_help", action="callback",
                      callback=callbackShortHelp,
                      help="output short help (command line options only.")
-
     parser.add_option_group(group)
 
     if quiet:
@@ -675,7 +678,7 @@ def Start(parser=None,
     )
 
     if add_pipe_options:
-
+        group = OptionGroup(parser, "Input/output options")
         group.add_option("-I", "--stdin", dest="stdin", type="string",
                          help="file to read stdin from [default = stdin].",
                          metavar="FILE")

@@ -5,7 +5,7 @@ dedup.py - Deduplicate reads that are coded with a UMI
 :Author: Ian Sudbery
 :Release: $Id$
 :Date: |today|
-:Tags: Python
+:Tags: Python UMI 
 
 Purpose
 -------
@@ -21,8 +21,8 @@ splicing status can be considered and reads with similar UMIs can be
 removed to account for errors in sequencing (see below).
 
 The start postion of a read is considered to be the start of its alignment
-minus any soft clipped bases. Hence a read aligned at position 100 with
-cigar 2S98M will be assumed to start at postion 98.
+minus any soft clipped bases. A read aligned at position 500 with
+cigar 2S98M will be assumed to start at postion 498.
 
 The following criteria are applied to select the read that will be retained
 form a group of duplicated reads:
@@ -35,18 +35,13 @@ Otherwise a read is chosen at random.
 The input file must be sorted.
 
 .. note::
-   You need to redirect either logging information or output to a file or turn
-   it off logging via -v 0 in order to get a valid sam/bam file.
+   In order to get a valid sam/bam file you need to redirect logging
+   information or turn it off logging via -v 0. You can redirect the
+   logging to a file with -L <logfile> or use the --log2stderr option
+   to send the logging to stderr.
 
 Options
 -------
-
---edit-distance-threshold (int)
-       Often when looking at reads mapping to a similar base, you will
-       find that the umis are more similar than you would expect. This
-       option causes the clustering of umis within a threshold edit
-       distance of each other, and then a search for the most common
-       umis that will explain the cluster.
 
 --method (choice, string)
       Method used to identify PCR duplicates within reads. All methods
@@ -75,6 +70,41 @@ Options
           Identify clusters of connected UMIs (based on hamming distance
           threshold) and umi A counts > (2* umi B counts) - 1. Return the
           UMIs with the highest counts per cluster
+
+--edit-distance-threshold (int)
+       For the adjacency and cluster methods the threshold for the
+       edit distance to connect two UMIs in the network can be
+       increased. The default value of 1 works best in all situations
+       tested to date.
+
+--paired
+       Use the template length as a criteria when deduping and output both read
+       pairs
+
+--spliced-is-unique
+       Causes two reads that start in the same position on the same
+       strand and having the same UMI to be considered unique if one is spliced
+       and the other is not. (Uses the 'N' cigar operation to test for
+       splicing)
+
+--soft-clip-threshold (int)
+       Mappers that soft clip, will sometimes do so rather than mapping a
+       spliced read if there is only a small overhang over the exon
+       junction. By setting this option, you can treat reads with at least
+       this many bases soft-clipped at the 3' end as spliced.
+
+--multimapping-detection-method (choice, string)
+       If the sam/bam contains tags to identify multimapping reads, you can
+       specify for use when selecting the best read at a given loci.
+       Supported tags are "NH", "X0" and "XT". If not specified, the read
+       with the highest mapping quality will be selected
+
+--read-length
+      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
+
+--whole-contig
+      Consider all alignments to a single contig together. This is useful if
+      you have aligned to a transcriptome multi-fasta
 
 --output-stats (filename prefix, string)
        Output edit distance statistics and UMI usage statistics
@@ -111,41 +141,12 @@ Options
        "[prefix]_stats_nodes.tsv"
            Hisogram of the number of nodes per cluster
 
---spliced-is-unique
-       Causes two reads that start in the same position on the same
-       strand and having the same UMI to be considered unique if one is spliced
-       and the other is not. (Uses the 'N' cigar operation to test for
-       splicing)
-
---soft-clip-threshold (int)
-       Mappers that soft clip, will sometimes do so rather than mapping a
-       spliced read if there is only a small overhang over the exon
-       junction. By setting this option, you can treat reads with at least
-       this many bases soft-clipped at the 3' end as spliced.
-
---multimapping-detection-method (choice, string)
-       If the sam/bam contains tags to identify multimapping reads, you can
-       specify for use when selecting the best read at a given loci.
-       Supported tags are "NH", "X0" and "XT". If not specified, the read
-       with the highest mapping quality will be selected
-
---paired
-       Use the template length as a criteria when deduping and output both read
-       pairs
-
---read-length
-      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
-
---whole-contig
-      Consider all alignments to a single contig together. This is useful if
-      you have aligned to a transcriptome multi-fasta
-
 --subset
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
 
 --chrom
-      Only consider a single chromosome. This is useful for debuggin purposes
+      Only consider a single chromosome. This is useful for debugging purposes
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
