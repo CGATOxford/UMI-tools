@@ -639,7 +639,6 @@ def Start(parser=None,
     global_starting_time = time.time()
 
     group = OptionGroup(parser, "Script timing options")
-    print [x for x in dir(group)]
 
     group.add_option("--timeit", dest='timeit_file', type="string",
                      help="store timeing information in file [%default].")
