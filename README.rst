@@ -59,4 +59,4 @@ To get help on umi_tools dedup run
 
 Dependencies
 ------------
-umi_tools is dependent on `numpy`, `pandas` and `CGAT <https://www.cgat.org/downloads/public/cgat/documentation/cgat.html#cgat>`_.
+umi_tools is dependent on `numpy`, `pandas`, `cython`, `pysam` and `future`
