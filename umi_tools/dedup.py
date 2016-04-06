@@ -432,6 +432,12 @@ class ClusterAndReducer:
     def __call__(self, bundle, threshold, stats=False, further_stats=False):
 
         umis = bundle.keys()
+
+        len_umis = [len(x) for x in umis]
+        assert max(len_umis) == min(len_umis), (
+            "not all umis are the same length(!):  %d - %d" % (
+                min(len_umis), max(len(umis))))
+
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
         adj_list = self.get_adj_list(umis, counts, threshold)
