@@ -106,7 +106,12 @@ Operating System :: POSIX
 Operating System :: Unix
 Operating System :: MacOS
 """
-
+requires = ["setuptools>=1.1",
+            "cython>=0.19",
+            "numpy>=1.7",
+            "pandas>=0.12.0",
+            "pysam>=0.8.4",
+            "future"]
 setup(
     # package information
     name='umi_tools',
@@ -125,12 +130,7 @@ setup(
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
-    install_requires=["setuptools>=1.1",
-                      "cython>=0.19",
-                      "numpy>=1.7",
-                      "pandas>=0.12.0",
-                      "pysam>=0.8.4",
-                      "future"],
+    install_requires=requires,
     #cmdclass={'build_ext': build_ext},
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
