@@ -169,6 +169,7 @@ import itertools
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
+from builtins import dict
 
 import pysam
 
@@ -216,7 +217,8 @@ def get_average_umi_distance(umis):
     if len(umis) == 1:
         return -1
 
-    dists = [edit_distance(x, y) for x, y in itertools.combinations(umis, 2)]
+    dists = [edit_distance(x.encode('utf-8'), y.encode('utf-8')) for
+             x, y in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
 
 
@@ -299,7 +301,8 @@ class ClusterAndReducer:
         ''' identify all umis within hamming distance threshold'''
 
         return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi, umi2) <= threshold]
+                      edit_distance(umi.encode('utf-8'),
+                                    umi2.encode('utf-8')) <= threshold]
                 for umi in umis}
 
     def _get_adj_list_directional_adjacency(self, umis, counts, threshold):
@@ -307,7 +310,8 @@ class ClusterAndReducer:
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi, umi2) == 1 and
+                      edit_distance(umi.encode('utf-8'),
+                                    umi2.encode('utf-8')) == 1 and
                       counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):
@@ -530,7 +534,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 out_keys = reads_dict.keys()
 
                 for p in out_keys:
-                    for bundle in reads_dict[p].itervalues():
+                    for bundle in reads_dict[p].values():
                         yield bundle
                     del reads_dict[p]
                     del read_counts[p]
@@ -572,7 +576,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 out_keys = [x for x in reads_dict.keys() if x <= start-1000]
 
                 for p in out_keys:
-                    for bundle in reads_dict[p].itervalues():
+                    for bundle in reads_dict[p].values():
                         yield bundle
                     del reads_dict[p]
                     del read_counts[p]
@@ -632,7 +636,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
 
     # yield remaining bundles
     for p in reads_dict:
-        for bundle in reads_dict[p].itervalues():
+        for bundle in reads_dict[p].values():
             yield bundle
 
 

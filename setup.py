@@ -53,18 +53,12 @@ version = version.__version__
 
 major, minor1, minor2, s, tmp = sys.version_info
 
-# Need to check Python 3 compatibility
-if major == 3:
-    raise SystemExit("""UMI-tools is not fully python3 compatible""")
+# Need to comfirm Python 3 compatibility
+#if major == 3:
+#    raise SystemExit("""UMI-tools is not fully python3 compatible""")
 
 if (major == 2 and minor1 < 7) or major < 2:
     raise SystemExit("""UMI-tools requires Python 2.7 or later.""")
-
-# use requires.txt to identify requirements
-#requires = []
-#for requirement in (
-#        l.strip() for l in open('requires.txt') if not l.startswith("#")):
-#    requires.append(requirement)
 
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
@@ -110,7 +104,7 @@ requires = ["setuptools>=1.1",
             "cython>=0.19",
             "numpy>=1.7",
             "pandas>=0.12.0",
-            "pysam>=0.8.4",
+            "pysam==0.8.4",
             "future"]
 setup(
     # package information
@@ -119,19 +113,20 @@ setup(
     description='umi-tools: Tools for UMI analyses',
     author='Ian Sudbury',
     author_email='i.sudbery@sheffield.ac.uk',
-    license="BSD",
+    license="MIT",
     platforms=["any"],
     keywords="computational genomics",
     long_description='umi-tools: Tools for UMI analyses',
     classifiers=filter(None, classifiers.split("\n")),
     url="https://github.com/CGATOxford/UMI-tools",
+    download_url="https://github.com/CGATOxford/UMI-tools/tarball/0.0.3",
     # package contents
     packages=umi_tools_packages,
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
     install_requires=requires,
-    #cmdclass={'build_ext': build_ext},
+    cmdclass={'build_ext': build_ext},
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },

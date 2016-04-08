@@ -253,6 +253,7 @@ import textwrap
 import random
 import uuid
 
+from builtins import bytes, chr
 
 class DefaultOptions:
     stdlog = sys.stdout
@@ -526,12 +527,12 @@ def getParams(options=None):
     if options:
         members = options.__dict__
         for k, v in sorted(members.items()):
-            result.append("# %-40s: %s" % (k, str(v).encode("string_escape")))
+            result.append("# %-40s: %s" % (k, str(v)))
     else:
         vars = inspect.currentframe().f_back.f_locals
         for var in filter(lambda x: re.match("param_", x), vars.keys()):
             result.append("# %-40s: %s" %
-                          (var, str(vars[var]).encode("string_escape")))
+                          (var, str(vars[var])))
 
     if result:
         return "\n".join(result)
