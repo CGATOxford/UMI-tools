@@ -117,7 +117,7 @@ setup(
     platforms=["any"],
     keywords="computational genomics",
     long_description='umi-tools: Tools for UMI analyses',
-    classifiers=filter(None, classifiers.split("\n")),
+    classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/CGATOxford/UMI-tools",
     download_url="https://github.com/CGATOxford/UMI-tools/tarball/0.0.3",
     # package contents
