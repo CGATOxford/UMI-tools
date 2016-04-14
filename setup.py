@@ -119,7 +119,7 @@ setup(
     long_description='umi-tools: Tools for UMI analyses',
     classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/CGATOxford/UMI-tools",
-    download_url="https://github.com/CGATOxford/UMI-tools/tarball/0.0.3",
+    download_url="https://github.com/CGATOxford/UMI-tools/tarball/%s" % version,
     # package contents
     packages=umi_tools_packages,
     package_dir=umi_tools_package_dirs,
