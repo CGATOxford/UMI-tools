@@ -58,6 +58,13 @@ if (major == 2 and minor1 < 7) or major < 2:
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
 
+install_requires = []
+
+for requirement in (
+        l.strip() for l in open('requirements.txt') if not l.startswith("#")):
+    install_requires.append(requirement)
+
+
 ##########################################################
 ##########################################################
 # Classifiers
@@ -73,12 +80,7 @@ Operating System :: POSIX
 Operating System :: Unix
 Operating System :: MacOS
 """
-requires = ["setuptools>=1.1",
-            "cython>=0.19",
-            "numpy>=1.7",
-            "pandas>=0.12.0",
-            "pysam>=0.8.4",
-            "future"]
+
 setup(
     # package information
     name='umi_tools',
@@ -98,7 +100,7 @@ setup(
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
-    install_requires=requires,
+    install_requires=install_requires,
     # extension modules
     ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
     entry_points={
