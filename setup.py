@@ -84,7 +84,7 @@ setup(
     name='umi_tools',
     version=version,
     description='umi-tools: Tools for UMI analyses',
-    author='Ian Sudbury',
+    author='Ian Sudbery',
     author_email='i.sudbery@sheffield.ac.uk',
     license="MIT",
     platforms=["any"],
