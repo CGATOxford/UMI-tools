@@ -36,8 +36,7 @@ if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
     raise ImportError(
         "UMI-tools requires setuptools 1.1 higher")
 
-from Cython.Distutils import build_ext
-
+from Cython.Build import cythonize
 ########################################################################
 ########################################################################
 # collect umi_tools version
@@ -53,37 +52,11 @@ version = version.__version__
 
 major, minor1, minor2, s, tmp = sys.version_info
 
-# Need to comfirm Python 3 compatibility
-#if major == 3:
-#    raise SystemExit("""UMI-tools is not fully python3 compatible""")
-
 if (major == 2 and minor1 < 7) or major < 2:
     raise SystemExit("""UMI-tools requires Python 2.7 or later.""")
 
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
-
-# automatically build pyximport script extensions
-pyx_files = glob.glob("umi_tools/*.pyx")
-tool_extensions = []
-pysam_dirname = os.path.dirname(pysam.__file__)
-include_dirs = [pysam.get_include()]
-
-extra_link_args = [os.path.join(pysam_dirname, x) for x in 
-                   pysam.get_libraries()]
-
-for pyx_file in pyx_files:
-    script_name = os.path.basename(pyx_file)
-    script_prefix = script_name[:-4]
-    tool_extensions.append(
-        Extension("umi_tools.%s" % (script_prefix),
-                  sources=[pyx_file],
-                  extra_link_args=extra_link_args,
-                  include_dirs=include_dirs,
-                  define_macros=pysam.get_defines())
-    )
-
-ext_modules = tool_extensions
 
 ##########################################################
 ##########################################################
@@ -126,7 +99,8 @@ setup(
     include_package_data=True,
     # dependencies
     install_requires=requires,
-    cmdclass={'build_ext': build_ext},
+    # extension modules
+    ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },
