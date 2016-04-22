@@ -4,6 +4,12 @@ python:
   - "2.7"
   - "3.4"
 
+script:
+  - cd $TRAVIS_BUILD_DIR ; python setup.py build; python setup.py install
+
+install:
+  - 
+
 after_script:
   - umi_tools --help
   - umi_tools extract --help
@@ -18,3 +24,9 @@ after_script:
 #  on:
 #    tags: true
 #    branch: master
+
+
+notifications:
+  email:
+    - thomas.smith2@dpag.ox.ac.uk
+    - i.sudbery@sheffield.ac.uk
