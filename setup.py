@@ -77,7 +77,7 @@ requires = ["setuptools>=1.1",
             "cython>=0.19",
             "numpy>=1.7",
             "pandas>=0.12.0",
-            "pysam==0.8.4",
+            "pysam>=0.8.4",
             "future"]
 setup(
     # package information
