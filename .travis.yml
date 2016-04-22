@@ -1,0 +1,20 @@
+language: python
+
+python:
+  - "2.7"
+  - "3.4"
+
+after_script
+  - umi_tools --help
+  - umi_tools extract --help
+  - umi_tools dedup --help
+
+# to do
+#deploy:
+#  provider: pypi
+#  user: toms
+#  password:
+#    secure: my_secure_password
+#  on:
+#    tags: true
+#    branch: master

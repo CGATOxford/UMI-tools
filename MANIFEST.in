@@ -1,0 +1,2 @@
+# extensions
+include umi_tools/*.pyx
