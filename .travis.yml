@@ -4,7 +4,7 @@ python:
   - "2.7"
   - "3.4"
 
-after_script
+after_script:
   - umi_tools --help
   - umi_tools extract --help
   - umi_tools dedup --help
