@@ -1,0 +1,29 @@
+language: python
+
+python:
+  - "2.7"
+#  - "3.4"
+
+script:
+  - cd $TRAVIS_BUILD_DIR ; pip install cython; python setup.py install
+
+after_script:
+  - umi_tools --help
+  - umi_tools extract --help
+  - umi_tools dedup --help
+
+# to do
+#deploy:
+#  provider: pypi
+#  user: toms
+#  password:
+#    secure: my_secure_password
+#  on:
+#    tags: true
+#    branch: master
+
+
+notifications:
+  email:
+    - thomas.smith2@dpag.ox.ac.uk
+    - i.sudbery@sheffield.ac.uk
