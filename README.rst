@@ -13,7 +13,8 @@ See simulation results at the `CGAT blog <https://cgatoxford.wordpress.com/2015/
 
 `Genome Science 2015 poster <http://f1000research.com/posters/4-728>`_.
 
-Preprint on the way shortly...
+`Biorxiv Preprint <http://dx.doi.org/10.1101/051755>`_.
+
 
 
 Installation
