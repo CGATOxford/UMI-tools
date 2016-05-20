@@ -82,9 +82,8 @@ Command line options
 --------------------
 
 '''
-
 import sys
-
+from itertools import izip
 import umi_tools.Utilities as U
 
 
@@ -318,7 +317,7 @@ def main(argv=None):
         read2s = fastqIterate(U.openFile(options.read2_in))
         read2_out = U.openFile(options.read2_out, "w")
 
-        for read1, read2 in zip(read1s, read2s):
+        for read1, read2 in izip(read1s, read2s):
             new_1, new_2 = processor(read1, read2)
             options.stdout.write(str(new_1) + "\n")
             read2_out.write(str(new_2) + "\n")
