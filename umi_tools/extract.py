@@ -186,7 +186,7 @@ class Extractor:
     def _joiner_5prime(self, sequence, sample):
         return sample + sequence
 
-    def _joiner_3prime(self, read, sequence, sample):
+    def _joiner_3prime(self, sequence, sample):
         return sequence + sample
 
     def __init__(self, pattern, pattern2, prime3=False):
