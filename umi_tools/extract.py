@@ -83,7 +83,15 @@ Command line options
 
 '''
 import sys
-from itertools import izip
+
+# python 3 doesn't require izip
+try:
+    # Python 2
+    from itertools import izip
+except ImportError:
+    # Python 3
+    izip = zip
+
 import umi_tools.Utilities as U
 
 
