@@ -120,7 +120,7 @@ class Record:
        String representation of quality scores.
     format : string
        Quality score format. Can be one of ``sanger``,
-       ``illumina-1.9``, ``solexa`` or ``phred64``.
+       ``phred33``, ``phred64`` or ``solexa``.
 
     """
     def __init__(self, identifier, seq, quals, format=None):
