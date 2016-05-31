@@ -209,7 +209,12 @@ def edit_dist(first, second):
 
 
 def get_umi(read):
-    return read.qname.split("_")[-1]
+    try:
+        return read.qname.split("_")[-1]
+    except IndexError:
+        raise ValueError("Could not extract UMI from read, please"
+                         "check UMI is encoded in the read name"
+                         "following the final '_' or run with --ignore-umi")
 
 
 def get_average_umi_distance(umis):
@@ -233,7 +238,18 @@ def remove_umis(adj_list, cluster, nodes):
 
     return cluster - nodes_to_remove
 
+
 class TwoPassPairWriter:
+    '''This class makes a note of reads that need their pair outputting
+    before outputting.  When the chromosome changes, the reads on that
+    chromosome are read again, and any mates of reads already output
+    are written and removed from the list of mates to output. When
+    close is called, this is performed for the last chormosome, and
+    then an algorithm identicate to pysam's mate() function is used to
+    retrieve any remaining mates.
+
+    This means that if close() is not called, at least as contigs
+    worth of mates will be missing. '''
 
     def __init__(self, infile, outfile):
         self.infile = infile
@@ -242,6 +258,9 @@ class TwoPassPairWriter:
         self.chrom = None
 
     def write(self, read):
+        '''Check if chromosome has changed since last time. If it has, scan
+        for mates. Write the read to outfile and save the identity for paired
+        end retrieval'''
 
         if not self.chrom == read.reference_id:
             self.write_mates()
@@ -252,6 +271,8 @@ class TwoPassPairWriter:
         self.outfile.write(read)
 
     def write_mates(self):
+        '''Scan the current chormosome for matches to any of the reads stored
+        in the read1s buffer'''
 
         U.debug("Dumping %s mates" % self.chrom)
         for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
@@ -265,9 +286,12 @@ class TwoPassPairWriter:
         U.debug("%i mates remaining" % len(self.read1s))
 
     def close(self):
+        '''Write mates for remaining chromsome. Search for matches to any
+        unmatched reads'''
 
         self.write_mates()
-        U.debug("Searching for mates for %i unmatched alignments" % len(self.read1s))
+        U.info("Searching for mates for %i unmatched alignments" %
+               len(self.read1s))
 
         found = 0
         for name, chrom, pos in self.read1s:
@@ -277,7 +301,7 @@ class TwoPassPairWriter:
                     found += 1
                     break
             
-        U.debug("%i mates never found" % (len(self.read1s) - found))
+        U.info("%i mates never found" % (len(self.read1s) - found))
         self.outfile.close()
 
 
@@ -956,12 +980,7 @@ def main(argv=None):
             for umi in bundle:
                 nOutput += 1
                 outfile.write(bundle[umi]["read"])
-                if options.paired:
-                    try:
-                        outfile.write(infile.mate(bundle[umi]["read"]))
-                    except:
-                        raise ValueError("Mate not found for read: %s" %
-                                         bundle[umi]["read"].query_name)
+                
         else:
 
             # set up ClusterAndReducer functor with methods specific to
