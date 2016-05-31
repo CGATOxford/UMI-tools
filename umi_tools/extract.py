@@ -100,6 +100,13 @@ import umi_tools.Utilities as U
 # https://github.com/CGATOxford/cgat/blob/master/CGAT/Fastq.py
 ###############################################################################
 
+RANGES = {
+    'phred33': (33, 77),
+    'solexa': (59, 106),
+    'phred64': (64, 106),
+}
+
+
 class Record:
     """A record representing a :term:`fastq` formatted record.
 
@@ -113,13 +120,26 @@ class Record:
        String representation of quality scores.
     format : string
        Quality score format. Can be one of ``sanger``,
-       ``illumina-1.8``, ``solexa`` or ``phred64``.
+       ``phred33``, ``phred64`` or ``solexa``.
 
     """
     def __init__(self, identifier, seq, quals, format=None):
         self.identifier, self.seq, self.quals, format = (
             identifier, seq, quals, format)
         self.format = None
+
+    def guessFormat(self):
+        '''return quality score format -
+        might return several if ambiguous.'''
+
+        c = [ord(x) for x in self.quals]
+        mi, ma = min(c), max(c)
+        r = []
+        for format, v in RANGES.iteritems():
+            m1, m2 = v
+            if mi >= m1 and ma < m2:
+                r.append(format)
+        return r
 
     def __str__(self):
         return "@%s\n%s\n+\n%s" % (self.identifier, self.seq, self.quals)
@@ -189,7 +209,10 @@ class Extractor:
     def _joiner_3prime(self, sequence, sample):
         return sequence + sample
 
-    def __init__(self, pattern, pattern2, prime3=False):
+    def __init__(self, pattern, pattern2,
+                 quality_filter_threshold,
+                 quality_encoding,
+                 prime3=False,):
 
         if prime3:
             self.extract = self._extract_3prime
@@ -198,6 +221,8 @@ class Extractor:
             self.extract = self._extract_5prime
             self.joiner = self._joiner_5prime
 
+        self.thresh = quality_filter_threshold
+        self.encoding = quality_encoding
         self.pattern_length = len(pattern)
         self.umi_bases = [x for x in range(len(pattern)) if pattern[x] is "N"]
         self.bc_bases = [x for x in range(len(pattern)) if pattern[x] is "X"]
@@ -216,6 +241,25 @@ class Extractor:
         bc1, sequence1 = self.extract(read1.seq)
         bc_qual1, seq_qual1 = self.extract(read1.quals)
 
+        # check qualities of UMI bases from read1
+        if self.thresh:
+            read1_format = read1.guessFormat()
+            assert self.encoding in read1_format, (
+                "specified quality encoding (%s) does not match possible "
+                "format for read: \n\n%s\n\npossible format(s)=%s)" % (
+                    self.encoding, read1, read1_format))
+
+            umi_qual = map(ord, [bc_qual1[x] for x in self.umi_bases])
+            umi_qual = [x - RANGES[self.encoding][0] for x in umi_qual]
+            below_threshold = len([x for x in umi_qual if x < self.thresh])
+
+            # if any bases below threshold, return None
+            if below_threshold > 0:
+                if read2:
+                    return None, None
+                else:
+                    return None
+
         umi1 = "".join([bc1[x] for x in self.umi_bases])
         sample1 = "".join([bc1[x] for x in self.bc_bases])
         sample_qual1 = "".join([bc_qual1[x] for x in self.bc_bases])
@@ -223,6 +267,21 @@ class Extractor:
         if self.split:
             bc2, sequence2 = self.extract(read2.seq, read=2)
             bc_qual2, seq_qual2 = self.extract(read2.quals, read=2)
+
+            # check qualities of UMI bases from read2
+            if self.thresh:
+                read2_format = read2.guessFormat()
+                assert self.encoding in read2_format, (
+                    "specified quality encoding (%s) does not match possible "
+                    "format(s) for read 2 (%s)" % (self.encoding, read2_format))
+
+                umi_qual2 = map(ord, [bc_qual2[x] for x in self.umi_bases2])
+                umi_qual2 = [x - RANGES[self.encoding][0] for x in umi_qual2]
+                below_threshold = len([x for x in umi_qual2 if x < self.thresh])
+
+                # if any bases below threshold, return None, None
+                if below_threshold > 0:
+                    return None, None
 
             umi2 = "".join([bc2[x] for x in self.umi_bases2])
             sample2 = "".join([bc2[x] for x in self.bc_bases2])
@@ -280,6 +339,15 @@ def main(argv=None):
                       help="barcode is on 3' end of read")
     parser.add_option("--read2-out", dest="read2_out", type="string",
                       help="file to output processed paired read to")
+    parser.add_option("--quality-filter-threshold",
+                      dest="quality_filter_threshold", type="int",
+                      help=("Remove reads where any UMI base quality score "
+                            "falls below this threshold"))
+    parser.add_option("--quality-encoding",
+                      dest="quality_encoding", type="choice",
+                      choices=["phred33", "phred64", "solexa"],
+                      help=("Quality score encoding. Choose from phred33"
+                            "[33-77] phred64 [64-106] or solexa [59-106]"))
     parser.add_option("--supress-stats", dest="stats", action="store_false",
                       help="Suppress the writing of stats to the log")
 
@@ -289,7 +357,9 @@ def main(argv=None):
                         read2_in=None,
                         read2_out=None,
                         prime3=False,
-                        stats=True)
+                        stats=True,
+                        quality_filter_threshold=None,
+                        quality_encoding=None)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -311,14 +381,26 @@ def main(argv=None):
             raise ValueError("must specify an output for the paired end "
                              "``--read2-out``")
 
+    if options.quality_filter_threshold:
+        if not options.quality_encoding:
+            raise ValueError("must provide a quality encoding to filter UMIs "
+                             "by quality ``--quality-encoding``")
+
     # Initialise the processor
-    processor = Extractor(options.pattern, options.pattern2, options.prime3)
+    processor = Extractor(options.pattern,
+                          options.pattern2,
+                          options.quality_filter_threshold,
+                          options.quality_encoding,
+                          options.prime3)
+
     read1s = fastqIterate(options.stdin)
 
     if options.read2_in is None:
 
         for read in read1s:
-            options.stdout.write(str(processor(read)) + "\n")
+            new_1 = processor(read)
+            if new_1:
+                options.stdout.write(str(new_1) + "\n")
 
     else:
 
@@ -326,9 +408,11 @@ def main(argv=None):
         read2_out = U.openFile(options.read2_out, "w")
 
         for read1, read2 in izip(read1s, read2s):
+            U.info("read1: %s, read2: %s" % ( read1, read2))
             new_1, new_2 = processor(read1, read2)
-            options.stdout.write(str(new_1) + "\n")
-            read2_out.write(str(new_2) + "\n")
+            if new_1:
+                options.stdout.write(str(new_1) + "\n")
+                read2_out.write(str(new_2) + "\n")
 
     # write footer and output benchmark information.
 

@@ -68,7 +68,7 @@ Options
 
       "directional-adjacency"
           Identify clusters of connected UMIs (based on hamming distance
-          threshold) and umi A counts > (2* umi B counts) - 1. Return the
+          threshold) and umi A counts >= (2* umi B counts) - 1. Return the
           UMIs with the highest counts per cluster
 
 --edit-distance-threshold (int)
