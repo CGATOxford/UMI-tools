@@ -209,7 +209,12 @@ def edit_dist(first, second):
 
 
 def get_umi(read):
-    return read.qname.split("_")[-1]
+    try:
+        return read.qname.split("_")[-1]
+    except IndexError:
+        raise ValueError("Could not extract UMI from read, please"
+                         "check UMI is encoded in the read name"
+                         "following the final '_' or run with --ignore-umi")
 
 
 def get_average_umi_distance(umis):
@@ -232,6 +237,72 @@ def remove_umis(adj_list, cluster, nodes):
                            for node in adj_list[x]] + nodes)
 
     return cluster - nodes_to_remove
+
+
+class TwoPassPairWriter:
+    '''This class makes a note of reads that need their pair outputting
+    before outputting.  When the chromosome changes, the reads on that
+    chromosome are read again, and any mates of reads already output
+    are written and removed from the list of mates to output. When
+    close is called, this is performed for the last chormosome, and
+    then an algorithm identicate to pysam's mate() function is used to
+    retrieve any remaining mates.
+
+    This means that if close() is not called, at least as contigs
+    worth of mates will be missing. '''
+
+    def __init__(self, infile, outfile):
+        self.infile = infile
+        self.outfile = outfile
+        self.read1s = set()
+        self.chrom = None
+
+    def write(self, read):
+        '''Check if chromosome has changed since last time. If it has, scan
+        for mates. Write the read to outfile and save the identity for paired
+        end retrieval'''
+
+        if not self.chrom == read.reference_id:
+            self.write_mates()
+            self.chrom = read.reference_id
+
+        key = read.query_name, read.next_reference_id, read.next_reference_start
+        self.read1s.add(key)
+        self.outfile.write(read)
+
+    def write_mates(self):
+        '''Scan the current chormosome for matches to any of the reads stored
+        in the read1s buffer'''
+
+        U.debug("Dumping %s mates" % self.chrom)
+        for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
+            if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
+                continue
+
+            key = read.query_name, read.reference_id, read.reference_start
+            if key in self.read1s:
+                self.outfile.write(read)
+                self.read1s.remove(key)
+        U.debug("%i mates remaining" % len(self.read1s))
+
+    def close(self):
+        '''Write mates for remaining chromsome. Search for matches to any
+        unmatched reads'''
+
+        self.write_mates()
+        U.info("Searching for mates for %i unmatched alignments" %
+               len(self.read1s))
+
+        found = 0
+        for name, chrom, pos in self.read1s:
+            for read in self.outfile.fetch(start=pos, end=pos+1, tid=chrom):
+                if (read.query_name, read.pos) == (name, pos):
+                    self.outfile.write(read)
+                    found += 1
+                    break
+            
+        U.info("%i mates never found" % (len(self.read1s) - found))
+        self.outfile.close()
 
 
 class ClusterAndReducer:
@@ -842,6 +913,9 @@ def main(argv=None):
     outfile = pysam.Samfile(out_name, out_mode,
                             template=infile)
 
+    if options.paired:
+        outfile = TwoPassPairWriter(infile, outfile)
+
     nInput, nOutput = 0, 0
 
     if options.detection_method:
@@ -906,12 +980,7 @@ def main(argv=None):
             for umi in bundle:
                 nOutput += 1
                 outfile.write(bundle[umi]["read"])
-                if options.paired:
-                    try:
-                        outfile.write(infile.mate(bundle[umi]["read"]))
-                    except:
-                        raise ValueError("Mate not found for read: %s" %
-                                         bundle[umi]["read"].query_name)
+                
         else:
 
             # set up ClusterAndReducer functor with methods specific to
@@ -926,13 +995,7 @@ def main(argv=None):
             for read in reads:
                 outfile.write(read)
                 nOutput += 1
-                if options.paired:
-                    # TS - write out paired end mate
-                    try:
-                        outfile.write(infile.mate(read))
-                    except:
-                        raise ValueError("Mate not found for read: %s" %
-                                         bundle[umi]["read"].query_name)
+
             if options.stats:
 
                 # collect pre-dudupe stats
@@ -958,6 +1021,8 @@ def main(argv=None):
                         topology_counts[c_type] += count
                     for c_type, count in nodes.most_common():
                         node_counts[c_type] += count
+
+    outfile.close()
 
     if options.stats:
 
@@ -1046,6 +1111,7 @@ def main(argv=None):
                                x, y in node_counts.most_common()]) + "\n")
 
     # write footer and output benchmark information.
+    
     U.info("Number of reads in: %i, Number of reads out: %i" %
            (nInput, nOutput))
     U.Stop()
