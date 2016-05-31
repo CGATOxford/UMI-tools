@@ -246,9 +246,10 @@ class Extractor:
             read1_format = read1.guessFormat()
             assert self.encoding in read1_format, (
                 "specified quality encoding (%s) does not match possible "
-                "format for read (%s)" % (self.encoding, read1_format))
+                "format for read: \n\n%s\n\npossible format(s)=%s)" % (
+                    self.encoding, read1, read1_format))
 
-            umi_qual = map(ord, bc_qual1)
+            umi_qual = map(ord, [bc_qual1[x] for x in self.umi_bases])
             umi_qual = [x - RANGES[self.encoding][0] for x in umi_qual]
             below_threshold = len([x for x in umi_qual if x < self.thresh])
 
@@ -274,7 +275,7 @@ class Extractor:
                     "specified quality encoding (%s) does not match possible "
                     "format(s) for read 2 (%s)" % (self.encoding, read2_format))
 
-                umi_qual2 = map(ord, bc_qual2)
+                umi_qual2 = map(ord, [bc_qual2[x] for x in self.umi_bases2])
                 umi_qual2 = [x - RANGES[self.encoding][0] for x in umi_qual2]
                 below_threshold = len([x for x in umi_qual2 if x < self.thresh])
 
