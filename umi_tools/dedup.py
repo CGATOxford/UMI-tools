@@ -176,6 +176,7 @@ import pysam
 import pandas as pd
 import numpy as np
 
+# allows script to be run directly for profiling
 try:
     import umi_tools.Utilities as U
 except:
@@ -183,6 +184,8 @@ except:
 
 import pyximport
 pyximport.install(build_in_temp=False)
+
+# allows script to be run directly for profiling
 try:
     from umi_tools._dedup_umi import edit_distance
 except:
@@ -279,8 +282,9 @@ class TwoPassPairWriter:
         '''Scan the current chormosome for matches to any of the reads stored
         in the read1s buffer'''
 
-        if self.chrom:
-            U.debug("Dumping %s mates" % self.infile.get_reference_name(self.chrom))
+        if self.chrom is not None:
+            U.debug("Dumping %i mates for contig %s" % (
+                len(self.read1s), self.infile.get_reference_name(self.chrom)))
 
         for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
@@ -1001,7 +1005,7 @@ def main(argv=None):
             for umi in bundle:
                 nOutput += 1
                 outfile.write(bundle[umi]["read"])
-                
+
         else:
 
             # set up ClusterAndReducer functor with methods specific to
