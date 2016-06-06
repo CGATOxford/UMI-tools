@@ -176,12 +176,20 @@ import pysam
 import pandas as pd
 import numpy as np
 
-import umi_tools.Utilities as U
+# allows script to be run directly for profiling
+try:
+    import umi_tools.Utilities as U
+except:
+    import Utilities as U
 
 import pyximport
 pyximport.install(build_in_temp=False)
-from umi_tools._dedup_umi import edit_distance
 
+# allows script to be run directly for profiling
+try:
+    from umi_tools._dedup_umi import edit_distance
+except:
+    from _dedup_umi import edit_distance
 
 def breadth_first_search(node, adj_list):
     searched = set()
@@ -274,7 +282,10 @@ class TwoPassPairWriter:
         '''Scan the current chormosome for matches to any of the reads stored
         in the read1s buffer'''
 
-        U.debug("Dumping %s mates" % self.chrom)
+        if self.chrom is not None:
+            U.debug("Dumping %i mates for contig %s" % (
+                len(self.read1s), self.infile.get_reference_name(self.chrom)))
+
         for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
@@ -300,7 +311,7 @@ class TwoPassPairWriter:
                     self.outfile.write(read)
                     found += 1
                     break
-            
+
         U.info("%i mates never found" % (len(self.read1s) - found))
         self.outfile.close()
 
@@ -753,6 +764,8 @@ class random_read_generator:
 
     def fill(self):
 
+        self.frequency2umis = collections.defaultdict(list)
+
         for read in self.inbam:
 
             if read.is_unmapped:
@@ -763,16 +776,28 @@ class random_read_generator:
 
             self.umis[get_umi(read)] += 1
 
-        self.observed_umis, freq = zip(*iteritems(self.umis))
-        total = sum(freq)
-        self.ps = [(x+0.0)/total for x in freq]
+        self.umis_counter = collections.Counter(self.umis)
+        total_umis = sum(self.umis_counter.values())
+
+        for observed_umi, freq in self.umis_counter.iteritems():
+            self.frequency2umis[freq+0.0/total_umis].append(observed_umi)
+
+        self.frequency_counter = collections.Counter(self.umis_counter.values())
+        self.frequency_prob = [(float(x)/total_umis)*y for x, y in
+                               self.frequency_counter.iteritems()]
 
     def getUmis(self, n):
         '''get n umis at random'''
 
-        umi_sample = np.random.choice(self.observed_umis, n, p=self.ps)
+        umi_sample = []
 
-        return list(umi_sample)
+        frequency_sample = np.random.choice(self.frequency_counter.keys(), n,
+                                            p=self.frequency_prob)
+
+        for frequency in frequency_sample:
+            umi_sample.append(np.random.choice(self.frequency2umis[frequency]))
+
+        return umi_sample
 
 
 def aggregateStatsDF(stats_df):
@@ -980,7 +1005,7 @@ def main(argv=None):
             for umi in bundle:
                 nOutput += 1
                 outfile.write(bundle[umi]["read"])
-                
+
         else:
 
             # set up ClusterAndReducer functor with methods specific to
