@@ -61,7 +61,7 @@ umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
 install_requires = []
 
 for requirement in (
-        l.strip() for l in open('requirements.txt') if not l.startswith("#")):
+        l.strip() for l in open('requires.txt') if not l.startswith("#")):
     install_requires.append(requirement)
 
 
