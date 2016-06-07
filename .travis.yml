@@ -5,7 +5,7 @@ python:
 #  - "3.4"
 
 script:
-  - cd $TRAVIS_BUILD_DIR ; pip install cython; python setup.py install
+  - cd $TRAVIS_BUILD_DIR ; pip install cython; pip install cython; python setup.py install
 
 after_script:
   - umi_tools --help
