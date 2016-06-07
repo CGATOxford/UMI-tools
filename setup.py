@@ -58,12 +58,19 @@ if (major == 2 and minor1 < 7) or major < 2:
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
 
-install_requires = []
+# debugging pip installation
+#install_requires = []
+#for requirement in (
+#        l.strip() for l in open('requires.txt') if not l.startswith("#")):
+#    install_requires.append(requirement)
 
-for requirement in (
-        l.strip() for l in open('requires.txt') if not l.startswith("#")):
-    install_requires.append(requirement)
-
+install_requires = [
+    "setuptools>=1.1",
+    "cython>=0.19",
+    "numpy>=1.7",
+    "pandas>=0.12.0",
+    "pysam>=0.8.4",
+    "future"]
 
 ##########################################################
 ##########################################################
