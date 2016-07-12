@@ -5,12 +5,12 @@ dedup.py - Deduplicate reads that are coded with a UMI
 :Author: Ian Sudbery
 :Release: $Id$
 :Date: |today|
-:Tags: Python UMI 
+:Tags: Python UMI
 
 Purpose
 -------
 
-The perpose of this script is to deduplicate BAM files based
+The purpose of this script is to deduplicate BAM files based
 on the first mapping co-ordinate and the UMI attached to the read.
 It is assumed that the FASTQ files were processed with extract_umi.py
 before mapping and thus the UMI is the last word of the read name.
@@ -25,9 +25,9 @@ minus any soft clipped bases. A read aligned at position 500 with
 cigar 2S98M will be assumed to start at postion 498.
 
 The following criteria are applied to select the read that will be retained
-form a group of duplicated reads:
+from a group of duplicated reads:
 
-1. The read with the lowest nubmer of hits
+1. The read with the lowest number of hits
 2. The read with the highest mapping quality
 
 Otherwise a read is chosen at random.
