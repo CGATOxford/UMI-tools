@@ -522,7 +522,7 @@ class ClusterAndReducer:
         len_umis = [len(x) for x in umis]
         assert max(len_umis) == min(len_umis), (
             "not all umis are the same length(!):  %d - %d" % (
-                min(len_umis), max(len(umis))))
+                min(len_umis), max(len_umis)))
 
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
@@ -779,19 +779,19 @@ class random_read_generator:
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())
 
-        for observed_umi, freq in self.umis_counter.iteritems():
+        for observed_umi, freq in iteritems(self.umis_counter):
             self.frequency2umis[freq+0.0/total_umis].append(observed_umi)
 
         self.frequency_counter = collections.Counter(self.umis_counter.values())
         self.frequency_prob = [(float(x)/total_umis)*y for x, y in
-                               self.frequency_counter.iteritems()]
+                               iteritems(self.frequency_counter)]
 
     def getUmis(self, n):
         '''get n umis at random'''
 
         umi_sample = []
 
-        frequency_sample = np.random.choice(self.frequency_counter.keys(), n,
+        frequency_sample = np.random.choice(list(self.frequency_counter.keys()), n,
                                             p=self.frequency_prob)
 
         for frequency in frequency_sample:
