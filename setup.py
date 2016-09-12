@@ -9,24 +9,9 @@ except ImportError:
         "UMI-tools requires cython to "
         "be installed before running setup.py (pip install cython)")
 
-try:
-    import pysam
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires pysam to "
-        "be installed before running setup.py (pip install pysam)")
-
-########################################################################
-########################################################################
-# Import setuptools
-# Use existing setuptools, otherwise try ez_setup.
-
-try:
-    import setuptools
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires setuptools"
-        "be installed before running setup.py (pip install setuptools)")
+from ez_setup import use_setuptools
+use_setuptools()
+import setuptools
 
 from setuptools import setup, find_packages, Extension
 
