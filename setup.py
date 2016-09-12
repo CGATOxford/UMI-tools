@@ -14,7 +14,6 @@ if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
     raise ImportError(
         "UMI-tools requires setuptools 1.1 higher")
 
-from Cython.Build import cythonize
 ########################################################################
 ########################################################################
 # collect umi_tools version
