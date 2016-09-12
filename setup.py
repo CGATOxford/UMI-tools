@@ -2,13 +2,6 @@ import sys
 import os
 import glob
 
-try:
-    import Cython
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires cython to "
-        "be installed before running setup.py (pip install cython)")
-
 from ez_setup import use_setuptools
 use_setuptools()
 import setuptools
@@ -94,7 +87,7 @@ setup(
     # dependencies
     install_requires=install_requires,
     # extension modules
-    ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
+    # ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },
