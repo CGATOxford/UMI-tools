@@ -25,7 +25,7 @@ etc. You can read more `about conda here`_.
 
 2. Type::
 
-   conda install -c https://conda.anaconda.org/toms umi_tools
+    conda install -c https://conda.anaconda.org/toms umi_tools
 
 Thats it, simple as that.
 
@@ -78,7 +78,7 @@ does have root access. Python and pip can be installed without root.
 
     or in CentOS/Redhat/Fedora::
 
-        sudo yum install
+        sudo yum install zlib-devel
 
 3.  **Install pip**: pip is also probably available from your package
     manager, but can also be installed without this if you don't have
