@@ -49,6 +49,35 @@ install_requires = [
     "pysam>=0.8.4",
     "future"]
 
+# This is a hack. When Pysam is installed from source, the recorded
+# version is 0.2.3, even though a more recent version is actaully
+# installed. In the following, if pysam is not detected, pysam will be
+# install, presumably this will be the lastest version. If pysam is
+# present detect its version with pysam.__version__.  The only problem
+# with this is that if pysam is present, but out of date, the system
+# will not recognise the update
+
+try:
+    import pysam
+    if LooseVersion(pysam.__version__) < LooseVersion('0.8.4'):
+        print """
+        
+    ######################################################################
+    #
+    # WARNING:
+    # Pysam is installed, but not recent enough. We will update pysam, but
+    # the system may fail to detect that pysam has been updated. If this
+    # happens please run setup again"
+    #
+    ######################################################################
+
+        """
+
+        install_requires.append("pysam>=0.8.4")
+
+except ImportError:
+    install_requires.append("pysam")
+
 ##########################################################
 ##########################################################
 # Classifiers
