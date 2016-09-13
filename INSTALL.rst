@@ -1,6 +1,8 @@
 Installation Guide
 ===================
 
+.. contents::
+
 We currently support installation on Linux (tested on Ubuntu and
 CentOS) and Mac OSX. We do not currently support Windows.
 
@@ -20,7 +22,7 @@ or::
     pip install umi_tools
 
 or grab a zip of the `lastest release`_ from github and unpack
-(replace `wget` with `curl -O` for OS X::
+(replace ``wget`` with ``curl -O``) for OS X::
 
     unzip v0.2.4.zip
     cd UMI-tools-0.2.4
@@ -31,12 +33,12 @@ If these options don't work, see below.
 Conda package manager
 ----------------------
 
-This is the easiest way to install UMI-tools if you are already using
+This is the easiest way to install ``UMI-tools`` if you are already using
 either anaconda python or miniconda: all depednencies, whether they be
 python libraries or system libraries are automatically installed. You
 can also do all your installations in seperate isolated "environments"
 where installing new software will not affect packages in other
-environments. The downside of conda installation is that if you do not
+environments. The downside of ``conda`` installation is that if you do not
 already use anaconda or miniconda, you will be building a completely
 new python environment, would have to reinstall all of your libraries
 etc. You can read more `about conda here`_.
@@ -68,13 +70,13 @@ dependencies is not handled as cleanly as in conda. You will need
 Linux
 ++++++
 
-Most systems will already have gcc, pip and zlib installed, so its
+Most systems will already have ``gcc``, ``pip`` and ``zlib`` installed, so its
 worth just trying::
 
     pip install umi_tools
 
-If you get a permissions error try adding `--user` to the pip
-command. Note that `umi_tools` will now only be install for the
+If you get a permissions error try adding ``--user`` to the ``pip``
+command. Note that ``umi_tools`` will now only be install for the
 current user.
 
 If that doesn't work, then you need to find what is missing. You can
@@ -110,8 +112,8 @@ does have root access. Python and pip can be installed without root.
         wget https://bootstrap.pypa.io/get-pip.py
         python get-pip.py --user
 
-    but in this case you'll need to make sure that the python-dev
-    (Ubuntu) or python-devel (CentOS/RHEL/fedora) packages are
+    but in this case you'll need to make sure that the ``python-dev``
+    (Ubuntu) or ``python-devel`` (CentOS/RHEL/fedora) packages are
     installed.
 
 The pip command at the top should now work. 
@@ -128,7 +130,7 @@ using the `homebrew` package manager to manage command line packages
 on OS X. You can find `instructions here`_. If you don't want to do
 that, here are non-homebrew instructions:
 
-1.  **Install gcc**: Apples XCode suite includes gcc. Installation depends
+1.  **Install gcc**: Apples XCode suite includes ``gcc``. Installation depends
     on which version of OS X you are using
 
     - *Mac OS X 10.9* or higher: Open a terminal and run::
@@ -145,18 +147,18 @@ that, here are non-homebrew instructions:
         python get-pip.py
 
 3.  **Install UMI-tools**: You should now have everything you need to
-    install `UMI-tools`::
+    install ``UMI-tools``::
 
         pip install umi_tools
 
     We have had reports that the current version of one of the
-    `UMI-tools` dependencies, pysam, is causing problems on the latest
+    ``UMI-tools`` dependencies, ``pysam``, is causing problems on the latest
     versions of OS X. If your installation is failing on the
     installation of pysam, try forcing an older version with::
 
         pip install pysam==0.8.4
 
-    before installing `umi_tools`.
+    before installing ``umi_tools``.
 
 
 Installing from source
@@ -167,7 +169,7 @@ example you need to install the most up-to-date version, or if you
 can't or don't want to use one of the package managers above. There
 are two levels of installing from source. The first is to install the
 dependencies using one of the pacakge managers above, and then just
-install `umi_tools` from source. The second is to install everything
+install ``umi_tools`` from source. The second is to install everything
 from source without the help of pip or conda.
 
 
@@ -186,11 +188,11 @@ Depedencies from conda/PyPI manager
         git clone https://github.com/CGATOxford/UMI-tools.git
 
 3.  Use your python package manager to install the
-    dependencies. e.g. for `pip`
+    dependencies. e.g. for ``pip``
 
         pip install -r requirements.txt
 
-    or with `conda`::
+    or with ``conda``::
 
         conda install setuptools
         conda install pandas
@@ -198,7 +200,7 @@ Depedencies from conda/PyPI manager
         conda config --add channels bioconda
         conda install pysam
 
-4.  Install UMI-tools using the `setup.py` script::
+4.  Install UMI-tools using the ``setup.py`` script::
 
         python setup.py install
 
@@ -208,19 +210,19 @@ Completely from source
 This method will allow you to install without installing pip or
 conda. It is in theory possible to install completely without root by
 installing gcc, zlib and python-dev in your home directory, but that
-is beyond the scope of this document. You are also going to need a `g++`
-compatiable compiler. On OS X `XCode` has one of these by default. On
-Linux install the `build-essential` or `g++` packages.
+is beyond the scope of this document. You are also going to need a ``g++``
+compatiable compiler. On OS X ``XCode`` has one of these by default. On
+Linux install the ``build-essential`` or ``g++`` packages.
 
-1.  Download and install `Cython`. For OS X replace `wget` with `curl
-    -O`::
+1.  Download and install `Cython`. For OS X replace ``wget`` with ``curl
+    -O``::
 
         wget https://pypi.python.org/packages/c6/fe/97319581905de40f1be7015a0ea1bd336a756f6249914b148a17eefa75dc/Cython-0.24.1.tar.gz
         tar -xzf Cython-0.24.1.tar.gz
         cd Cython-0.24.1.tar.gz
         python setup.py install --user
 
-2.  Download and install UMI-tools::
+2.  Download and install ``UMI-tools``::
 
         wget https://github.com/CGATOxford/UMI-tools/archive/master.zip
         unzip master.zip
@@ -231,7 +233,7 @@ Linux install the `build-essential` or `g++` packages.
     probably see quite a lot of warning messages that look like
     errors. 
 
-    The most likely fail point is installing `pysam`. Due to a bug in 
+    The most likely fail point is installing ``pysam``. Due to a bug in 
     pysam, when it is installed from source, the recorded install version
     is wrong. Thus, if you get the error::
 
@@ -240,8 +242,8 @@ Linux install the `build-essential` or `g++` packages.
     try just running setup again. 
 
     In addition, as we pointed out above, we have had reports that 
-    installation of the lastest `pysam` fails on the latest OS X. If
-    this is the case, try installing an older version of `pysam`::
+    installation of the lastest ``pysam`` fails on the latest OS X. If
+    this is the case, try installing an older version of ``pysam``::
 
         curl -O https://pypi.python.org/packages/27/89/bf8c44d0bfe9d0cadab062893806994c168c9f490f67370fc56d6e8ba224/pysam-0.8.4.tar.gz
         tar -xzf pysam-0.8.4.tar.gz
@@ -257,6 +259,7 @@ creating an issue on our `github issues page`_.
 .. _about conda here: http://conda.pydata.org/docs/intro.html
 .. _conda installation instructions here: http://conda.pydata.org/docs/installation.html
 .. _developer download page: https://developer.apple.com/downloads/index.action#
-.. _lastest release: https://github.com/CGATOxford/UMI-tools/releases/latest
+.. _latest release: https://github.com/CGATOxford/UMI-tools/releases/latest
 .. _master branch: https://github.com/CGATOxford/UMI-tools/archive/master.zip
-.. _github page: https://github.com/CGATOxford/UMI-tools/issues/new
+.. _github issues page: https://github.com/CGATOxford/UMI-tools/issues/new
+.. _instructions here: http://docs.python-guide.org/en/latest/starting/install/osx/
