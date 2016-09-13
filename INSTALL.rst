@@ -23,7 +23,7 @@ etc. You can read more `about conda here`_.
 1. Install miniconda (if not already installed), see `conda
    installation instructions here`_.
 
-2. Type:
+2. Type::
 
    conda install -c https://conda.anaconda.org/toms umi_tools
 
@@ -64,25 +64,25 @@ installed AND you don't have root access, please speak to someone who
 does have root access. Python and pip can be installed without root. 
 
 1.  **Install gcc**: the easiest way is using your package manager. In
-    ubuntu or debian
+    ubuntu or debian::
 
         sudo apt-get install gcc
 
-    or in CentOS/Redhat/Fedora
+    or in CentOS/Redhat/Fedora::
 
         sudo yum install gcc
 
-2.  **Install zlib**: again, use the package manager. Ubuntu:
+2.  **Install zlib**: again, use the package manager. Ubuntu::
 
         sudo apt-get zlib1g-dev
 
-    or in CentOS/Redhat/Fedora
+    or in CentOS/Redhat/Fedora::
 
         sudo yum install
 
 3.  **Install pip**: pip is also probably available from your package
     manager, but can also be installed without this if you don't have
-    root access:
+    root access::
 
         wget https://bootstrap.pypa.io/get-pip.py
         python get-pip.py --user
