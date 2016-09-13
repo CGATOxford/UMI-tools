@@ -46,7 +46,6 @@ install_requires = [
     "cython>=0.19",
     "numpy>=1.7",
     "pandas>=0.12.0",
-    "pysam>=0.8.4",
     "future"]
 
 # This is a hack. When Pysam is installed from source, the recorded
