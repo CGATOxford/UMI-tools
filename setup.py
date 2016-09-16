@@ -12,7 +12,7 @@ from distutils.version import LooseVersion
 if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
     print ("Version detected:", LooseVersion(setuptools.__version__))
     raise ImportError(
-        "UMI-tools requires setuptools 1.1 higher")
+        "umi_tools requires setuptools 1.1 higher")
 
 ########################################################################
 ########################################################################
@@ -30,7 +30,7 @@ version = version.__version__
 major, minor1, minor2, s, tmp = sys.version_info
 
 if (major == 2 and minor1 < 7) or major < 2:
-    raise SystemExit("""UMI-tools requires Python 2.7 or later.""")
+    raise SystemExit("""umi_tools requires Python 2.7 or later.""")
 
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
@@ -97,13 +97,13 @@ setup(
     # package information
     name='umi_tools',
     version=version,
-    description='umi-tools: Tools for UMI analyses',
+    description='umi_tools: Tools for UMI analyses',
     author='Ian Sudbery',
     author_email='i.sudbery@sheffield.ac.uk',
     license="MIT",
     platforms=["any"],
     keywords="computational genomics",
-    long_description='umi-tools: Tools for UMI analyses',
+    long_description='umi_tools: Tools for UMI analyses',
     classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/CGATOxford/UMI-tools",
     download_url="https://github.com/CGATOxford/UMI-tools/tarball/%s" % version,
