@@ -112,6 +112,7 @@ setup(
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
+    setup_requires=['cython'],
     install_requires=install_requires,
     # extension modules
     # ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
