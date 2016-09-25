@@ -631,7 +631,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 pos = read.aend
                 if read.cigar[-1][0] == 4:
                     pos = pos + read.cigar[-1][1]
-                start = read.pos
+                start = pos
 
                 if ('N' in read.cigarstring or
                     (read.cigar[0][0] == 4 and
