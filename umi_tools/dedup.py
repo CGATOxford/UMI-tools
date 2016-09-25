@@ -387,13 +387,13 @@ class ClusterAndReducer:
                                     umi2.encode('utf-8')) <= threshold]
                 for umi in umis}
 
-    def _get_adj_list_directional_adjacency(self, umis, counts, threshold):
+    def _get_adj_list_directional_adjacency(self, umis, counts, threshold=1):
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         return {umi: [umi2 for umi2 in umis if
                       edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) == 1 and
+                                    umi2.encode('utf-8')) == threshold and
                       counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):
