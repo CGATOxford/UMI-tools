@@ -34,7 +34,7 @@ Conda package manager
 ----------------------
 
 This is the easiest way to install ``UMI-tools`` if you are already using
-either anaconda python or miniconda: all depednencies, whether they be
+either anaconda python or miniconda: all depedencies, whether they be
 python libraries or system libraries are automatically installed. You
 can also do all your installations in seperate isolated "environments"
 where installing new software will not affect packages in other
@@ -50,7 +50,7 @@ etc. You can read more `about conda here`_.
 
     conda install -c https://conda.anaconda.org/toms umi_tools
 
-Thats it, simple as that.
+That's it, simple as that.
 
 
 Installation from PyPI using the pip package manager
@@ -122,13 +122,38 @@ The pip command at the top should now work.
 Apple OS X
 +++++++++++
 
-The good news is that `zlib` is installed by default of OS X and
-modern versions include an upto date `python` and `python-dev`. The
+The good news is that `zlib` is installed by default of OS X. The
 bad news is that `gcc` and `pip` are generally not included (although
-many users may have installed them already). Many people recommend
-using the `homebrew` package manager to manage command line packages
-on OS X. You can find `instructions here`_. If you don't want to do
-that, here are non-homebrew instructions:
+many users may have installed them already). Furthermore, it's generally
+not advisable to use the default python since installation of third party
+python libraries leads to difficulties with permissions, especially since the
+introduction of System Integrity Protection (SIP) from OS X El Capitan onwards.
+For this reason, we recommend using a non-default python. 
+
+If you only have the default python (e.g /usr/local/bin/python) there are a number of ways
+to install another instance of python. Many OS X users recommend using the ``homebrew``
+package manager to manage command line packages on OS X. You can find `instructions here`_
+for installation python via ``homebrew``. This will also install setuptools and pip.
+You can install gcc via homebrew by following `these instructions`_::
+    
+    brew install gcc48
+
+
+**Install UMI-tools**: You should now have everything you need to
+install ``UMI-tools``::
+
+        pip install umi_tools
+
+We have had reports that the current version of one of the
+``UMI-tools`` dependencies, ``pysam``, is causing problems on the latest
+versions of OS X. If your installation is failing on the
+installation of pysam, try forcing an older version with::
+
+        pip install pysam==0.8.4
+
+before installing ``umi_tools``.
+
+If you don't want to do use homebrew, here are non-homebrew instructions for installing gcc and pip as needed:
 
 1.  **Install gcc**: Apples XCode suite includes ``gcc``. Installation depends
     on which version of OS X you are using
@@ -145,20 +170,6 @@ that, here are non-homebrew instructions:
 
         curl -O https://bootstrap.pypa.io/get-pip.py
         python get-pip.py
-
-3.  **Install UMI-tools**: You should now have everything you need to
-    install ``UMI-tools``::
-
-        pip install umi_tools
-
-    We have had reports that the current version of one of the
-    ``UMI-tools`` dependencies, ``pysam``, is causing problems on the latest
-    versions of OS X. If your installation is failing on the
-    installation of pysam, try forcing an older version with::
-
-        pip install pysam==0.8.4
-
-    before installing ``umi_tools``.
 
 
 Installing from source
@@ -263,3 +274,4 @@ creating an issue on our `github issues page`_.
 .. _master branch: https://github.com/CGATOxford/UMI-tools/archive/master.zip
 .. _github issues page: https://github.com/CGATOxford/UMI-tools/issues/new
 .. _instructions here: http://docs.python-guide.org/en/latest/starting/install/osx/
+.. _these instructions: http://www-scf.usc.edu/~csci104/installation/gccmac.html
