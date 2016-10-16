@@ -24,26 +24,26 @@ If you're using Conda, you can use:
 
 .. code:: bash
 
-   conda install -c https://conda.anaconda.org/toms umi_tools
+   $ conda install -c https://conda.anaconda.org/toms umi_tools
 
 Or pip:
 
 .. code:: bash
 
-   pip install umi_tools
+   $ pip install umi_tools
 
 
 Or if you'd like to work directly from the git repository:
 
 .. code:: bash
 
-   git clone git@github.com:CGATOxford/UMI-tools.git
+   $ git clone https://github.com/CGATOxford/UMI-tools.git
 
 Enter repository and run:
 
 .. code:: bash
 
-   python setup.py install
+   $ python setup.py install
 
 
 Help
@@ -53,19 +53,19 @@ To get help on umi_tools run
 
 .. code:: bash
 
-   `umi_tools --help`
+   $ umi_tools --help
 
 To get help on umi_tools extract run
 
 .. code:: bash
 
-   `umi_tools extract --help`
+   $ umi_tools extract --help
 
 To get help on umi_tools dedup run
 
 .. code:: bash
 
-   `umi_tools dedup --help`
+   $ umi_tools dedup --help
 
 
 Dependencies
