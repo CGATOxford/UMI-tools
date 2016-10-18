@@ -23,8 +23,7 @@ The most computationally intensive part of this is the middle part -
 mapping the reads, is also the least interesting for us here. To aid
 the ability of folks to follow along without having to worry if they
 have the correct indexs install etc, we have provided a BAM file of
-the mapped reads from this example. You can download it `here
-<https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.bam>`_. It
+the mapped reads from this example. You can download it [here](https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.bam>). It
 will need indexing with `samtools index` before use. You can then skip
 striaght to Step 5 below.
 
