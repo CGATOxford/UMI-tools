@@ -1,6 +1,17 @@
 UMI-Tools quick start guide
 =============================
 
+- [UMI-Tools quick start guide](#umi-tools-quick-start-guide)
+  * [Step 1: Install `UMI-Tools`](#step-1--install--umi-tools-)
+  * [Step 2: Download the test data](#step-2--download-the-test-data)
+  * [Step 3: Extract the UMIs](#step-3--extract-the-umis)
+  * [Step 4: Mapping](#step-4--mapping)
+  * [Step 5: Deduplication](#step-5--deduplication)
+  * [Common variations](#common-variations)
+    + [Paired-end sequencing](#paired-end-sequencing)
+    + [Mapping to the transcriptome](#mapping-to-the-transcriptome)
+    + [Other options](#other-options)
+
 The following steps will guide you through a short example of how to
 use the `UMI-tools` package to process data with UMIs added to them.
 
