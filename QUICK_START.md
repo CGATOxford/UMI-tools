@@ -178,8 +178,7 @@ Common variations
 ------------------
 
 
-Paired-end sequencing
-++++++++++++++++++++++
+### Paired-end sequencing ###
 
 If paired-end sequencing has been performed, it is necessary to make
 sure that the UMI sequence is added to both reads. When processing,
@@ -199,9 +198,7 @@ achieved by adding the `--paired` to the call to `dedup`:
 Paired deduplicating is signficantly slower and more memory intensive
 than single-ended.
 
-Mapping to the transcriptome
-+++++++++++++++++++++++++++++
-
+### Mapping to the transcriptome ###
 
 A common practice in single cell RNA-seq is to map to the
 transcriptome rather than the genome. The identify of the transcript
@@ -213,8 +210,7 @@ gene. UMI-tools can be instructed to use this scheme using the
 
     $ umi_tools dedup -I transcriptome_mapped.bam --per-contig -S deduplicated.bam
 
-Other options
-++++++++++++++
+### Other options ###
 
 See `umi_tools extract --help` and `umi_tools dedup --help` for details of
 futher possibilities. 
