@@ -86,7 +86,7 @@ Since the file we have downloaded contains only one library, here we
 will treat the whole barcode as a UMI, and os the pattern will contain
 only Ns.
 
-   $ zcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --stdout processed.fastq.gz
+    $ zcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --stdout processed.fastq.gz
 
 Note that `extract` can output to a gziped or uncompressed file
 depending on the file extension. It can also output to `stdout` if not
@@ -142,25 +142,17 @@ of statistics about the run. One of the most interesting is the
 distribution of edit distances. The content of this file after running
 the above will look something like:
 
-+---------------------+--------------------------+-------------+------+-----------+
+
 |directional-adjacency|directional-adjacency_null|edit_distance|unique|unique_null|
-+---------------------+--------------------------+-------------+------+-----------+
+|---------------------|--------------------------|-------------|------|-----------|
 |18313                |18313                     |Single_UMI   |15910 |15910      |
-+---------------------+--------------------------+-------------+------+-----------+
 |0                    |7                         |0            |0     |4          |
-+---------------------+--------------------------+-------------+------+-----------+
 |3                    |19                        |1            |1846  |45         |
-+---------------------+--------------------------+-------------+------+-----------+
 |366                  |166                       |2            |976   |287        |
-+---------------------+--------------------------+-------------+------+-----------+
 |711                  |547                       |3            |937   |1023       |
-+---------------------+--------------------------+-------------+------+-----------+
 |1975                 |2186                      |4            |1906  |3498       |
-+---------------------+--------------------------+-------------+------+-----------+
 |513                  |643                       |5            |306   |1114       |
-+---------------------+--------------------------+-------------+------+-----------+
 |0                    |0                         |6            |0     |0          |
-+---------------------+--------------------------+-------------+------+-----------+
 
 The first two columns show the distribution of average edit distances
 between UMIs found at a single base in the genome after deduplication
