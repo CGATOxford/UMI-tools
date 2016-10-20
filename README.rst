@@ -49,11 +49,14 @@ Enter repository and run:
 
    python setup.py install
 
+For more detail see `INSTALL.rst <INSTALL.rst>`_
 
 Help
 ----- 
 
-To get help on umi_tools run
+See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
+
+To get detailed help on umi_tools run
 
 .. code:: bash
 
