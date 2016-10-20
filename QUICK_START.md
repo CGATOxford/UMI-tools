@@ -52,6 +52,10 @@ file here:
 
     $ wget https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.fastq.gz
 
+If you're using macOS use:
+
+    $ curl -L "https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.fastq.gz" -o "example.fastq.gz"
+
 The file is about 100Mb, and takes a couple of minutes to download on
 our system.
 
@@ -96,13 +100,18 @@ Since the file we have downloaded contains only one library, here we
 will treat the whole barcode as a UMI, and os the pattern will contain
 only Ns.
 
-    $ zcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --stdout processed.fastq.gz
+    $ zcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz
+
+If you're using macOS use (note the use of gzcat in place of zcat):
+
+    $ gzcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz
+ 
 
 Note that `extract` can output to a gziped or uncompressed file
 depending on the file extension. It can also output to `stdout` if not
-output is specified. A log file is output continaning the paramemeters
+output is specified. A log file is saved contianing the paramemeters
 which which `extract` was run and the frequency of each UMI
-encountered. boThis can be redirected with `--log` or supprssed with
+encountered. This can be redirected with `--log` or supprssed with
 `--supress-stats` (run parameters are still output).
 
 
@@ -115,7 +124,7 @@ to demultiplex, trim and quality filter the reads). Below we will use
 a BAM file from the results. If you don't wish to spend the time doing
 this, or don't have access to `bowtie` or `samtools` (or suitable
 alternatives), we provide a premapped BAM file in the `example`
-directory, or here.
+directory (see command at the end of this step).
 
 First map the reads with your favoirte read mapper, here `bowtie`
 using parameters from the paper which we stole the sample from. This
@@ -134,11 +143,15 @@ The BAM now needs to be sorted and indexed:
     $ samtools sort mapped.bam -o example.bam
     $ samtools index example.bam
 
-We have steps up to this point and made the result available if you
-want to skip step 4. Get the file here (it will still need indexing):
+If you want to skip the mapping, you can get the file here.
+It will still need indexing (see "samtools index" command above):
 
     $ wget https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.bam
 
+Again for macOS use the following to download:
+
+    $ curl -L "https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.bam" -o "example.bam"
+    
 Step 5: Deduplication
 ----------------------
 
@@ -149,9 +162,8 @@ the deduplication proceedure on it:
 
 The `--output-stats` option is optional, but selecting output a range
 of statistics about the run. One of the most interesting is the
-distribution of edit distances. The content of this file after running
-the above will look something like:
-
+distribution of edit distances (here named deduplicated_edit_distance.tsv).
+The content of this file after running the above will look something like:
 
 |directional-adjacency|directional-adjacency_null|edit_distance|unique|unique_null|
 |---------------------|--------------------------|-------------|------|-----------|
@@ -169,7 +181,7 @@ between UMIs found at a single base in the genome after deduplication
 with the directional-adjacency method (the default). Thus in the third
 line we see that there are 3 bases in the genome where the average
 edit distance between the UMIs found at that base is 1. The second
-column is what we would expect to see if UMIs where randomly
+column is what we would expect to see if UMIs were randomly
 distributed between mapping locations (taking into account any biases
 in the overall usage of particular UMI sequences). The last two
 columns the same, but for the naive `unique` deduplication method
@@ -224,3 +236,33 @@ gene. UMI-tools can be instructed to use this scheme using the
 
 See `umi_tools extract --help` and `umi_tools dedup --help` for details of
 futher possibilities. 
+
+### Bespoke UMI extraction ###
+We have tried to accommodate the common ways in which UMIs are encoded in the reads for umi_tools extract,
+however many techniques use very particular methods to incorporate UMIs. For example, inDrop (Klein et al, 2015) incorporates the UMI at different places from read to read due to a variable length of the cell barcode.
+In such cases, it may be neccessary to write your own code to extract the UMI
+from the read fastq read sequence and attach it to the fastq read identifier.
+
+Following UMI extraction, the final fastq read identifier should be in the format
+[\<identifier>]\_[\<UMI>], where identifier is the original identifier and UMI is
+the UMI sequence (see below). Note that the UMI must be appended after the first space in the
+identifier in order to be retained in the BAM following alignment. In addition,
+if you have paired end reads, both with a UMI, the UMI sequence is the concatenation
+of the 2 UMIs so that each read has the exact same UMI. If you are having trouble with
+bespoke UMI extraction, raise a GitHub issue and we'll try and help out.
+
+#### Example UMI extraction: ####
+
+UMI is bases 3-4, bases 1-2 and 5-6 are the sample barcode and need to be removed. The case below could be handled by umi_tools dedup by specifiying --bc-pattern=NNXXNN but we include it here as an example of how the fastq should be formatted following extraction:
+
+    @HISEQ:87:00000000 read1
+    AAGGTTGCTGATTGGATGGGCTAG
+    DA1AEBFGGCG01DFH00B1FF0B
+    +
+ 
+ will become:
+ 
+     @HISEQ:87:00000000_AATT read1
+     GGGCTGATTGGATGGGCTAG
+     1AFGGCG01DFH00B1FF0B
+     +
