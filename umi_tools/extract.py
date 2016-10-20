@@ -68,12 +68,12 @@ Usage:
 ------
 
 For single ended reads:
-        python extract_umi.py --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
+        umi_tools extract --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
 
 reads from stdin and outputs to stdout.
 
 For paired end reads:
-        python extract_umi.py --bc-pattern=[PATTERN] --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
+        umi_tools extract --bc-pattern=[PATTERN] --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
 
 reads end one from stdin and end two from FASTQIN and outputs end one to stdin
 and end two to FASTQOUT.
