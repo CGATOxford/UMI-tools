@@ -1,3 +1,7 @@
+.. image:: https://cloud.githubusercontent.com/assets/6096414/19521726/a4dea98e-960c-11e6-806a-a18ff04a391e.png
+ 
+
+
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
