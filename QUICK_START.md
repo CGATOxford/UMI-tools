@@ -100,12 +100,7 @@ Since the file we have downloaded contains only one library, here we
 will treat the whole barcode as a UMI, and os the pattern will contain
 only Ns.
 
-    $ zcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz
-
-If you're using macOS use (note the use of gzcat in place of zcat):
-
-    $ gzcat SRR2057597.fastq.gz | umi_tools extract --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz
- 
+    $ umi_tools extract --stdin=example.fastq.gz --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz 
 
 Note that `extract` can output to a gziped or uncompressed file
 depending on the file extension. It can also output to `stdout` if not
@@ -123,8 +118,7 @@ to demultiplex, trim and quality filter the reads). Below we will use
 `bowtie` to map the reads to the mouse genome and `samtools` to create
 a BAM file from the results. If you don't wish to spend the time doing
 this, or don't have access to `bowtie` or `samtools` (or suitable
-alternatives), we provide a premapped BAM file in the `example`
-directory (see command at the end of this step).
+alternatives), we provide a premapped BAM file (see command at the end of this step).
 
 First map the reads with your favoirte read mapper, here `bowtie`
 using parameters from the paper which we stole the sample from. This
@@ -245,7 +239,7 @@ from the read fastq read sequence and attach it to the fastq read identifier.
 
 Following UMI extraction, the final fastq read identifier should be in the format
 [\<identifier>]\_[\<UMI>], where identifier is the original identifier and UMI is
-the UMI sequence (see below). Note that the UMI must be appended after the first space in the
+the UMI sequence (see below). Note that the UMI must be appended before the first space in the
 identifier in order to be retained in the BAM following alignment. In addition,
 if you have paired end reads, both with a UMI, the UMI sequence is the concatenation
 of the 2 UMIs so that each read has the exact same UMI. If you are having trouble with
