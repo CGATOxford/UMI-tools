@@ -10,6 +10,7 @@ UMI-Tools quick start guide
   * [Common variations](#common-variations)
     + [Paired-end sequencing](#paired-end-sequencing)
     + [Mapping to the transcriptome](#mapping-to-the-transcriptome)
+    + [Bespoke UMI extraction](#bespoke-umi-extraction)
     + [Other options](#other-options)
 
 The following steps will guide you through a short example of how to
@@ -226,11 +227,6 @@ gene. UMI-tools can be instructed to use this scheme using the
 
     $ umi_tools dedup -I transcriptome_mapped.bam --per-contig -S deduplicated.bam
 
-### Other options ###
-
-See `umi_tools extract --help` and `umi_tools dedup --help` for details of
-futher possibilities. 
-
 ### Bespoke UMI extraction ###
 We have tried to accommodate the common ways in which UMIs are encoded in the reads for umi_tools extract,
 however many techniques use very particular methods to incorporate UMIs. For example, inDrop (Klein et al, 2015) incorporates the UMI at different places from read to read due to a variable length of the cell barcode.
@@ -260,3 +256,8 @@ UMI is bases 3-4, bases 1-2 and 5-6 are the sample barcode and need to be remove
      GGGCTGATTGGATGGGCTAG
      1AFGGCG01DFH00B1FF0B
      +
+
+### Other options ###
+
+See `umi_tools extract --help` and `umi_tools dedup --help` for details of
+futher possibilities. 
