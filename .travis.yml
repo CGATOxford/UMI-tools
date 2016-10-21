@@ -4,11 +4,10 @@ python:
   - "2.7"
 #  - "3.4"
 
-install: true
+before_install:
+  - pip install cython
 
-script: travis_testing.sh
-
-after_script:
+script: 
   - umi_tools --help
   - umi_tools extract --help
   - umi_tools dedup --help
