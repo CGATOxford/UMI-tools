@@ -4,8 +4,9 @@ python:
   - "2.7"
 #  - "3.4"
 
-script:
-  - travis_testing.sh
+install: true
+
+script: travis_testing.sh
 
 after_script:
   - umi_tools --help
