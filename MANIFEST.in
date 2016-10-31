@@ -1,2 +1,6 @@
+# ez_setup bootstrap
+include ez_setup.py
 # extensions
 include umi_tools/*.pyx
+# requirements.txt
+include requirements.txt

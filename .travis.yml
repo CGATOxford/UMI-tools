@@ -1,13 +1,17 @@
 language: python
+sudo: required
 
 python:
   - "2.7"
 #  - "3.4"
 
-script:
-  - cd $TRAVIS_BUILD_DIR ; pip install cython; python setup.py install
+before_install:
+  - pip install cython
 
-after_script:
+install:
+  - python setup.py install
+
+script: 
   - umi_tools --help
   - umi_tools extract --help
   - umi_tools dedup --help

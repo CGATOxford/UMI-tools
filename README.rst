@@ -1,3 +1,7 @@
+.. image:: https://cloud.githubusercontent.com/assets/6096414/19521726/a4dea98e-960c-11e6-806a-a18ff04a391e.png
+ 
+
+
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
@@ -24,48 +28,51 @@ If you're using Conda, you can use:
 
 .. code:: bash
 
-   conda install -c https://conda.anaconda.org/toms umi_tools
+   $ conda install -c https://conda.anaconda.org/toms umi_tools
 
 Or pip:
 
 .. code:: bash
 
-   pip install umi_tools
+   $ pip install umi_tools
 
 
 Or if you'd like to work directly from the git repository:
 
 .. code:: bash
 
-   git clone git@github.com:CGATOxford/UMI-tools.git
+   $ git clone https://github.com/CGATOxford/UMI-tools.git
 
 Enter repository and run:
 
 .. code:: bash
 
-   python setup.py install
+   $ python setup.py install
 
+For more detail see `INSTALL.rst <INSTALL.rst>`_
 
 Help
 ----- 
 
-To get help on umi_tools run
+See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
+
+To get detailed help on umi_tools run
 
 .. code:: bash
 
-   `umi_tools --help`
+   $ umi_tools --help
 
 To get help on umi_tools extract run
 
 .. code:: bash
 
-   `umi_tools extract --help`
+   $ umi_tools extract --help
 
 To get help on umi_tools dedup run
 
 .. code:: bash
 
-   `umi_tools dedup --help`
+   $ umi_tools dedup --help
 
 
 Dependencies
