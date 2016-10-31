@@ -306,7 +306,7 @@ class TwoPassPairWriter:
 
         found = 0
         for name, chrom, pos in self.read1s:
-            for read in self.outfile.fetch(start=pos, end=pos+1, tid=chrom):
+            for read in self.infile.fetch(start=pos, end=pos+1, tid=chrom):
                 if (read.query_name, read.pos) == (name, pos):
                     self.outfile.write(read)
                     found += 1
