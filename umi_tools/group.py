@@ -242,9 +242,11 @@ def main(argv=None):
     parser.add_option("--group-out", dest="tsv", type="string",
                       help="Outfile name for file mapping read id to read group",
                       default=None)
-    parser.add_option("--group-out", dest="tsv", type="string",
-                      help="Outfile name for file mapping read id to read group",
-                      default=None)
+    parser.add_option("--output-bam", dest="output_bam", action="store_true",
+                      default=False,
+                      help=("output a bam file with read groups tagged using the UG tag"
+                            "[default=%default]"))
+
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -272,11 +274,13 @@ def main(argv=None):
         out_mode = "wb"
 
     infile = pysam.Samfile(in_name, in_mode)
-    outfile = pysam.Samfile(out_name, out_mode,
-                            template=infile)
 
-    if options.paired:
-        outfile = umi_methods.TwoPassPairWriter(infile, outfile)
+    if options.output_bam:
+        outfile = pysam.Samfile(out_name, out_mode, template=infile)
+        if options.paired:
+            outfile = umi_methods.TwoPassPairWriter(infile, outfile)
+    else:
+        outfile = None
 
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
@@ -317,7 +321,9 @@ def main(argv=None):
 
         for ix, read_group in enumerate(reads):
             for read in read_group:
-                outfile.write(read)
+                if outfile:
+                    # need to add the 'UG' tag here
+                    outfile.write(read)
 
                 if options.tsv:
                     mapping_outfile.write("%s\t%s\t%i\t%s\t%i\n" % (
@@ -328,7 +334,8 @@ def main(argv=None):
 
             unique_id += 1
 
-    outfile.close()
+    if outfile:
+        outfile.close()
 
     if options.tsv:
         mapping_outfile.close()
