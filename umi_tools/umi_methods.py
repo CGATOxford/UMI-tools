@@ -118,6 +118,34 @@ class TwoPassPairWriter:
         self.outfile.close()
 
 
+def get_read_position(read, soft_clip_threshold):
+    ''' '''
+    is_spliced = False
+
+    if read.is_reverse:
+        pos = read.aend
+        if read.cigar[-1][0] == 4:
+            pos = pos + read.cigar[-1][1]
+        start = read.pos
+
+        if ('N' in read.cigarstring or
+            (read.cigar[0][0] == 4 and
+             read.cigar[0][1] > soft_clip_threshold)):
+            is_spliced = True
+    else:
+        pos = read.pos
+        if read.cigar[0][0] == 4:
+            pos = pos - read.cigar[0][1]
+        start = pos
+
+        if ('N' in read.cigarstring or
+            (read.cigar[-1][0] == 4 and
+             read.cigar[-1][1] > soft_clip_threshold)):
+            is_spliced = True
+
+    return start, pos, is_spliced
+
+
 def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
@@ -181,28 +209,8 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
 
         else:
 
-            is_spliced = False
-
-            if read.is_reverse:
-                pos = read.aend
-                if read.cigar[-1][0] == 4:
-                    pos = pos + read.cigar[-1][1]
-                start = read.pos
-
-                if ('N' in read.cigarstring or
-                    (read.cigar[0][0] == 4 and
-                     read.cigar[0][1] > soft_clip_threshold)):
-                    is_spliced = True
-            else:
-                pos = read.pos
-                if read.cigar[0][0] == 4:
-                    pos = pos - read.cigar[0][1]
-                start = pos
-
-                if ('N' in read.cigarstring or
-                    (read.cigar[-1][0] == 4 and
-                     read.cigar[-1][1] > soft_clip_threshold)):
-                    is_spliced = True
+            start, pos, is_spliced = get_read_position(
+                read, soft_clip_threshold)
 
             if whole_contig:
                 do_output = not read.tid == last_chr

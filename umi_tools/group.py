@@ -286,7 +286,8 @@ def main(argv=None):
 
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
-        mapping_outfile.write("read_id\tumi\tcount\tfinal_umi\tunique_id\n")
+        mapping_outfile.write(
+            "read_id\tcontig\tposition\tumi\tcount\tfinal_umi\tunique_id\n")
 
     nInput, nOutput, unique_id = 0, 0, 0
 
@@ -326,11 +327,14 @@ def main(argv=None):
                 if outfile:
                     # Add the 'UG' tag to the read
                     read.tags += [('UG', unique_id)]
+                    read.tags += [('FU', umis[ix])]
                     outfile.write(read)
 
                 if options.tsv:
-                    mapping_outfile.write("%s\t%s\t%i\t%s\t%i\n" % (
-                        read.query_name, umi_methods.get_umi(read),
+                    mapping_outfile.write("%s\t%s\t%s\t%s\t%i\t%s\t%i\n" % (
+                        read.query_name, read.reference_name,
+                        umi_methods.get_read_position(read, options.soft)[1],
+                        umi_methods.get_umi(read),
                         umi_counts[ix], umis[ix], unique_id))
 
                 nOutput += 1
