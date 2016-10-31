@@ -317,25 +317,28 @@ def main(argv=None):
         # specified options.method
         processor = network.ReadClusterer(options.method)
 
-        reads, umis, umi_counts, topologies, nodes = processor(
+        clusters, umis, umi_counts, topologies, nodes = processor(
             bundle=bundle,
             threshold=options.threshold,
-            stats=True)
+            stats=True,
+            deduplicate=False)
 
-        for ix, read_group in enumerate(reads):
-            for read in read_group:
-                if outfile:
-                    # Add the 'UG' tag to the read
-                    read.tags += [('UG', unique_id)]
-                    read.tags += [('FU', umis[ix])]
-                    outfile.write(read)
+        for ix, umi_group in enumerate(clusters):
+            for umi in umi_group:
+                reads = bundle[umi]['read']
+                for read in reads:
+                    if outfile:
+                        # Add the 'UG' tag to the read
+                        read.tags += [('UG', unique_id)]
+                        read.tags += [('FU', umis[ix])]
+                        outfile.write(read)
 
-                if options.tsv:
-                    mapping_outfile.write("%s\t%s\t%s\t%s\t%i\t%s\t%i\n" % (
-                        read.query_name, read.reference_name,
-                        umi_methods.get_read_position(read, options.soft)[1],
-                        umi_methods.get_umi(read),
-                        umi_counts[ix], umis[ix], unique_id))
+                    if options.tsv:
+                        mapping_outfile.write("%s\t%s\t%s\t%s\t%i\t%s\t%i\n" % (
+                            read.query_name, read.reference_name,
+                            umi_methods.get_read_position(read, options.soft)[1],
+                            umi_methods.get_umi(read),
+                            umi_counts[ix], umis[ix], unique_id))
 
                 nOutput += 1
 

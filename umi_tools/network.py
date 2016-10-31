@@ -257,7 +257,8 @@ class ReadClusterer:
             self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
 
-    def __call__(self, bundle, threshold, stats=False, further_stats=False):
+    def __call__(self, bundle, threshold, stats=False, further_stats=False,
+                 deduplicate=True):
         ''' '''
 
         umis = bundle.keys()
@@ -302,4 +303,7 @@ class ReadClusterer:
             topologies = None
             nodes = None
 
-        return reads, final_umis, umi_counts, topologies, nodes
+        if deduplicate:
+            return reads, final_umis, umi_counts, topologies, nodes
+        else:
+            return clusters, final_umis, umi_counts, topologies, nodes
