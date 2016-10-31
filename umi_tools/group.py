@@ -260,6 +260,8 @@ def main(argv=None):
     if options.stdout != sys.stdout:
         out_name = options.stdout.name
         options.stdout.close()
+        assert options.output_bam, (
+            "To output a bam you must include --output-bam option")
     else:
         out_name = "-"
 
@@ -322,7 +324,8 @@ def main(argv=None):
         for ix, read_group in enumerate(reads):
             for read in read_group:
                 if outfile:
-                    # need to add the 'UG' tag here
+                    # Add the 'UG' tag to the read
+                    read.tags += [('UG', unique_id)]
                     outfile.write(read)
 
                 if options.tsv:
