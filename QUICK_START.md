@@ -14,7 +14,10 @@ UMI-Tools quick start guide
     + [Other options](#other-options)
 
 The following steps will guide you through a short example of how to
-use the `UMI-tools` package to process data with UMIs added to them.
+use the `UMI-tools` package to process data with UMIs added to them. The
+data used comes from one of the control replicates from [Mueller-Mcnicoll et al, 
+*Genes Dev* (2016) 30: 553](http://genesdev.cshlp.org/content/30/5/553). We
+have adaptor trimmed and filtered the data to reduce its size.
 
 The general pipeline is:
 
@@ -162,19 +165,24 @@ The content of this file after running the above will look something like:
 
 |directional-adjacency|directional-adjacency_null|edit_distance|unique|unique_null|
 |---------------------|--------------------------|-------------|------|-----------|
-|18313                |18313                     |Single_UMI   |15910 |15910      |
-|0                    |7                         |0            |0     |4          |
-|3                    |19                        |1            |1846  |45         |
-|366                  |166                       |2            |976   |287        |
-|711                  |547                       |3            |937   |1023       |
-|1975                 |2186                      |4            |1906  |3498       |
-|513                  |643                       |5            |306   |1114       |
-|0                    |0                         |6            |0     |0          |
+|10465                |10465                     |Single_UMI   |8976  |8976       |
+|0                    |1                         |0            |0     |2          |
+|2                    |8                         |1            |1167  |33         |
+|164                  |73                        |2            |496   |183        |
+|211                  |258                       |3            |281   |566        |
+|700                  |916                       |4            |730   |1663       |
+|395                  |320                       |5            |317   |617        |
+|89                   |4                         |6            |59    |5          |
+|21                   |2                         |7            |21    |2          |
+|0                    |0                         |8            |0     |0          |
++---------------------+--------------------------+-------------+------+-----------+
+
+
 
 The first two columns show the distribution of average edit distances
 between UMIs found at a single base in the genome after deduplication
 with the directional-adjacency method (the default). Thus in the third
-line we see that there are 3 bases in the genome where the average
+line we see that there are 2 bases in the genome where the average
 edit distance between the UMIs found at that base is 1. The second
 column is what we would expect to see if UMIs were randomly
 distributed between mapping locations (taking into account any biases
@@ -182,9 +190,9 @@ in the overall usage of particular UMI sequences). The last two
 columns the same, but for the naive `unique` deduplication method
 where every UMI is assumed to represent an independent molecule in the
 biological sample. Looking at the third row, we see that there are
-1846 positions where we see that the average edit distance between
+11167 positions where we see that the average edit distance between
 UMIs is 1, where as in the random null (in the final column) we would
-only expect to see 45 such bases.
+only expect to see 33 such bases.
 
 The statistics options signficantly reduce the speed at which
 deduplication is performed and increase the memory usage. If time or
