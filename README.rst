@@ -1,3 +1,7 @@
+.. image:: https://cloud.githubusercontent.com/assets/6096414/19521726/a4dea98e-960c-11e6-806a-a18ff04a391e.png
+ 
+
+
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
@@ -45,11 +49,14 @@ Enter repository and run:
 
    $ python setup.py install
 
+For more detail see `INSTALL.rst <INSTALL.rst>`_
 
 Help
 ----- 
 
-To get help on umi_tools run
+See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
+
+To get detailed help on umi_tools run
 
 .. code:: bash
 

@@ -2,31 +2,9 @@ import sys
 import os
 import glob
 
-try:
-    import Cython
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires cython to "
-        "be installed before running setup.py (pip install cython)")
-
-try:
-    import pysam
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires pysam to "
-        "be installed before running setup.py (pip install pysam)")
-
-########################################################################
-########################################################################
-# Import setuptools
-# Use existing setuptools, otherwise try ez_setup.
-
-try:
-    import setuptools
-except ImportError:
-    raise ImportError(
-        "UMI-tools requires setuptools"
-        "be installed before running setup.py (pip install setuptools)")
+from ez_setup import use_setuptools
+use_setuptools()
+import setuptools
 
 from setuptools import setup, find_packages, Extension
 
@@ -34,9 +12,8 @@ from distutils.version import LooseVersion
 if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
     print ("Version detected:", LooseVersion(setuptools.__version__))
     raise ImportError(
-        "UMI-tools requires setuptools 1.1 higher")
+        "umi_tools requires setuptools 1.1 higher")
 
-from Cython.Build import cythonize
 ########################################################################
 ########################################################################
 # collect umi_tools version
@@ -53,7 +30,7 @@ version = version.__version__
 major, minor1, minor2, s, tmp = sys.version_info
 
 if (major == 2 and minor1 < 7) or major < 2:
-    raise SystemExit("""UMI-tools requires Python 2.7 or later.""")
+    raise SystemExit("""umi_tools requires Python 2.7 or later.""")
 
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
@@ -69,8 +46,36 @@ install_requires = [
     "cython>=0.19",
     "numpy>=1.7",
     "pandas>=0.12.0",
-    "pysam>=0.8.4",
     "future"]
+
+# This is a hack. When Pysam is installed from source, the recorded
+# version is 0.2.3, even though a more recent version is actaully
+# installed. In the following, if pysam is not detected, pysam will be
+# install, presumably this will be the lastest version. If pysam is
+# present detect its version with pysam.__version__.  The only problem
+# with this is that if pysam is present, but out of date, the system
+# will not recognise the update
+
+try:
+    import pysam
+    if LooseVersion(pysam.__version__) < LooseVersion('0.8.4'):
+        print """
+        
+    ######################################################################
+    #
+    # WARNING:
+    # Pysam is installed, but not recent enough. We will update pysam, but
+    # the system may fail to detect that pysam has been updated. If this
+    # happens please run setup again"
+    #
+    ######################################################################
+
+        """
+
+        install_requires.append("pysam>=0.8.4")
+
+except ImportError:
+    install_requires.append("pysam")
 
 ##########################################################
 ##########################################################
@@ -92,13 +97,13 @@ setup(
     # package information
     name='umi_tools',
     version=version,
-    description='umi-tools: Tools for UMI analyses',
+    description='umi_tools: Tools for UMI analyses',
     author='Ian Sudbery',
     author_email='i.sudbery@sheffield.ac.uk',
     license="MIT",
     platforms=["any"],
     keywords="computational genomics",
-    long_description='umi-tools: Tools for UMI analyses',
+    long_description='umi_tools: Tools for UMI analyses',
     classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/CGATOxford/UMI-tools",
     download_url="https://github.com/CGATOxford/UMI-tools/tarball/%s" % version,
@@ -107,9 +112,10 @@ setup(
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
+    setup_requires=['cython'],
     install_requires=install_requires,
     # extension modules
-    ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
+    # ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },
