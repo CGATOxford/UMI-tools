@@ -10,35 +10,74 @@ dedup.py - Deduplicate reads that are coded with a UMI
 Purpose
 -------
 
-The purpose of this script is to deduplicate BAM files based
+The purpose of this command is to deduplicate BAM files based
 on the first mapping co-ordinate and the UMI attached to the read.
 It is assumed that the FASTQ files were processed with extract_umi.py
-before mapping and thus the UMI is the last word of the read name.
+before mapping and thus the UMI is the last word of the read name. e.g:
+
+@HISEQ:87:00000000_AATT
+
+where AATT is the UMI sequeuence.
 
 By default, reads are considered identical if they have the same start
-co-ordinate are on the same strand and have the same UMI. Optionally,
-splicing status can be considered and reads with similar UMIs can be
-removed to account for errors in sequencing (see below).
+coordinate, are on the same strand, and have the same UMI. Optionally,
+splicing status can be considered (see below).
 
 The start postion of a read is considered to be the start of its alignment
 minus any soft clipped bases. A read aligned at position 500 with
 cigar 2S98M will be assumed to start at postion 498.
 
+Methods
+-------
+
+dedup can be run with multiple methods to identify group of reads with
+the same (or similar) UMI(s), from which a single read is
+returned. All methods start by identifying the reads with the same
+mapping position.
+
+The simpliest methods, unique and percentile, group reads with
+the exact same UMI. The network-based methods, cluster, adjacency and
+directional, build networks where nodes are UMIs and edges connect UMIs
+with an edit distance <= threshold (usually 1). The groups of reads
+are then defined from the network in a method-specific manner. For all
+the network-based methods, a single read is returned with the most
+abundant UMI in each read group. For details about how the read is
+selected, see 'Selecting the representative read' below.
+
+  "unique"
+      Reads group share the exact same UMI
+
+  "percentile"
+      Reads group share the exact same UMI. UMIs with counts < 1% of the
+      median counts for UMIs at the same position are ignored.
+
+  "cluster"
+      Identify clusters of connected UMIs (based on hamming distance
+      threshold). Each network is a read group
+
+  "adjacency"
+      Cluster UMIs as above. For each cluster, select and remove the
+      node(UMI) with the highest counts and remove all connected
+      nodes. Repeat with remaining nodes until no nodes remain. Each
+      removal step defines a read group.
+
+  "directional"
+      Identify clusters of connected UMIs (based on hamming distance
+      threshold) and umi A counts >= (2* umi B counts) - 1. Each
+      network is a read group.
+
+Selecting the representative read
+---------------------------------
+
 The following criteria are applied to select the read that will be retained
 from a group of duplicated reads:
 
-1. The read with the lowest number of hits
+1. The read with the lowest number of mapping coordinates (see
+--multimapping-detection-method option)
 2. The read with the highest mapping quality
 
 Otherwise a read is chosen at random.
 
-The input file must be sorted.
-
-.. note::
-   In order to get a valid sam/bam file you need to redirect logging
-   information or turn it off logging via -v 0. You can redirect the
-   logging to a file with -L <logfile> or use the --log2stderr option
-   to send the logging to stderr.
 
 Options
 -------
@@ -49,37 +88,26 @@ Options
 
       Options are:
 
-      "unique"
-          Return all unique UMIs
+      - "unique"
 
-      "percentile"
-          Return all unique UMIs excluding UMIs with counts
-          < 1% of the median counts per mapping position
+      - "percentile"
 
-      "cluster"
-          Identify clusters of connected UMIs (based on hamming distance
-          threshold). Return the UMIs with the highest counts per cluster
+      - "cluster"
 
-      "adjacency"
-          Cluster UMIs as above. For each cluster, select and remove
-          the node(UMI) with the highest counts and remove all
-          connected nodes. Repeat with remaining nodes until no nodes
-          remain. Return all selected nodes(UMIs)
+      - "adjacency"
 
-      "directional-adjacency"
-          Identify clusters of connected UMIs (based on hamming distance
-          threshold) and umi A counts >= (2* umi B counts) - 1. Return the
-          UMIs with the highest counts per cluster
+      - "directional-adjacency"
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
-       increased. The default value of 1 works best in all situations
-       tested to date.
+       increased. The default value of 1 works best unless the UMI is
+       very long (>14bp)
 
 --paired
-       Use the template length as a criteria when deduping and output both read
-       pairs
+       BAM is paired end - output both read pairs. This will also
+       force the Use of the template length to determine reads with
+       the same mapping coordinates.
 
 --spliced-is-unique
        Causes two reads that start in the same position on the same
@@ -151,15 +179,26 @@ Options
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
       in BAM format. Use these options to specify the use of SAM format for
-      inputs or outputs. SAM input assumed if input from stdin.
+      inputs or outputs.
+
+-I    input file name. The input file must be sorted and indexed.
+
+-S    output file name.
+
+-L    log file name.
+
 
 Usage
 -----
 
-    python dedup_umi.py -I infile.bam -S deduped.bam
+    python dedup_umi.py -I infile.bam -S deduped.bam -L dedup.log
 
-Command line options
---------------------
+
+.. note::
+   In order to get a valid sam/bam file you need to redirect logging
+   information or turn it off logging via -v 0. You can redirect the
+   logging to a file with -L <logfile> or use the --log2stderr option
+   to send the logging to stderr.
 
 '''
 import sys
@@ -176,7 +215,6 @@ import pysam
 import pandas as pd
 import numpy as np
 
-# allows script to be run directly for profiling
 try:
     import umi_tools.Utilities as U
 except:
@@ -185,11 +223,11 @@ except:
 import pyximport
 pyximport.install(build_in_temp=False)
 
-# allows script to be run directly for profiling
 try:
     from umi_tools._dedup_umi import edit_distance
 except:
     from _dedup_umi import edit_distance
+
 
 def breadth_first_search(node, adj_list):
     searched = set()
@@ -831,40 +869,43 @@ def main(argv=None):
                             usage=globals()["__doc__"])
 
     parser.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                      help="Input file is in sam format", default=False)
+                      help="Input file is in sam format [default=%default]",
+                      default=False)
     parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                      help="Output alignments in sam format", default=False)
+                      help="Output alignments in sam format [default=%default]",
+                      default=False)
     parser.add_option("--ignore-umi", dest="ignore_umi", action="store_true",
                       help="Ignore UMI and dedup only on position",
                       default=False)
-    parser.add_option("--subset", dest="subset", type="string",
+    parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
-                      default=1.1)
+                      default=None)
     parser.add_option("--spliced-is-unique", dest="spliced",
                       action="store_true",
                       help="Treat a spliced read as different to an unspliced"
-                           " one",
+                           " one [default=%default]",
                       default=False)
     parser.add_option("--soft-clip-threshold", dest="soft",
                       type="float",
                       help="number of bases clipped from 5' end before"
-                           "read os counted as spliced",
+                           "read is counted as spliced [default=%default]",
                       default=4)
     parser.add_option("--edit-distance-threshold", dest="threshold",
                       type="int",
+                      default=1,
                       help="Edit distance theshold at which to join two UMIs"
-                           "when clustering", default=1)
+                           "when clustering. [default=%default]")
     parser.add_option("--chrom", dest="chrom", type="string",
                       help="Restrict to one chromosome",
                       default=None)
     parser.add_option("--paired", dest="paired", action="store_true",
                       default=False,
-                      help="Use second-in-pair position when deduping")
+                      help="paired BAM. [default=%default]")
     parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional-adjacency",
+                      choices=("adjacency", "directional",
                                "percentile", "unique", "cluster"),
-                      default="directional-adjacency",
-                      help="method to use for umi deduping")
+                      default="directional",
+                      help="method to use for umi deduping [default=%default]")
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=False,
                       help="Specify location to output stats")
@@ -886,15 +927,17 @@ def main(argv=None):
                       help=("Some aligners identify multimapping using bam "
                             "tags. Setting this option to NH, X0 or XT will "
                             "use these tags when selecting the best read "
-                            "amongst reads with the same position and umi"))
+                            "amongst reads with the same position and umi "
+                            "[default=%default]"))
     parser.add_option("--mapping-quality", dest="mapping_quality",
                       type="int",
-                      help="Minimum mapping quality for a read to be retained",
+                      help="Minimum mapping quality for a read to be retained"
+                      " [default=%default]",
                       default=0)
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"
-                            "to identify possible duplicates"))
+                            "to identify possible duplicates [default=%default]"))
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -973,7 +1016,7 @@ def main(argv=None):
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
-                              subset=float(options.subset),
+                              subset=options.subset,
                               quality_threshold=options.mapping_quality,
                               paired=options.paired,
                               chrom=options.chrom,
