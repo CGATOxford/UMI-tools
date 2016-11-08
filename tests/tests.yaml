@@ -1,0 +1,35 @@
+# filtering:
+#     stdin: counts_small.tsv.gz
+#     outputs: [stdout]
+#     references: [counts_filtered.tsv]
+#     options: --design-tsv-file=<DIR>/design.tsv --filter-min-counts-per-row=1000 --filter-min-counts-per-sample=400000 --filter-percentile-rowsums=25 -v 0
+
+# spikeRowsFoldChange:
+#     stdin: counts_small.tsv.gz
+#     outputs: [stdout]
+#     # even with random seed, permutations differ between py2 and py3
+#     skip_python: 2
+#     references: [counts_rowspikes_logfold.tsv]
+#     options: --design-tsv-file=<DIR>/design2.tsv --method="spike" --spike-type="row" --spike-maximum=1 --spike-change-bin-width=1 --spike-change-bin-max=10 --spike-initial-bin-max=10 --spike-initial-bin-width=1 --random-seed=1234567890 -v0 --spike-difference-method=logfold
+
+# spikeRowsRelative:
+#     stdin: counts_small.tsv.gz
+#     outputs: [stdout]
+#     # even with random seed, permutations differ between py2 and py3
+#     skip_python: 2
+#     references: [counts_rowspikes_relative.tsv]
+#     options: --design-tsv-file=<DIR>/design2.tsv --method="spike" --spike-type="row" --spike-maximum=1 --spike-change-bin-width=100 --spike-change-bin-max=1000 --spike-initial-bin-max=200 --spike-initial-bin-width=10 --random-seed=1234567890 -v0 --spike-difference-method=relative
+
+# # For some reason these tests cause failures on travis, but they
+# # work locally in CGAT (error = files are not the same)
+# #normalise_deseq_size_factors:
+# #    stdin: counts_small.tsv.gz
+# #    outputs: [stdout]
+# #    references: [normed_deseq_size_factors.tsv]
+# #    options: --method=normalize --normalization-method=deseq-size-factors -v 0
+
+# #normalise_million_counts:
+# #    stdin: counts_small.tsv.gz
+# #    outputs: [stdout]
+# #    references: [normed_million_counts.tsv]
+# #    options: --method=normalize --normalization-method=million-counts -v 0
