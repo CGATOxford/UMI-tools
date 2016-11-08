@@ -97,7 +97,7 @@ def check_script(test_name,
     stdout = os.path.join(tmpdir, 'stdout')
 
     if stdin:
-        stdin = '--stdin=' % (os.path.abspath(working_dir), stdin)
+        stdin = '--stdin=%s' % (os.path.join(os.path.abspath(working_dir), stdin))
     else:
         stdin = ""
 
@@ -113,7 +113,7 @@ def check_script(test_name,
 
     # use /bin/bash in order to enable "<( )" syntax in shells
     statement = ("/bin/bash -c "
-                 "'umi_tools %(stdin)s %(options)s > %(stdout)s'") % locals()
+                 "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
 
     process = subprocess.Popen(statement,
                                shell=True,

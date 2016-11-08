@@ -1,8 +1,15 @@
-# filtering:
-#     stdin: counts_small.tsv.gz
-#     outputs: [stdout]
-#     references: [counts_filtered.tsv]
-#     options: --design-tsv-file=<DIR>/design.tsv --filter-min-counts-per-row=1000 --filter-min-counts-per-sample=400000 --filter-percentile-rowsums=25 -v 0
+extract_basic:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_basic.fastq]
+      options: extract -I slim.fastq.gz --bc-pattern=NNNNNNNNN --log=processed_basic.log
+
+extract_basic:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed.fastq]
+      options: extract -I slim.fastq.gz --bc-pattern=NNNNNNNNN --log=processed.log
+
 
 # spikeRowsFoldChange:
 #     stdin: counts_small.tsv.gz
