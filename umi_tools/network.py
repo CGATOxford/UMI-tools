@@ -23,7 +23,7 @@ except:
     from _dedup_umi import edit_distance
 
 
-def breadth_first_search(node, adj_list):
+def breadth_first_search(node, adj_list, removed):
     searched = set()
     found = set()
     queue = set()
@@ -32,8 +32,17 @@ def breadth_first_search(node, adj_list):
 
     while len(queue) > 0:
         node = (list(queue))[0]
-        found.update(adj_list[node])
-        queue.update(adj_list[node])
+        # Some nodes may have been removed in a previous search
+        # through the network. If so, we don't want to include them in
+        # multiple connected components. Quicker to check with list of
+        # previously removed nodes than to re-generate the adj_list
+        # for each step
+        if node not in removed:
+            for connected_node in adj_list[node]:
+                if connected_node not in removed:
+                    found.update((connected_node,))
+                    queue.update((connected_node,))
+
         searched.update((node,))
         queue.difference_update(searched)
 
@@ -152,7 +161,7 @@ class ReadClusterer:
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
-                component = breadth_first_search(node, graph)
+                component = breadth_first_search(node, graph, found)
                 found.extend(component)
                 components.append(component)
 
