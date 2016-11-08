@@ -520,7 +520,7 @@ class ClusterAndReducer:
 
         return reads, final_umis, umi_counts
 
-    def __init__(self, cluster_method="directional-adjacency"):
+    def __init__(self, cluster_method="directional"):
         ''' select the required class methods for the cluster_method'''
 
         if cluster_method == "adjacency":
@@ -529,7 +529,7 @@ class ClusterAndReducer:
             self.get_best = self._get_best_min_account
             self.reduce_clusters = self._reduce_clusters_multiple
 
-        elif cluster_method == "directional-adjacency":
+        elif cluster_method == "directional":
             self.get_adj_list = self._get_adj_list_directional_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
