@@ -96,7 +96,7 @@ Options
 
       - "adjacency"
 
-      - "directional-adjacency"
+      - "directional"
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
