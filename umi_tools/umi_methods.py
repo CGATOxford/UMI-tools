@@ -67,20 +67,20 @@ class TwoPassPairWriter:
         self.read1s = set()
         self.chrom = None
 
-    def write(self, read):
+    def write(self, read, add_tag=False, unique_id=None, umi=None):
         '''Check if chromosome has changed since last time. If it has, scan
         for mates. Write the read to outfile and save the identity for paired
         end retrieval'''
 
         if not self.chrom == read.reference_id:
-            self.write_mates()
+            self.write_mates(add_tag, unique_id, umi)
             self.chrom = read.reference_id
 
         key = read.query_name, read.next_reference_id, read.next_reference_start
         self.read1s.add(key)
         self.outfile.write(read)
 
-    def write_mates(self):
+    def write_mates(self, add_tag=False, unique_id=None, umi=None):
         '''Scan the current chormosome for matches to any of the reads stored
         in the read1s buffer'''
 
@@ -94,6 +94,9 @@ class TwoPassPairWriter:
 
             key = read.query_name, read.reference_id, read.reference_start
             if key in self.read1s:
+                if add_tag:
+                    read.tags += [('UG', unique_id)]
+                    read.tags += [('FU', umi)]
                 self.outfile.write(read)
                 self.read1s.remove(key)
         U.debug("%i mates remaining" % len(self.read1s))

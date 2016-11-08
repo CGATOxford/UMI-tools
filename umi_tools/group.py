@@ -173,14 +173,6 @@ except:
     import network
     import umi_methods
 
-import pyximport
-pyximport.install(build_in_temp=False)
-
-try:
-    from umi_tools._dedup_umi import edit_distance
-except:
-    from _dedup_umi import edit_distance
-
 
 def main(argv=None):
     """script main.
@@ -246,7 +238,6 @@ def main(argv=None):
                       default=False,
                       help=("output a bam file with read groups tagged using the UG tag"
                             "[default=%default]"))
-
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -331,16 +322,23 @@ def main(argv=None):
                         # Add the 'UG' tag to the read
                         read.tags += [('UG', unique_id)]
                         read.tags += [('FU', umis[ix])]
-                        outfile.write(read)
+
+                        if options.paired:
+                            # if paired, we need to supply the tags to
+                            # add to the paired read
+                            outfile.write(read, add_tag=True,
+                                          unique_id=unique_id, umi=umis[ix])
+                        else:
+                            outfile.write(read)
 
                     if options.tsv:
-                        mapping_outfile.write("%s\t%s\t%s\t%s\t%i\t%s\t%i\n" % (
+                        mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
                             umi_methods.get_umi(read),
-                            umi_counts[ix], umis[ix], unique_id))
+                            umi_counts[ix], umis[ix], unique_id))))
 
-                nOutput += 1
+                    nOutput += 1
 
             unique_id += 1
 
@@ -351,8 +349,8 @@ def main(argv=None):
         mapping_outfile.close()
 
     # write footer and output benchmark information.
-    U.info("Number of reads in: %i, Number of reads out: %i" %
-           (nInput, nOutput))
+    U.info("Number of reads in: %i, Number of reads out: %i, Number of groups: %i" %
+           (nInput, nOutput, unique_id))
     U.Stop()
 
 if __name__ == "__main__":
