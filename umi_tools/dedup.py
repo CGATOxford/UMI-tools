@@ -950,6 +950,9 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
+    if options.random_seed:
+        np.random.seed(options.random_seed)
+
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()

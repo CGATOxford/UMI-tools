@@ -23,7 +23,6 @@ import hashlib
 import sys
 import platform
 
-
 from nose.tools import ok_
 
 PYTHON_VERSION = platform.python_version()
