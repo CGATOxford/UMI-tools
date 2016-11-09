@@ -202,6 +202,9 @@ def get_bundles(insam, read_events,
         else:
             read_events['Input Reads'] += 1
 
+        if paired:
+            read_events['Paired Reads'] += 1
+
         if subset:
             if random.random() >= subset:
                 read_events['Randomly excluded'] += 1
