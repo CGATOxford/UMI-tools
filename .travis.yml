@@ -19,8 +19,6 @@ install:
 before_script:
   - pip install nose
   - pip install pep8
-  - pip install yaml
-
 
 script: 
   - umi_tools --help
