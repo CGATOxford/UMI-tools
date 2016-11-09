@@ -34,18 +34,20 @@ group can be run with multiple methods to identify group of reads with
 the same (or similar) UMI(s). All methods start by identifying the
 reads with the same mapping position.
 
-The simpliest methods, unique and percentile, group reads with
+The simpliest method, unique, groups reads with
 the exact same UMI. The network-based methods, cluster, adjacency and
 directional, build networks where nodes are UMIs and edges connect UMIs
 with an edit distance <= threshold (usually 1). The groups of reads
 are then defined from the network in a method-specific manner.
 
+Note that the percentile method is not available in group as when
+applied in deduplication, this method does not group similar UMIs as
+per the network methods. Instead it applies a threshold for inclusion
+of the UMI in the output. Excluded UMIs are not assigned to a "true"
+UMI.
+
   "unique"
       Reads group share the exact same UMI
-
-  "percentile"
-      Reads group share the exact same UMI. UMIs with counts < 1% of the
-      median counts for UMIs at the same position are ignored.
 
   "cluster"
       Identify clusters of connected UMIs (based on hamming distance
@@ -105,8 +107,6 @@ Options
       - "cluster"
 
       - "adjacency"
-
-      - "directional"
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -190,6 +190,7 @@ from future.utils import iteritems
 from builtins import dict
 
 import pysam
+import numpy as np
 
 try:
     import umi_tools.Utilities as U
@@ -243,7 +244,7 @@ def main(argv=None):
                       help="paired BAM. [default=%default]")
     parser.add_option("--method", dest="method", type="choice",
                       choices=("adjacency", "directional",
-                               "percentile", "unique", "cluster"),
+                               "unique", "cluster"),
                       default="directional",
                       help="method to use for umi deduping [default=%default]")
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
@@ -345,72 +346,57 @@ def main(argv=None):
             stats=True,
             deduplicate=False)
 
+        # if using adjacency or unique methods, we need to
+        # find the groups of UMIs with the clusters. For unique this
+        # is every unique UMI.  For adjacency we need to identify the
+        # sub-clusters which represent the UMI groups.
+        # For both methods we therefore need to redefine the clusters object.
+
+        if options.method == "unique":
+
+            if len(clusters) == 1:
+                groups = [set(clusters)]
+            else:
+                groups = [set([x]) for x in clusters]
+
+            clusters = groups
+
         if options.method == "adjacency":
-            # if using adjacency method, need to identify the
-            # sub-clusters which represent the UMI groups and get the
-            # counts per group
 
             def get_best(cluster, adj_list, counts):
                 ''' return the minimum UMI groups need to account for
                 adjacency network'''
 
                 if len(cluster) == 1:
-                    return [cluster], counts, list(cluster)
+                    return [cluster]
 
                 groups = []
-                new_counts = {}
-                new_umis = []
 
                 sorted_nodes = sorted(cluster, key=lambda x: counts[x],
                                       reverse=True)
                 removed = set()
 
                 for i in range(len(sorted_nodes) - 1):
-                    umi = sorted_nodes[i+1]
-                    new_umis.append(umi)
                     new_group = [umi2 for umi2 in adj_list[umi]
                                  if umi2 not in removed]
                     groups.append(set(new_group))
                     removed.update(set(new_group))
 
-                    new_count = 0
-                    new_count += counts[umi]
-                    new_count += sum([counts[umi2] for umi2 in adj_list[umi]
-                                      if umi2 not in removed])
-
-                    new_counts[umi] = new_count
-
                     if len(network.remove_umis(
                             adj_list, cluster, sorted_nodes[:i+1])) == 0:
-                        return groups, new_counts, new_umis
+                        return groups
 
             final_groups = []
-            final_counts = {}
-            final_umis = []
 
             for cluster in clusters:
-                new_groups, new_counts, new_umis = get_best(
-                    cluster, adj_list, counts)
-                final_groups.extend(new_groups)
-                final_umis.extend(new_umis)
-
-                for key, value in new_counts.iteritems():
-                    final_counts[key] = value
+                final_groups.extend(get_best(cluster, adj_list, counts))
 
             clusters = final_groups
-            counts = final_counts
-            umis = final_umis
 
-        # otherwise we can proceed straight to writing out
         for ix, umi_group in enumerate(clusters):
             for umi in umi_group:
                 reads = bundle[umi]['read']
                 for read in reads:
-                    #if read.qname == "SRR2057595.9990026_CACAC":
-                    #    for c in clusters:
-                    #        print c, "CACAC" in c
-                    #    print counts, umis
-                    #    raise ValueError()
                     if outfile:
                         if options.paired:
                             # if paired, we need to supply the tags to
