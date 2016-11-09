@@ -200,32 +200,32 @@ def get_bundles(insam, read_events,
         if read.is_read2:
             continue
         else:
-            read_events['input_reads'] += 1
+            read_events['Input Reads'] += 1
 
         if subset:
             if random.random() >= subset:
-                read_events['randomly excluded'] += 1
+                read_events['Randomly excluded'] += 1
                 continue
 
         if quality_threshold:
             if read.mapq < quality_threshold:
-                read_events['< mapq threshold'] += 1
+                read_events['< MAPQ threshold'] += 1
                 continue
 
         if read.is_unmapped:
             if paired:
                 if read.mate_is_unmapped:
-                    read_events['both unmapped'] += 1
+                    read_events['Both unmapped'] += 1
                 else:
-                    read_events['read 1 unmapped'] += 1
+                    read_events['Read 1 unmapped'] += 1
             else:
-                read_events['single end unmapped'] += 1
+                read_events['Single end unmapped'] += 1
 
             continue
 
         if read.mate_is_unmapped and paired:
             if not read.is_unmapped:
-                read_events['read 2 unmapped'] += 1
+                read_events['Read 2 unmapped'] += 1
             continue
 
 

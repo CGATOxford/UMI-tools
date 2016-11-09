@@ -440,8 +440,10 @@ def main(argv=None):
         mapping_outfile.close()
 
     # write footer and output benchmark information.
-    U.info("%s" % ", ".join(
+    U.info("Reads: %s" % ", ".join(
         ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+    U.info("Number of reads out: %i, Number of groups: %i" %
+           (nOutput, unique_id))
     U.Stop()
 
 if __name__ == "__main__":

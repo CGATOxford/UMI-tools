@@ -602,6 +602,7 @@ def main(argv=None):
 
     U.info("%s" % ", ".join(
         ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+    U.info("Number of reads out: %i" % nOutput)
 
     U.Stop()
 
