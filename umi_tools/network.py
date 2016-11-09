@@ -315,4 +315,4 @@ class ReadClusterer:
         if deduplicate:
             return reads, final_umis, umi_counts, topologies, nodes
         else:
-            return clusters, final_umis, umi_counts, topologies, nodes
+            return clusters, adj_list, counts, final_umis, umi_counts, topologies, nodes

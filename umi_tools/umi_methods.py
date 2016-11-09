@@ -61,27 +61,37 @@ class TwoPassPairWriter:
     This means that if close() is not called, at least as contigs
     worth of mates will be missing. '''
 
-    def __init__(self, infile, outfile, csv=None):
+    def __init__(self, infile, outfile, tags=False):
         self.infile = infile
         self.outfile = outfile
         self.read1s = set()
         self.chrom = None
+        if tags:
+            self.read2tags = {}
+        else:
+            self.read2tags = False
 
-    def write(self, read, add_tag=False, unique_id=None, umi=None):
+    def write(self, read, unique_id=None, umi=None):
         '''Check if chromosome has changed since last time. If it has, scan
         for mates. Write the read to outfile and save the identity for paired
         end retrieval'''
 
         if not self.chrom == read.reference_id:
-            self.write_mates(add_tag, unique_id, umi)
+            self.write_mates()
             self.chrom = read.reference_id
 
         key = read.query_name, read.next_reference_id, read.next_reference_start
         self.read1s.add(key)
+
+        if umi:
+            self.read2tags[key] = (unique_id, umi)
+            read.tags += [('UG', unique_id)]
+            read.tags += [('FU', umi)]
+
         self.outfile.write(read)
 
-    def write_mates(self, add_tag=False, unique_id=None, umi=None):
-        '''Scan the current chormosome for matches to any of the reads stored
+    def write_mates(self):
+        '''Scan the current chromosome for matches to any of the reads stored
         in the read1s buffer'''
 
         if self.chrom is not None:
@@ -94,11 +104,16 @@ class TwoPassPairWriter:
 
             key = read.query_name, read.reference_id, read.reference_start
             if key in self.read1s:
-                if add_tag:
+                if self.read2tags:
+                    unique_id, umi = self.read2tags[key]
+                    self.read2tags.pop(key)
+
                     read.tags += [('UG', unique_id)]
                     read.tags += [('FU', umi)]
+
                 self.outfile.write(read)
                 self.read1s.remove(key)
+
         U.debug("%i mates remaining" % len(self.read1s))
 
     def close(self):
@@ -113,6 +128,11 @@ class TwoPassPairWriter:
         for name, chrom, pos in self.read1s:
             for read in self.infile.fetch(start=pos, end=pos+1, tid=chrom):
                 if (read.query_name, read.pos) == (name, pos):
+                    if self.read2tags:
+                        unique_id, umi = self.read2tags[name, chrom, pos]
+                        read.tags += [('UG', unique_id)]
+                        read.tags += [('FU', umi)]
+
                     self.outfile.write(read)
                     found += 1
                     break
@@ -149,7 +169,8 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
+def get_bundles(insam, read_events,
+                ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
                 detection_method="MAPQ", all_reads=False):
@@ -167,6 +188,8 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
     read_counts = collections.defaultdict(
         lambda: collections.defaultdict(dict))
 
+    read_events = collections.Counter()
+
     if chrom:
         inreads = insam.fetch(reference=chrom)
     else:
@@ -174,22 +197,37 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
 
     for read in inreads:
 
+        if read.is_read2:
+            continue
+        else:
+            read_events['input_reads'] += 1
+
         if subset:
             if random.random() >= subset:
+                read_events['randomly excluded'] += 1
                 continue
 
         if quality_threshold:
             if read.mapq < quality_threshold:
+                read_events['< mapq threshold'] += 1
                 continue
 
         if read.is_unmapped:
+            if paired:
+                if read.mate_is_unmapped:
+                    read_events['both unmapped'] += 1
+                else:
+                    read_events['read 1 unmapped'] += 1
+            else:
+                read_events['single end unmapped'] += 1
+
             continue
 
         if read.mate_is_unmapped and paired:
+            if not read.is_unmapped:
+                read_events['read 2 unmapped'] += 1
             continue
 
-        if read.is_read2:
-            continue
 
         # TS - some methods require deduping on a per contig
         # (gene for transcriptome) basis, e.g Soumillon et al 2014
@@ -204,7 +242,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
 
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle
+                        yield bundle, read_events
                     del reads_dict[p]
                     del read_counts[p]
 
@@ -226,7 +264,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
 
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle
+                        yield bundle, read_events
                     del reads_dict[p]
                     del read_counts[p]
 
@@ -302,8 +340,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
     # yield remaining bundles
     for p in reads_dict:
         for bundle in reads_dict[p].values():
-            yield bundle
-
+            yield bundle, read_events
 
 class random_read_generator:
     ''' class to generate umis at random based on the

@@ -428,8 +428,11 @@ def main(argv=None):
         read_gn = umi_methods.random_read_generator(
             infile.filename, chrom=options.chrom)
 
-    for bundle in umi_methods.get_bundles(
+    read_events = collections.Counter()
+
+    for bundle, read_events in umi_methods.get_bundles(
             infile,
+            read_events,
             ignore_umi=options.ignore_umi,
             subset=options.subset,
             quality_threshold=options.mapping_quality,
@@ -597,8 +600,9 @@ def main(argv=None):
 
     # write footer and output benchmark information.
 
-    U.info("Number of reads in: %i, Number of reads out: %i" %
-           (nInput, nOutput))
+    U.info("%s" % ", ".join(
+        ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+
     U.Stop()
 
 if __name__ == "__main__":

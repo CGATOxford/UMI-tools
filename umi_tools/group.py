@@ -62,6 +62,32 @@ are then defined from the network in a method-specific manner.
       threshold) and umi A counts >= (2* umi B counts) - 1. Each
       network is a read group.
 
+The group command can be used to create two types of outfile: a tagged
+BAM or a flatfile describing the read groups
+
+To generate the tagged-BAM file, use the option --output-bam and
+provide a filename with the -S option. Alternatively, if you do not
+provide a filename, the bam file will be outputted to the stdout. If
+you have provided the --log/-L option to send the logging output
+elsewhere, you can pipe the output from the group command directly to
+e.g samtools sort like so:
+
+umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam 
+--log=group.log --paired | samtools sort - -o grouped_sorted.bam
+
+The tagged-BAM file will have two tagged per read:
+UG = Unique_id. 0-indexed unique id number for each group of reads
+     with the same genomic position and UMI or UMIs inferred to be
+     from the same true UMI + errors
+FU = Final UMI. The inferred true UMI for the group
+
+To generate the flatfile describing the read groups, include the
+--group-out=<filename> option. The columns of the read groups file are:
+
+
+
+
+
 
 Options
 -------
@@ -80,7 +106,7 @@ Options
 
       - "adjacency"
 
-      - "directional-adjacency"
+      - "directional"
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -130,6 +156,12 @@ Options
       in BAM format. Use these options to specify the use of SAM format for
       inputs or outputs.
 
+--group-out=<filename>
+      Output a flatfile describing the read groups
+
+--output-bam
+      Output a tagged bam file to stdout or -S <filename>
+
 -I    input file name. The input file must be sorted and indexed.
 
 -S    output file name.
@@ -140,7 +172,7 @@ Options
 Usage
 -----
 
-    python group -I infile.bam -S grouped.bam -L group.log
+    python group -I infile.bam --output-bam -S grouped.bam -L group.log --
 
 
 .. note::
@@ -151,18 +183,13 @@ Usage
 
 '''
 import sys
-import random
 import collections
-import itertools
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
 from builtins import dict
 
 import pysam
-
-import pandas as pd
-import numpy as np
 
 try:
     import umi_tools.Utilities as U
@@ -271,7 +298,7 @@ def main(argv=None):
     if options.output_bam:
         outfile = pysam.Samfile(out_name, out_mode, template=infile)
         if options.paired:
-            outfile = umi_methods.TwoPassPairWriter(infile, outfile)
+            outfile = umi_methods.TwoPassPairWriter(infile, outfile, tags=True)
     else:
         outfile = None
 
@@ -282,8 +309,11 @@ def main(argv=None):
 
     nInput, nOutput, unique_id = 0, 0, 0
 
-    for bundle in umi_methods.get_bundles(
+    read_events = collections.Counter()
+
+    for bundle, read_events in umi_methods.get_bundles(
             infile,
+            read_events,
             ignore_umi=False,
             subset=False,
             quality_threshold=0,
@@ -308,27 +338,88 @@ def main(argv=None):
         # specified options.method
         processor = network.ReadClusterer(options.method)
 
-        clusters, umis, umi_counts, topologies, nodes = processor(
+        (clusters, adj_list, counts, umis,
+         umi_counts, topologies, nodes) = processor(
             bundle=bundle,
             threshold=options.threshold,
             stats=True,
             deduplicate=False)
 
+        if options.method == "adjacency":
+            # if using adjacency method, need to identify the
+            # sub-clusters which represent the UMI groups and get the
+            # counts per group
+
+            def get_best(cluster, adj_list, counts):
+                ''' return the minimum UMI groups need to account for
+                adjacency network'''
+
+                if len(cluster) == 1:
+                    return [cluster], counts, list(cluster)
+
+                groups = []
+                new_counts = {}
+                new_umis = []
+
+                sorted_nodes = sorted(cluster, key=lambda x: counts[x],
+                                      reverse=True)
+                removed = set()
+
+                for i in range(len(sorted_nodes) - 1):
+                    umi = sorted_nodes[i+1]
+                    new_umis.append(umi)
+                    new_group = [umi2 for umi2 in adj_list[umi]
+                                 if umi2 not in removed]
+                    groups.append(set(new_group))
+                    removed.update(set(new_group))
+
+                    new_count = 0
+                    new_count += counts[umi]
+                    new_count += sum([counts[umi2] for umi2 in adj_list[umi]
+                                      if umi2 not in removed])
+
+                    new_counts[umi] = new_count
+
+                    if len(network.remove_umis(
+                            adj_list, cluster, sorted_nodes[:i+1])) == 0:
+                        return groups, new_counts, new_umis
+
+            final_groups = []
+            final_counts = {}
+            final_umis = []
+
+            for cluster in clusters:
+                new_groups, new_counts, new_umis = get_best(
+                    cluster, adj_list, counts)
+                final_groups.extend(new_groups)
+                final_umis.extend(new_umis)
+
+                for key, value in new_counts.iteritems():
+                    final_counts[key] = value
+
+            clusters = final_groups
+            counts = final_counts
+            umis = final_umis
+
+        # otherwise we can proceed straight to writing out
         for ix, umi_group in enumerate(clusters):
             for umi in umi_group:
                 reads = bundle[umi]['read']
                 for read in reads:
+                    #if read.qname == "SRR2057595.9990026_CACAC":
+                    #    for c in clusters:
+                    #        print c, "CACAC" in c
+                    #    print counts, umis
+                    #    raise ValueError()
                     if outfile:
-                        # Add the 'UG' tag to the read
-                        read.tags += [('UG', unique_id)]
-                        read.tags += [('FU', umis[ix])]
-
                         if options.paired:
                             # if paired, we need to supply the tags to
                             # add to the paired read
-                            outfile.write(read, add_tag=True,
-                                          unique_id=unique_id, umi=umis[ix])
+                            outfile.write(read, unique_id, umis[ix])
                         else:
+                            # Add the 'UG' tag to the read
+                            read.tags += [('UG', unique_id)]
+                            read.tags += [('FU', umis[ix])]
                             outfile.write(read)
 
                     if options.tsv:
@@ -341,7 +432,7 @@ def main(argv=None):
                     nOutput += 1
 
             unique_id += 1
-
+        
     if outfile:
         outfile.close()
 
@@ -349,8 +440,8 @@ def main(argv=None):
         mapping_outfile.close()
 
     # write footer and output benchmark information.
-    U.info("Number of reads in: %i, Number of reads out: %i, Number of groups: %i" %
-           (nInput, nOutput, unique_id))
+    U.info("%s" % ", ".join(
+        ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
     U.Stop()
 
 if __name__ == "__main__":
