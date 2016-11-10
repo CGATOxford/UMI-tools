@@ -74,7 +74,7 @@ you have provided the --log/-L option to send the logging output
 elsewhere, you can pipe the output from the group command directly to
 e.g samtools sort like so:
 
-umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam 
+umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam
 --log=group.log --paired | samtools sort - -o grouped_sorted.bam
 
 The tagged-BAM file will have two tagged per read:

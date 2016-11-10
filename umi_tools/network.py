@@ -81,7 +81,7 @@ class ReadClusterer:
 
     '''
 
-    ######## "get_best" methods ##########
+    # "get_best" methods #
 
     def _get_best_min_account(self, cluster, adj_list, counts):
         ''' return the min UMI(s) need to account for cluster'''
@@ -119,7 +119,7 @@ class ReadClusterer:
 
         return list(cluster)
 
-    ######## "get_adj_list" methods ##########
+    # "get_adj_list" methods #
 
     def _get_adj_list_adjacency(self, umis, counts, threshold):
         ''' identify all umis within hamming distance threshold'''
@@ -142,7 +142,7 @@ class ReadClusterer:
         ''' for methods which don't use a adjacency dictionary'''
         return None
 
-    ######## "get_connected_components" methods ##########
+    # "get_connected_components" methods #
 
     def _get_connected_components_adjacency(self, umis, graph, counts):
         ''' find the connected UMIs within an adjacency dictionary'''
@@ -162,8 +162,8 @@ class ReadClusterer:
         ''' for methods which don't use a adjacency dictionary'''
         return umis
 
+    # "group" methods #
 
-    ######## "group" methods ##########
     def _group_single(self, clusters, adj_list, counts):
         ''' return groups for unique method'''
         if len(clusters) == 1:
@@ -225,7 +225,7 @@ class ReadClusterer:
 
         return groups
 
-    ######## "reduce_clusters" methods ##########
+    # "reduce_clusters" methods #
 
     def _reduce_clusters_multiple(self, bundle, clusters,
                                   adj_list, counts, stats=False):
@@ -346,7 +346,7 @@ class ReadClusterer:
         if not deduplicate:
             groups = self.get_groups(clusters, adj_list, counts)
 
-        return bundle, groups, counts
+            return bundle, groups, counts
 
         reads, final_umis, umi_counts = self.reduce_clusters(
             bundle, clusters, adj_list, counts, stats)

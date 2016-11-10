@@ -231,7 +231,6 @@ def get_bundles(insam, read_events,
                 read_events['Read 2 unmapped'] += 1
             continue
 
-
         # TS - some methods require deduping on a per contig
         # (gene for transcriptome) basis, e.g Soumillon et al 2014
         # to fit in with current workflow, simply assign pos and key as contig
@@ -344,6 +343,7 @@ def get_bundles(insam, read_events,
     for p in reads_dict:
         for bundle in reads_dict[p].values():
             yield bundle, read_events
+
 
 class random_read_generator:
     ''' class to generate umis at random based on the
