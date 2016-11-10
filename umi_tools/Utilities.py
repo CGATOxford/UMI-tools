@@ -255,6 +255,7 @@ import uuid
 
 from builtins import bytes, chr
 
+
 class DefaultOptions:
     stdlog = sys.stdout
     stdout = sys.stdout

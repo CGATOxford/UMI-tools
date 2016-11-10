@@ -103,7 +103,7 @@ Options
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
        increased. The default value of 1 works best unless the UMI is
-       very long (>14bp)
+very long (>14bp)
 
 --paired
        BAM is paired end - output both read pairs. This will also
@@ -355,6 +355,9 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
+
+    if options.random_seed:
+        np.random.seed(options.random_seed)
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name

@@ -1,0 +1,79 @@
+extract_single:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_single.fastq]
+      options: extract  --bc-pattern=NNNXXXXNN --log=test.log
+
+extract_3prime:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_3prime.fastq]
+      options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
+
+dedup_single_ignore:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_ignore.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
+
+dedup_single_unique:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_unique.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
+
+dedup_single_perc:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_perc.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
+
+dedup_single_cluster:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_cluster.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
+
+dedup_single_adj:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_adj.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
+
+dedup_single_dir:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
+
+
+dedup_single_stats:
+      stdin: chr19.bam
+      outputs: [stdout, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
+      references: [single_cluster.sam, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
+      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats --further-stats
+
+
+dedup_single_dir_edit_dist:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir_2.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
+
+
+dedup_single_subset:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_subset.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
+
+
+### Tests to implement ####
+
+## extract ##
+# paired end +/- split barcode
+
+## dedup ##
+# mapping-quality (Need a BAM with meaningful MAPQ)
+# paired end (obv. need a paired end BAM)
+# read-length (ideally with sRNA-Seq BAM?!)
