@@ -1,6 +1,11 @@
 language: python
 sudo: required
 
+env:
+  matrix:
+    - TEST_STYLE=1
+    - TEST_FUNCTIONALITY=1
+
 python:
   - "2.7"
 #  - "3.4"
@@ -11,23 +16,13 @@ before_install:
 install:
   - python setup.py install
 
+before_script:
+  - pip install nose
+  - pip install pep8
+  - pip install pyyaml
+
 script: 
   - umi_tools --help
   - umi_tools extract --help
   - umi_tools dedup --help
-
-# to do
-#deploy:
-#  provider: pypi
-#  user: toms
-#  password:
-#    secure: my_secure_password
-#  on:
-#    tags: true
-#    branch: master
-
-
-notifications:
-  email:
-    - thomas.smith2@dpag.ox.ac.uk
-    - i.sudbery@sheffield.ac.uk
+  - ./test_umi_tools.sh

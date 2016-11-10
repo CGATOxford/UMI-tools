@@ -102,7 +102,7 @@ Options
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
        increased. The default value of 1 works best unless the UMI is
-       very long (>14bp)
+very long (>14bp)
 
 --paired
        BAM is paired end - output both read pairs. This will also
@@ -377,7 +377,9 @@ class ClusterAndReducer:
 
     '''
 
-    ######## "get_best" methods ##########
+    ######################
+    # "get_best" methods #
+    ######################
 
     def _get_best_min_account(self, cluster, adj_list, counts):
         ''' return the min UMI(s) need to account for cluster'''
@@ -415,7 +417,9 @@ class ClusterAndReducer:
 
         return list(cluster)
 
-    ######## "get_adj_list" methods ##########
+    ##########################
+    # "get_adj_list" methods #
+    ##########################
 
     def _get_adj_list_adjacency(self, umis, counts, threshold):
         ''' identify all umis within hamming distance threshold'''
@@ -425,7 +429,7 @@ class ClusterAndReducer:
                                     umi2.encode('utf-8')) <= threshold]
                 for umi in umis}
 
-    def _get_adj_list_directional_adjacency(self, umis, counts, threshold=1):
+    def _get_adj_list_directional(self, umis, counts, threshold=1):
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
@@ -438,7 +442,9 @@ class ClusterAndReducer:
         ''' for methods which don't use a adjacency dictionary'''
         return None
 
-    ######## "get_connected_components" methods ##########
+    ######################################
+    # "get_connected_components" methods #
+    ######################################
 
     def _get_connected_components_adjacency(self, umis, graph, counts):
         ''' find the connected UMIs within an adjacency dictionary'''
@@ -458,7 +464,9 @@ class ClusterAndReducer:
         ''' for methods which don't use a adjacency dictionary'''
         return umis
 
-    ######## "reduce_clusters" methods ##########
+    #############################
+    # "reduce_clusters" methods #
+    #############################
 
     def _reduce_clusters_multiple(self, bundle, clusters,
                                   adj_list, counts, stats=False):
@@ -530,7 +538,7 @@ class ClusterAndReducer:
             self.reduce_clusters = self._reduce_clusters_multiple
 
         elif cluster_method == "directional":
-            self.get_adj_list = self._get_adj_list_directional_adjacency
+            self.get_adj_list = self._get_adj_list_directional
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
             self.reduce_clusters = self._reduce_clusters_single
@@ -585,7 +593,7 @@ class ClusterAndReducer:
                         nodes[1] += 1
                     else:
                         most_con = max([len(adj_list[umi]) for umi in cluster])
-                        
+
                         if most_con == len(cluster):
                             topologies["single hub"] += 1
                             nodes[len(cluster)] += 1
@@ -942,6 +950,9 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
+    if options.random_seed:
+        np.random.seed(options.random_seed)
+
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()
@@ -1179,7 +1190,7 @@ def main(argv=None):
                                x, y in node_counts.most_common()]) + "\n")
 
     # write footer and output benchmark information.
-    
+
     U.info("Number of reads in: %i, Number of reads out: %i" %
            (nInput, nOutput))
     U.Stop()
