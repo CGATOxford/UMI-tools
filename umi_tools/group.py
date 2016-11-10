@@ -34,17 +34,17 @@ group can be run with multiple methods to identify group of reads with
 the same (or similar) UMI(s). All methods start by identifying the
 reads with the same mapping position.
 
-The simpliest method, unique, groups reads with
-the exact same UMI. The network-based methods, cluster, adjacency and
-directional, build networks where nodes are UMIs and edges connect UMIs
-with an edit distance <= threshold (usually 1). The groups of reads
-are then defined from the network in a method-specific manner.
+The simpliest method, "unique", groups reads with the exact same
+UMI. The network-based methods, "cluster", "adjacency" and
+"directional", build networks where nodes are UMIs and edges connect
+UMIs with an edit distance <= threshold (usually 1). The groups of
+reads are then defined from the network in a method-specific manner.
 
-Note that the percentile method is not available in group as when
-applied in deduplication, this method does not group similar UMIs as
-per the network methods. Instead it applies a threshold for inclusion
-of the UMI in the output. Excluded UMIs are not assigned to a "true"
-UMI.
+Note that the "percentile" method used with the dedup command is not
+available with group. This is because this method does not group
+similar UMIs as per the network methods. Instead it applies a
+threshold for inclusion of the UMI in the output and excluded UMIs are
+not assigned to a "true" UMI.
 
   "unique"
       Reads group share the exact same UMI
@@ -84,11 +84,36 @@ UG = Unique_id. 0-indexed unique id number for each group of reads
 FU = Final UMI. The inferred true UMI for the group
 
 To generate the flatfile describing the read groups, include the
---group-out=<filename> option. The columns of the read groups file are:
+--group-out=<filename> option. The columns of the read groups file are
+below. The first five columns relate to the read. The final 3 columns
+relate to the group.
 
+  - read_id
+    read identifier
 
+  - contig
+    alignment contig
 
+  - position
+    Alignment position. Note that this position is not the start
+    position of the read in the BAM file but the start of the read
+    taking into account the read strand and cigar
 
+  - umi
+    The read UMI
+
+  - umi_count
+    The number of times this UMI is observed for reads at the same
+    position
+
+  - final_umi
+    The inferred true UMI for the group
+
+  - final_umi_count
+    The total number of reads within the group
+
+  - unique_id
+    The unique id for the group
 
 
 Options
@@ -259,6 +284,11 @@ def main(argv=None):
                       default=False,
                       help=("use read length in addition to position and UMI"
                             "to identify possible duplicates [default=%default]"))
+    parser.add_option("--mapping-quality", dest="mapping_quality",
+                      type="int",
+                      help="Minimum mapping quality for a read to be retained"
+                      " [default=%default]",
+                      default=0)
     parser.add_option("--group-out", dest="tsv", type="string",
                       help="Outfile name for file mapping read id to read group",
                       default=None)
@@ -317,7 +347,7 @@ def main(argv=None):
             read_events,
             ignore_umi=False,
             subset=False,
-            quality_threshold=0,
+            quality_threshold=options.mapping_quality,
             paired=options.paired,
             chrom=options.chrom,
             spliced=options.spliced,

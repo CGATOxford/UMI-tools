@@ -56,10 +56,11 @@ selected, see 'Selecting the representative read' below.
       threshold). Each network is a read group
 
   "adjacency"
-      Cluster UMIs as above. For each cluster, select and remove the
-      node(UMI) with the highest counts and remove all connected
-      nodes. Repeat with remaining nodes until no nodes remain. Each
-      removal step defines a read group.
+      Cluster UMIs as above. For each cluster, select the node(UMI)
+      with the highest counts. Visit all nodes one edge away. If all
+      nodes have been visted, stop. Otherise, repeat with remaining
+      nodes until all nodes have been visted. Each step
+      defines a read group.
 
   "directional"
       Identify clusters of connected UMIs (based on hamming distance
