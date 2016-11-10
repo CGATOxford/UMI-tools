@@ -69,7 +69,7 @@ class TwoPassPairWriter:
         if tags:
             self.read2tags = {}
         else:
-            self.read2tags = False
+            self.read2tags = None
 
     def write(self, read, unique_id=None, umi=None):
         '''Check if chromosome has changed since last time. If it has, scan
@@ -83,7 +83,7 @@ class TwoPassPairWriter:
         key = read.query_name, read.next_reference_id, read.next_reference_start
         self.read1s.add(key)
 
-        if umi:
+        if self.read2tags is not None:
             self.read2tags[key] = (unique_id, umi)
             read.tags += [('UG', unique_id)]
             read.tags += [('FU', umi)]
@@ -104,7 +104,7 @@ class TwoPassPairWriter:
 
             key = read.query_name, read.reference_id, read.reference_start
             if key in self.read1s:
-                if self.read2tags:
+                if self.read2tags is not None:
                     unique_id, umi = self.read2tags[key]
                     self.read2tags.pop(key)
 

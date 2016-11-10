@@ -306,7 +306,7 @@ def main(argv=None):
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
         mapping_outfile.write(
-            "read_id\tcontig\tposition\tumi\tcount\tfinal_umi\tunique_id\n")
+            "read_id\tcontig\tposition\tumi\tumi_count\tfinal_umi\tfinal_umi_count\tunique_id\n")
 
     nInput, nOutput, unique_id = 0, 0, 0
 
@@ -339,61 +339,17 @@ def main(argv=None):
         # specified options.method
         processor = network.ReadClusterer(options.method)
 
-        (clusters, adj_list, counts, umis,
-         umi_counts, topologies, nodes) = processor(
+        bundle, groups, counts = processor(
             bundle=bundle,
             threshold=options.threshold,
             stats=True,
             deduplicate=False)
 
-        # if using adjacency or unique methods, we need to
-        # find the groups of UMIs with the clusters. For unique this
-        # is every unique UMI.  For adjacency we need to identify the
-        # sub-clusters which represent the UMI groups.
-        # For both methods we therefore need to redefine the clusters object.
+        for umi_group in groups:
+            top_umi = umi_group[0]
 
-        if options.method == "unique":
+            group_count = sum(counts[umi] for umi in umi_group)
 
-            if len(clusters) == 1:
-                groups = [set(clusters)]
-            else:
-                groups = [set([x]) for x in clusters]
-
-            clusters = groups
-
-        if options.method == "adjacency":
-
-            def get_best(cluster, adj_list, counts):
-                ''' return the minimum UMI groups need to account for
-                adjacency network'''
-
-                if len(cluster) == 1:
-                    return [cluster]
-
-                groups = []
-
-                sorted_nodes = sorted(cluster, key=lambda x: counts[x],
-                                      reverse=True)
-                removed = set()
-
-                for i in range(len(sorted_nodes) - 1):
-                    new_group = [umi2 for umi2 in adj_list[umi]
-                                 if umi2 not in removed]
-                    groups.append(set(new_group))
-                    removed.update(set(new_group))
-
-                    if len(network.remove_umis(
-                            adj_list, cluster, sorted_nodes[:i+1])) == 0:
-                        return groups
-
-            final_groups = []
-
-            for cluster in clusters:
-                final_groups.extend(get_best(cluster, adj_list, counts))
-
-            clusters = final_groups
-
-        for ix, umi_group in enumerate(clusters):
             for umi in umi_group:
                 reads = bundle[umi]['read']
                 for read in reads:
@@ -401,11 +357,12 @@ def main(argv=None):
                         if options.paired:
                             # if paired, we need to supply the tags to
                             # add to the paired read
-                            outfile.write(read, unique_id, umis[ix])
+                            outfile.write(read, unique_id, top_umi)
+
                         else:
                             # Add the 'UG' tag to the read
                             read.tags += [('UG', unique_id)]
-                            read.tags += [('FU', umis[ix])]
+                            read.tags += [('FU', top_umi)]
                             outfile.write(read)
 
                     if options.tsv:
@@ -413,12 +370,15 @@ def main(argv=None):
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
                             umi_methods.get_umi(read),
-                            umi_counts[ix], umis[ix], unique_id))))
+                            counts[top_umi],
+                            top_umi,
+                            group_count,
+                            unique_id))))
 
                     nOutput += 1
 
             unique_id += 1
-        
+
     if outfile:
         outfile.close()
 

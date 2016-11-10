@@ -23,7 +23,7 @@ except:
     from _dedup_umi import edit_distance
 
 
-def breadth_first_search(node, adj_list, removed):
+def breadth_first_search(node, adj_list):
     searched = set()
     found = set()
     queue = set()
@@ -32,17 +32,8 @@ def breadth_first_search(node, adj_list, removed):
 
     while len(queue) > 0:
         node = (list(queue))[0]
-        # Some nodes may have been removed in a previous search
-        # through the network. If so, we don't want to include them in
-        # multiple connected components. Quicker to check with list of
-        # previously removed nodes than to re-generate the adj_list
-        # for each step
-        if node not in removed:
-            for connected_node in adj_list[node]:
-                if connected_node not in removed:
-                    found.update((connected_node,))
-                    queue.update((connected_node,))
-
+        found.update(adj_list[node])
+        queue.update(adj_list[node])
         searched.update((node,))
         queue.difference_update(searched)
 
@@ -161,7 +152,7 @@ class ReadClusterer:
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
-                component = breadth_first_search(node, graph, found)
+                component = breadth_first_search(node, graph)
                 found.extend(component)
                 components.append(component)
 
@@ -170,6 +161,69 @@ class ReadClusterer:
     def _get_connected_components_null(self, umis, adj_list, counts):
         ''' for methods which don't use a adjacency dictionary'''
         return umis
+
+
+    ######## "group" methods ##########
+    def _group_single(self, clusters, adj_list, counts):
+        ''' return groups for unique method'''
+        if len(clusters) == 1:
+            groups = [clusters]
+        else:
+            groups = [[x] for x in clusters]
+
+        return groups
+
+    def _group_adjacency(self, clusters, adj_list, counts):
+        ''' return groups for adjacency method'''
+
+        groups = []
+
+        for cluster in clusters:
+            if len(cluster) == 1:
+                groups.append(list(cluster))
+
+            else:
+                sorted_nodes = sorted(
+                    cluster, key=lambda x: counts[x], reverse=True)
+                temp_groups = []
+                for i in range(len(sorted_nodes) - 1):
+                    node = sorted_nodes[i]
+                    latest_temp_group = [node]
+                    latest_temp_group.extend([
+                        x for x in adj_list[node] if x != node])
+
+                    # need to remove top node from any
+                    # other group where it is found
+                    top_node = latest_temp_group[0]
+
+                    new_temp_groups = []
+                    for temp_group in temp_groups:
+                        temp_group = [x for x in temp_group if x != top_node]
+                        new_temp_groups.append(temp_group)
+
+                    temp_groups = new_temp_groups
+                    temp_groups.append(latest_temp_group)
+
+                    if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
+                        removed = set()
+                        for temp_group in temp_groups:
+                            temp_group = [x for x in temp_group if x not in removed]
+                            if len(temp_group) > 0:
+                                removed.update(temp_group)
+                                groups.append(temp_group)
+                        break
+
+        return groups
+
+    def _group_whole_network(self, clusters, adj_list, counts):
+        ''' return groups for cluster or directional methods'''
+
+        groups = []
+
+        for cluster in clusters:
+            groups.append(sorted(cluster, key=lambda x: counts[x], reverse=True))
+
+        return groups
 
     ######## "reduce_clusters" methods ##########
 
@@ -241,30 +295,36 @@ class ReadClusterer:
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_min_account
             self.reduce_clusters = self._reduce_clusters_multiple
+            self.get_groups = self._group_adjacency
 
         elif cluster_method == "directional":
             self.get_adj_list = self._get_adj_list_directional
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
             self.reduce_clusters = self._reduce_clusters_single
+            self.get_groups = self._group_whole_network
 
         elif cluster_method == "cluster":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
             self.reduce_clusters = self._reduce_clusters_single
+            self.get_groups = self._group_whole_network
 
         elif cluster_method == "percentile":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
             self.get_best = self._get_best_percentile
             self.reduce_clusters = self._reduce_clusters_no_network
+            # percentile method incompatible with defining UMI groups
+            self.get_groups = None
 
         if cluster_method == "unique":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
             self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
+            self.get_groups = self._group_single
 
     def __call__(self, bundle, threshold, stats=False, further_stats=False,
                  deduplicate=True):
@@ -282,6 +342,11 @@ class ReadClusterer:
         adj_list = self.get_adj_list(umis, counts, threshold)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
+
+        if not deduplicate:
+            groups = self.get_groups(clusters, adj_list, counts)
+
+        return bundle, groups, counts
 
         reads, final_umis, umi_counts = self.reduce_clusters(
             bundle, clusters, adj_list, counts, stats)
@@ -312,7 +377,4 @@ class ReadClusterer:
             topologies = None
             nodes = None
 
-        if deduplicate:
-            return reads, final_umis, umi_counts, topologies, nodes
-        else:
-            return clusters, adj_list, counts, final_umis, umi_counts, topologies, nodes
+        return reads, final_umis, umi_counts, topologies, nodes
