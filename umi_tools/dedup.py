@@ -1034,7 +1034,7 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = random_read_generator(
-            infile.filename,chrom=options.chrom, umi_sep=options.umi_sep)
+            infile.filename, chrom=options.chrom, umi_sep=options.umi_sep)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
