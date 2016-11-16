@@ -616,7 +616,7 @@ class ClusterAndReducer:
 def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ"):
+                detection_method="MAPQ", umi_sep="_"):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -728,7 +728,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
         if ignore_umi:
             umi = ""
         else:
-            umi = get_umi(read, options.umi_sep)
+            umi = get_umi(read, umi_sep)
 
         try:
             reads_dict[pos][key][umi]["count"] += 1
@@ -1046,7 +1046,8 @@ def main(argv=None):
                               per_contig=options.per_contig,
                               whole_contig=options.whole_contig,
                               read_length=options.read_length,
-                              detection_method=options.detection_method):
+                              detection_method=options.detection_method,
+                              umi_sep=options.umi_sep):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
