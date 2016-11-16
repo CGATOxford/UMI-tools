@@ -805,8 +805,8 @@ class random_read_generator:
     def __init__(self, bamfile, chrom, umi_sep="_"):
         inbam = pysam.Samfile(bamfile)
 
-        self.umi_sep=umi_sep
-        
+        self.umi_sep = umi_sep
+
         if chrom:
             self.inbam = inbam.fetch(reference=chrom)
         else:
