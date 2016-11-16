@@ -19,6 +19,11 @@ before mapping and thus the UMI is the last word of the read name. e.g:
 
 where AATT is the UMI sequeuence.
 
+If you have used an alternative method which does not separate the
+read id and UMI with a "_", such as bcl2fastq which uses ":", you can
+specify the separator with the option "--umi-separator=<sep>",
+replacing <sep> with e.g ":".
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -254,9 +259,9 @@ def edit_dist(first, second):
     return dist
 
 
-def get_umi(read):
+def get_umi(read, sep="_"):
     try:
-        return read.qname.split("_")[-1]
+        return read.qname.split(sep)[-1]
     except IndexError:
         raise ValueError("Could not extract UMI from read, please"
                          "check UMI is encoded in the read name"
@@ -723,7 +728,7 @@ def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
         if ignore_umi:
             umi = ""
         else:
-            umi = read.qname.split("_")[-1]
+            umi = get_umi(read, options.umi_sep)
 
         try:
             reads_dict[pos][key][umi]["count"] += 1
@@ -797,9 +802,11 @@ class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile, chrom):
+    def __init__(self, bamfile, chrom, umi_sep="_"):
         inbam = pysam.Samfile(bamfile)
 
+        self.umi_sep=umi_sep
+        
         if chrom:
             self.inbam = inbam.fetch(reference=chrom)
         else:
@@ -820,7 +827,7 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[get_umi(read)] += 1
+            self.umis[get_umi(read, self.umi_sep)] += 1
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())
@@ -882,9 +889,12 @@ def main(argv=None):
     parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
                       help="Output alignments in sam format [default=%default]",
                       default=False)
-    parser.add_option("--ignore-umi", dest="ignore_umi", action="store_true",
-                      help="Ignore UMI and dedup only on position",
-                      default=False)
+    parser.add_option("--ignore-umi", dest="ignore_umi",
+                      action="store_true", help="Ignore UMI and dedup"
+                      " only on position", default=False)
+    parser.add_option("--umi-separator", dest="umi_sep",
+                      type="string", help="separator between read id and UMI",
+                      default="_")
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
@@ -1023,7 +1033,7 @@ def main(argv=None):
         post_cluster_stats_null = []
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
-        read_gn = random_read_generator(infile.filename, chrom=options.chrom)
+        read_gn = random_read_generator(infile.filename, chrom=options.chrom, umi_sep=options.umi_sep)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
