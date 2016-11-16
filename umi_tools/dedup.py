@@ -1033,7 +1033,8 @@ def main(argv=None):
         post_cluster_stats_null = []
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
-        read_gn = random_read_generator(infile.filename, chrom=options.chrom, umi_sep=options.umi_sep)
+        read_gn = random_read_generator(
+            infile.filename,chrom=options.chrom, umi_sep=options.umi_sep)
 
     for bundle in get_bundles(infile,
                               ignore_umi=options.ignore_umi,
@@ -1094,7 +1095,7 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [x.qname.split("_")[-1] for x in reads]
+                post_cluster_umis = [get_umi(x, options.umi_sep) for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
