@@ -300,6 +300,10 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
+    if options.method == 'adjacency':
+        raise ValueError('The adjacency method is not yet available '
+                         'with umi_tools group')
+
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()

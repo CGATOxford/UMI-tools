@@ -53,13 +53,11 @@ dedup_single_stats:
       references: [single_cluster.sam, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
       options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats --further-stats
 
-
 dedup_single_dir_edit_dist:
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
-
 
 dedup_single_subset:
       stdin: chr19.bam
@@ -73,17 +71,17 @@ group unique:
       references: [group_uniq.sam, group_uniq.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
 
-group unique:
+group cluster:
       stdin: chr19.bam
       outputs: [stdout, group_cluster.tsv]
       references: [group_cluster.sam, group_cluster.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
 
-group unique:
-      stdin: chr19.bam
-      outputs: [stdout, group_adj.tsv]
-      references: [group_adj.sam, group_adj.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
+# group adjacency:
+#       stdin: chr19.bam
+#       outputs: [stdout, group_adj.tsv]
+#       references: [group_adj.sam, group_adj.tsv]
+#       options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
 
 group directional:
       stdin: chr19.bam
