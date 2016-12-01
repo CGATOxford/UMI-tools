@@ -452,7 +452,8 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
-            all_reads=False):
+            all_reads=False,
+            umi_sep=options.umi_sep):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
@@ -501,7 +502,8 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [get_umi(x, options.umi_sep) for x in reads]
+                post_cluster_umis = [umi_methods.get_umi(x, options.umi_sep)
+                                     for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 

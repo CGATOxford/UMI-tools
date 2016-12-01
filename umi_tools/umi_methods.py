@@ -30,9 +30,9 @@ except:
     from _dedup_umi import edit_distance
 
 
-def get_umi(read):
+def get_umi(read, sep="_"):
     try:
-        return read.qname.split("_")[-1]
+        return read.qname.split(sep)[-1]
     except IndexError:
         raise ValueError("Could not extract UMI from read, please"
                          "check UMI is encoded in the read name"
@@ -173,7 +173,7 @@ def get_bundles(insam, read_events,
                 ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ", all_reads=False):
+                detection_method="MAPQ", all_reads=False, umi_sep="_"):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -284,7 +284,7 @@ def get_bundles(insam, read_events,
         if ignore_umi:
             umi = ""
         else:
-            umi = read.qname.split("_")[-1]
+            umi = get_umi(read, umi_sep)
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
