@@ -246,6 +246,9 @@ def main(argv=None):
     parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
                       help="Output alignments in sam format [default=%default]",
                       default=False)
+    parser.add_option("--umi-separator", dest="umi_sep",
+                      type="string", help="separator between read id and UMI",
+                      default="_")
     parser.add_option("--spliced-is-unique", dest="spliced",
                       action="store_true",
                       help="Treat a spliced read as different to an unspliced"
@@ -359,6 +362,7 @@ def main(argv=None):
             per_contig=options.per_contig,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
+            umi_sep=options.umi_sep,
             all_reads=True):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -403,7 +407,7 @@ def main(argv=None):
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
-                            umi_methods.get_umi(read),
+                            umi_methods.get_umi(read, options.umi_sep),
                             counts[top_umi],
                             top_umi,
                             group_count,
