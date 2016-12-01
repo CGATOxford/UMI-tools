@@ -56,10 +56,11 @@ selected, see 'Selecting the representative read' below.
       threshold). Each network is a read group
 
   "adjacency"
-      Cluster UMIs as above. For each cluster, select and remove the
-      node(UMI) with the highest counts and remove all connected
-      nodes. Repeat with remaining nodes until no nodes remain. Each
-      removal step defines a read group.
+      Cluster UMIs as above. For each cluster, select the node(UMI)
+      with the highest counts. Visit all nodes one edge away. If all
+      nodes have been visted, stop. Otherise, repeat with remaining
+      nodes until all nodes have been visted. Each step
+      defines a read group.
 
   "directional"
       Identify clusters of connected UMIs (based on hamming distance
@@ -191,7 +192,7 @@ very long (>14bp)
 Usage
 -----
 
-    python dedup_umi.py -I infile.bam -S deduped.bam -L dedup.log
+    python dedup -I infile.bam -S deduped.bam -L dedup.log
 
 
 .. note::
@@ -202,12 +203,10 @@ Usage
 
 '''
 import sys
-import random
 import collections
-import itertools
+
 
 # required to make iteritems python2 and python3 compatible
-from future.utils import iteritems
 from builtins import dict
 
 import pysam
@@ -217,555 +216,15 @@ import numpy as np
 
 try:
     import umi_tools.Utilities as U
+    import umi_tools.network as network
+    import umi_tools.umi_methods as umi_methods
 except:
     import Utilities as U
+    import network
+    import umi_methods
 
 import pyximport
 pyximport.install(build_in_temp=False)
-
-try:
-    from umi_tools._dedup_umi import edit_distance
-except:
-    from _dedup_umi import edit_distance
-
-
-def breadth_first_search(node, adj_list):
-    searched = set()
-    found = set()
-    queue = set()
-    queue.update((node,))
-    found.update((node,))
-
-    while len(queue) > 0:
-        node = (list(queue))[0]
-        found.update(adj_list[node])
-        queue.update(adj_list[node])
-        searched.update((node,))
-        queue.difference_update(searched)
-
-    return found
-
-
-def edit_dist(first, second):
-    ''' returns the edit distance/hamming distances between
-    its two arguments '''
-
-    dist = sum([not a == b for a, b in zip(first, second)])
-    return dist
-
-
-def get_umi(read):
-    try:
-        return read.qname.split("_")[-1]
-    except IndexError:
-        raise ValueError("Could not extract UMI from read, please"
-                         "check UMI is encoded in the read name"
-                         "following the final '_' or run with --ignore-umi")
-
-
-def get_average_umi_distance(umis):
-
-    if len(umis) == 1:
-        return -1
-
-    dists = [edit_distance(x.encode('utf-8'), y.encode('utf-8')) for
-             x, y in itertools.combinations(umis, 2)]
-    return float(sum(dists))/(len(dists))
-
-
-def remove_umis(adj_list, cluster, nodes):
-    '''removes the specified nodes from the cluster and returns
-    the remaining nodes '''
-
-    # list incomprehension: for x in nodes: for node in adj_list[x]: yield node
-    nodes_to_remove = set([node
-                           for x in nodes
-                           for node in adj_list[x]] + nodes)
-
-    return cluster - nodes_to_remove
-
-
-class TwoPassPairWriter:
-    '''This class makes a note of reads that need their pair outputting
-    before outputting.  When the chromosome changes, the reads on that
-    chromosome are read again, and any mates of reads already output
-    are written and removed from the list of mates to output. When
-    close is called, this is performed for the last chormosome, and
-    then an algorithm identicate to pysam's mate() function is used to
-    retrieve any remaining mates.
-
-    This means that if close() is not called, at least as contigs
-    worth of mates will be missing. '''
-
-    def __init__(self, infile, outfile):
-        self.infile = infile
-        self.outfile = outfile
-        self.read1s = set()
-        self.chrom = None
-
-    def write(self, read):
-        '''Check if chromosome has changed since last time. If it has, scan
-        for mates. Write the read to outfile and save the identity for paired
-        end retrieval'''
-
-        if not self.chrom == read.reference_id:
-            self.write_mates()
-            self.chrom = read.reference_id
-
-        key = read.query_name, read.next_reference_id, read.next_reference_start
-        self.read1s.add(key)
-        self.outfile.write(read)
-
-    def write_mates(self):
-        '''Scan the current chormosome for matches to any of the reads stored
-        in the read1s buffer'''
-
-        if self.chrom is not None:
-            U.debug("Dumping %i mates for contig %s" % (
-                len(self.read1s), self.infile.get_reference_name(self.chrom)))
-
-        for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
-            if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
-                continue
-
-            key = read.query_name, read.reference_id, read.reference_start
-            if key in self.read1s:
-                self.outfile.write(read)
-                self.read1s.remove(key)
-        U.debug("%i mates remaining" % len(self.read1s))
-
-    def close(self):
-        '''Write mates for remaining chromsome. Search for matches to any
-        unmatched reads'''
-
-        self.write_mates()
-        U.info("Searching for mates for %i unmatched alignments" %
-               len(self.read1s))
-
-        found = 0
-        for name, chrom, pos in self.read1s:
-            for read in self.infile.fetch(start=pos, end=pos+1, tid=chrom):
-                if (read.query_name, read.pos) == (name, pos):
-                    self.outfile.write(read)
-                    found += 1
-                    break
-
-        U.info("%i mates never found" % (len(self.read1s) - found))
-        self.outfile.close()
-
-
-class ClusterAndReducer:
-    '''A functor that clusters a bundle of reads,
-    indentifies the parent UMIs and returns the selected reads, umis and counts
-
-    The initiation of the functor defines the methods:
-
-      ** get_adj_list ** - returns the edges connecting the UMIs
-
-      ** connected_components ** - returns clusters of connected components
-                                   using the edges in the adjacency list
-
-      ** get_best ** - returns the parent UMI(s) in the connected_components
-
-      ** reduce_clusters ** - loops through the connected components in a
-                              cluster and returns the unique reads. Optionally
-                              returns lists of umis and counts per umi also
-
-    Note: The get_adj_list and connected_components methods are not required by
-    all custering methods. Where there are not required, the methods return
-    None or the input parameters.
-
-    '''
-
-    ######################
-    # "get_best" methods #
-    ######################
-
-    def _get_best_min_account(self, cluster, adj_list, counts):
-        ''' return the min UMI(s) need to account for cluster'''
-        if len(cluster) == 1:
-            return list(cluster)
-
-        sorted_nodes = sorted(cluster, key=lambda x: counts[x],
-                              reverse=True)
-
-        for i in range(len(sorted_nodes) - 1):
-            if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
-                return sorted_nodes[:i+1]
-
-    def _get_best_higher_counts(self, cluster, counts):
-        ''' return the UMI with the highest counts'''
-        if len(cluster) == 1:
-            return list(cluster)[0]
-        else:
-            sorted_nodes = sorted(cluster, key=lambda x: counts[x],
-                                  reverse=True)
-            return sorted_nodes[0]
-
-    def _get_best_percentile(self, cluster, counts):
-        ''' return all UMIs with counts >1% of the
-        median counts in the cluster '''
-
-        if len(cluster) == 1:
-            return list(cluster)
-        else:
-            threshold = np.median(counts.values())/100
-            return [read for read in cluster if counts[read] > threshold]
-
-    def _get_best_null(self, cluster, counts):
-        ''' return all UMIs in the cluster'''
-
-        return list(cluster)
-
-    ##########################
-    # "get_adj_list" methods #
-    ##########################
-
-    def _get_adj_list_adjacency(self, umis, counts, threshold):
-        ''' identify all umis within hamming distance threshold'''
-
-        return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) <= threshold]
-                for umi in umis}
-
-    def _get_adj_list_directional(self, umis, counts, threshold=1):
-        ''' identify all umis within the hamming distance threshold
-        and where the counts of the first umi is > (2 * second umi counts)-1'''
-
-        return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) == threshold and
-                      counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
-
-    def _get_adj_list_null(self, umis, counts, threshold):
-        ''' for methods which don't use a adjacency dictionary'''
-        return None
-
-    ######################################
-    # "get_connected_components" methods #
-    ######################################
-
-    def _get_connected_components_adjacency(self, umis, graph, counts):
-        ''' find the connected UMIs within an adjacency dictionary'''
-
-        found = list()
-        components = list()
-
-        for node in sorted(graph, key=lambda x: counts[x], reverse=True):
-            if node not in found:
-                component = breadth_first_search(node, graph)
-                found.extend(component)
-                components.append(component)
-
-        return components
-
-    def _get_connected_components_null(self, umis, adj_list, counts):
-        ''' for methods which don't use a adjacency dictionary'''
-        return umis
-
-    #############################
-    # "reduce_clusters" methods #
-    #############################
-
-    def _reduce_clusters_multiple(self, bundle, clusters,
-                                  adj_list, counts, stats=False):
-        ''' collapse clusters down to the UMI(s) which account for the cluster
-        using the adjacency dictionary and return the list of final UMIs'''
-
-        # TS - the "adjacency" variant of this function requires an adjacency
-        # list to identify the best umi, whereas the other variants don't
-        # As temporary solution, pass adj_list to all variants
-
-        reads = []
-        final_umis = []
-        umi_counts = []
-
-        for cluster in clusters:
-            parent_umis = self.get_best(cluster, adj_list, counts)
-            reads.extend([bundle[umi]["read"] for umi in parent_umis])
-
-            if stats:
-                final_umis.extend(parent_umis)
-                umi_counts.extend([counts[umi] for umi in parent_umis])
-
-        return reads, final_umis, umi_counts
-
-    def _reduce_clusters_single(self, bundle, clusters,
-                                adj_list, counts, stats=False):
-        ''' collapse clusters down to the UMI which accounts for the cluster
-        using the adjacency dictionary and return the list of final UMIs'''
-
-        reads = []
-        final_umis = []
-        umi_counts = []
-
-        for cluster in clusters:
-            parent_umi = self.get_best(cluster, counts)
-            reads.append(bundle[parent_umi]["read"])
-
-            if stats:
-                final_umis.append(parent_umi)
-                umi_counts.append(sum([counts[x] for x in cluster]))
-
-        return reads, final_umis, umi_counts
-
-    def _reduce_clusters_no_network(self, bundle, clusters,
-                                    adj_list, counts, stats=False):
-        ''' collapse down to the UMIs which accounts for the cluster
-        and return the list of final UMIs'''
-
-        reads = []
-        final_umis = []
-        umi_counts = []
-
-        parent_umis = self.get_best(clusters, counts)
-        reads.extend([bundle[umi]["read"] for umi in parent_umis])
-
-        if stats:
-            final_umis.extend(parent_umis)
-            umi_counts.extend([counts[umi] for umi in parent_umis])
-
-        return reads, final_umis, umi_counts
-
-    def __init__(self, cluster_method="directional"):
-        ''' select the required class methods for the cluster_method'''
-
-        if cluster_method == "adjacency":
-            self.get_adj_list = self._get_adj_list_adjacency
-            self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_min_account
-            self.reduce_clusters = self._reduce_clusters_multiple
-
-        elif cluster_method == "directional":
-            self.get_adj_list = self._get_adj_list_directional
-            self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_higher_counts
-            self.reduce_clusters = self._reduce_clusters_single
-
-        elif cluster_method == "cluster":
-            self.get_adj_list = self._get_adj_list_adjacency
-            self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_higher_counts
-            self.reduce_clusters = self._reduce_clusters_single
-
-        elif cluster_method == "percentile":
-            self.get_adj_list = self._get_adj_list_null
-            self.get_connected_components = self._get_connected_components_null
-            self.get_best = self._get_best_percentile
-            self.reduce_clusters = self._reduce_clusters_no_network
-
-        if cluster_method == "unique":
-            self.get_adj_list = self._get_adj_list_null
-            self.get_connected_components = self._get_connected_components_null
-            self.get_best = self._get_best_null
-            self.reduce_clusters = self._reduce_clusters_no_network
-
-    def __call__(self, bundle, threshold, stats=False, further_stats=False):
-
-        umis = bundle.keys()
-
-        len_umis = [len(x) for x in umis]
-        assert max(len_umis) == min(len_umis), (
-            "not all umis are the same length(!):  %d - %d" % (
-                min(len_umis), max(len_umis)))
-
-        counts = {umi: bundle[umi]["count"] for umi in umis}
-
-        adj_list = self.get_adj_list(umis, counts, threshold)
-
-        clusters = self.get_connected_components(umis, adj_list, counts)
-
-        reads, final_umis, umi_counts = self.reduce_clusters(
-            bundle, clusters, adj_list, counts, stats)
-
-        if further_stats:
-            topologies = collections.Counter()
-            nodes = collections.Counter()
-
-            if len(clusters) == len(umis):
-                topologies["single node"] = len(umis)
-                nodes[1] = len(umis)
-            else:
-                for cluster in clusters:
-                    if len(cluster) == 1:
-                        topologies["single node"] += 1
-                        nodes[1] += 1
-                    else:
-                        most_con = max([len(adj_list[umi]) for umi in cluster])
-
-                        if most_con == len(cluster):
-                            topologies["single hub"] += 1
-                            nodes[len(cluster)] += 1
-                        else:
-                            topologies["complex"] += 1
-                            nodes[len(cluster)] += 1
-
-        else:
-            topologies = None
-            nodes = None
-
-        return reads, final_umis, umi_counts, topologies, nodes
-
-
-def get_bundles(insam, ignore_umi=False, subset=None, quality_threshold=0,
-                paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ"):
-    ''' Returns a dictionary of dictionaries, representing the unique reads at
-    a position/spliced/strand combination. The key to the top level dictionary
-    is a umi. Each dictionary contains a "read" entry with the best read, and a
-    count entry with the number of reads with that position/spliced/strand/umi
-    combination'''
-
-    last_pos = 0
-    last_chr = ""
-    reads_dict = collections.defaultdict(
-        lambda: collections.defaultdict(
-            lambda: collections.defaultdict(dict)))
-    read_counts = collections.defaultdict(
-        lambda: collections.defaultdict(dict))
-
-    if chrom:
-        inreads = insam.fetch(reference=chrom)
-    else:
-        inreads = insam.fetch()
-
-    for read in inreads:
-
-        if subset:
-            if random.random() >= subset:
-                continue
-
-        if quality_threshold:
-            if read.mapq < quality_threshold:
-                continue
-
-        if read.is_unmapped:
-            continue
-
-        if read.mate_is_unmapped and paired:
-            continue
-
-        if read.is_read2:
-            continue
-
-        # TS - some methods require deduping on a per contig
-        # (gene for transcriptome) basis, e.g Soumillon et al 2014
-        # to fit in with current workflow, simply assign pos and key as contig
-        if per_contig:
-
-            pos = read.tid
-            key = read.tid
-            if not read.tid == last_chr:
-
-                out_keys = reads_dict.keys()
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_chr = read.tid
-
-        else:
-
-            is_spliced = False
-
-            if read.is_reverse:
-                pos = read.aend
-                if read.cigar[-1][0] == 4:
-                    pos = pos + read.cigar[-1][1]
-                start = read.pos
-
-                if ('N' in read.cigarstring or
-                    (read.cigar[0][0] == 4 and
-                     read.cigar[0][1] > soft_clip_threshold)):
-                    is_spliced = True
-            else:
-                pos = read.pos
-                if read.cigar[0][0] == 4:
-                    pos = pos - read.cigar[0][1]
-                start = pos
-
-                if ('N' in read.cigarstring or
-                    (read.cigar[-1][0] == 4 and
-                     read.cigar[-1][1] > soft_clip_threshold)):
-                    is_spliced = True
-
-            if whole_contig:
-                do_output = not read.tid == last_chr
-            else:
-                do_output = start > (last_pos+1000) or not read.tid == last_chr
-
-            if do_output:
-
-                out_keys = [x for x in reads_dict.keys() if x <= start-1000]
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_pos = start
-                last_chr = read.tid
-
-            if read_length:
-                r_length = read.query_length
-            else:
-                r_length = 0
-
-            key = (read.is_reverse, spliced & is_spliced,
-                   paired*read.tlen, r_length)
-
-        if ignore_umi:
-            umi = ""
-        else:
-            umi = read.qname.split("_")[-1]
-
-        try:
-            reads_dict[pos][key][umi]["count"] += 1
-        except KeyError:
-            reads_dict[pos][key][umi]["read"] = read
-            reads_dict[pos][key][umi]["count"] = 1
-            read_counts[pos][key][umi] = 0
-        else:
-            if reads_dict[pos][key][umi]["read"].mapq > read.mapq:
-                continue
-
-            if reads_dict[pos][key][umi]["read"].mapq < read.mapq:
-                reads_dict[pos][key][umi]["read"] = read
-                read_counts[pos][key][umi] = 0
-                continue
-
-            # TS: implemented different checks for multimapping here
-            if detection_method in ["NH", "X0"]:
-                tag = detection_method
-                if reads_dict[pos][key][umi]["read"].opt(tag) < read.opt(tag):
-                    continue
-                elif reads_dict[pos][key][umi]["read"].opt(tag) > read.opt(tag):
-                    reads_dict[pos][key][umi]["read"] = read
-                    read_counts[pos][key][umi] = 0
-
-            elif detection_method == "XT":
-                if reads_dict[pos][key][umi]["read"].opt("XT") == "U":
-                    continue
-                elif read.opt("XT") == "U":
-                    reads_dict[pos][key][umi]["read"] = read
-                    read_counts[pos][key][umi] = 0
-
-            read_counts[pos][key][umi] += 1
-            prob = 1.0/read_counts[pos][key][umi]
-
-            if random.random() < prob:
-                reads_dict[pos][key][umi]["read"] = read
-
-    # yield remaining bundles
-    for p in reads_dict:
-        for bundle in reads_dict[p].values():
-            yield bundle
 
 
 def detect_bam_features(bamfile, n_entries=1000):
@@ -791,59 +250,6 @@ def detect_bam_features(bamfile, n_entries=1000):
                     available_tags[tag] = 0
 
     return available_tags
-
-
-class random_read_generator:
-    ''' class to generate umis at random based on the
-    distributon of umis in a bamfile '''
-
-    def __init__(self, bamfile, chrom):
-        inbam = pysam.Samfile(bamfile)
-
-        if chrom:
-            self.inbam = inbam.fetch(reference=chrom)
-        else:
-            self.inbam = inbam.fetch()
-
-        self.umis = collections.defaultdict(int)
-        self.fill()
-
-    def fill(self):
-
-        self.frequency2umis = collections.defaultdict(list)
-
-        for read in self.inbam:
-
-            if read.is_unmapped:
-                continue
-
-            if read.is_read2:
-                continue
-
-            self.umis[get_umi(read)] += 1
-
-        self.umis_counter = collections.Counter(self.umis)
-        total_umis = sum(self.umis_counter.values())
-
-        for observed_umi, freq in iteritems(self.umis_counter):
-            self.frequency2umis[freq+0.0/total_umis].append(observed_umi)
-
-        self.frequency_counter = collections.Counter(self.umis_counter.values())
-        self.frequency_prob = [(float(x)/total_umis)*y for x, y in
-                               iteritems(self.frequency_counter)]
-
-    def getUmis(self, n):
-        '''get n umis at random'''
-
-        umi_sample = []
-
-        frequency_sample = np.random.choice(list(self.frequency_counter.keys()), n,
-                                            p=self.frequency_prob)
-
-        for frequency in frequency_sample:
-            umi_sample.append(np.random.choice(self.frequency2umis[frequency]))
-
-        return umi_sample
 
 
 def aggregateStatsDF(stats_df):
@@ -993,7 +399,7 @@ def main(argv=None):
                             template=infile)
 
     if options.paired:
-        outfile = TwoPassPairWriter(infile, outfile)
+        outfile = umi_methods.TwoPassPairWriter(infile, outfile)
 
     nInput, nOutput = 0, 0
 
@@ -1023,20 +429,25 @@ def main(argv=None):
         post_cluster_stats_null = []
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
-        read_gn = random_read_generator(infile.filename, chrom=options.chrom)
+        read_gn = umi_methods.random_read_generator(
+            infile.filename, chrom=options.chrom)
 
-    for bundle in get_bundles(infile,
-                              ignore_umi=options.ignore_umi,
-                              subset=options.subset,
-                              quality_threshold=options.mapping_quality,
-                              paired=options.paired,
-                              chrom=options.chrom,
-                              spliced=options.spliced,
-                              soft_clip_threshold=options.soft,
-                              per_contig=options.per_contig,
-                              whole_contig=options.whole_contig,
-                              read_length=options.read_length,
-                              detection_method=options.detection_method):
+    read_events = collections.Counter()
+
+    for bundle, read_events in umi_methods.get_bundles(
+            infile,
+            read_events,
+            ignore_umi=options.ignore_umi,
+            subset=options.subset,
+            quality_threshold=options.mapping_quality,
+            paired=options.paired, chrom=options.chrom,
+            spliced=options.spliced,
+            soft_clip_threshold=options.soft,
+            per_contig=options.per_contig,
+            whole_contig=options.whole_contig,
+            read_length=options.read_length,
+            detection_method=options.detection_method,
+            all_reads=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
@@ -1048,11 +459,11 @@ def main(argv=None):
 
         if options.stats:
             # generate pre-dudep stats
-            average_distance = get_average_umi_distance(bundle.keys())
+            average_distance = umi_methods.get_average_umi_distance(bundle.keys())
             pre_cluster_stats.append(average_distance)
             cluster_size = len(bundle)
             random_umis = read_gn.getUmis(cluster_size)
-            average_distance_null = get_average_umi_distance(random_umis)
+            average_distance_null = umi_methods.get_average_umi_distance(random_umis)
             pre_cluster_stats_null.append(average_distance_null)
 
         if options.ignore_umi:
@@ -1062,14 +473,16 @@ def main(argv=None):
 
         else:
 
-            # set up ClusterAndReducer functor with methods specific to
+            # set up ReadCluster functor with methods specific to
             # specified options.method
-            processor = ClusterAndReducer(options.method)
+            processor = network.ReadClusterer(options.method)
 
             # dedup using umis and write out deduped bam
             reads, umis, umi_counts, topologies, nodes = processor(
-                bundle, options.threshold,
-                options.stats, options.further_stats)
+                bundle=bundle,
+                threshold=options.threshold,
+                stats=options.stats,
+                further_stats=options.further_stats)
 
             for read in reads:
                 outfile.write(read)
@@ -1087,12 +500,12 @@ def main(argv=None):
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
-                average_distance = get_average_umi_distance(post_cluster_umis)
+                average_distance = umi_methods.get_average_umi_distance(post_cluster_umis)
                 post_cluster_stats.append(average_distance)
 
                 cluster_size = len(post_cluster_umis)
                 random_umis = read_gn.getUmis(cluster_size)
-                average_distance_null = get_average_umi_distance(random_umis)
+                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
                 post_cluster_stats_null.append(average_distance_null)
 
                 if options.further_stats:
@@ -1191,8 +604,10 @@ def main(argv=None):
 
     # write footer and output benchmark information.
 
-    U.info("Number of reads in: %i, Number of reads out: %i" %
-           (nInput, nOutput))
+    U.info("%s" % ", ".join(
+        ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+    U.info("Number of reads out: %i" % nOutput)
+
     U.Stop()
 
 if __name__ == "__main__":

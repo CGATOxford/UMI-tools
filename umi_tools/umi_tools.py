@@ -7,7 +7,10 @@ umi_tools.py - Tools for UMI analyses
 :Date: |today|
 :Tags: Genomics UMI
 
-There are two tools: extract & dedup
+There are 3 tools:
+  - extract
+  - group
+  - dedup
 
 To get help on a specific tool, type:
 
