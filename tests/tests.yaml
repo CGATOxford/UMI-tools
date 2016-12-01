@@ -65,6 +65,12 @@ dedup_single_subset:
       references: [single_subset.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
 
+dedup_single_sep:
+      stdin: chr19_sep.bam
+      outputs: [stdout]
+      references: [single_sep.sam]
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+
 group unique:
       stdin: chr19.bam
       outputs: [stdout, group_uniq.tsv]

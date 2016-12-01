@@ -19,6 +19,11 @@ before mapping and thus the UMI is the last word of the read name. e.g:
 
 where AATT is the UMI sequeuence.
 
+If you have used an alternative method which does not separate the
+read id and UMI with a "_", such as bcl2fastq which uses ":", you can
+specify the separator with the option "--umi-separator=<sep>",
+replacing <sep> with e.g ":".
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -223,9 +228,6 @@ except:
     import network
     import umi_methods
 
-import pyximport
-pyximport.install(build_in_temp=False)
-
 
 def detect_bam_features(bamfile, n_entries=1000):
     ''' read the first n entries in the bam file and identify the tags
@@ -288,9 +290,12 @@ def main(argv=None):
     parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
                       help="Output alignments in sam format [default=%default]",
                       default=False)
-    parser.add_option("--ignore-umi", dest="ignore_umi", action="store_true",
-                      help="Ignore UMI and dedup only on position",
-                      default=False)
+    parser.add_option("--ignore-umi", dest="ignore_umi",
+                      action="store_true", help="Ignore UMI and dedup"
+                      " only on position", default=False)
+    parser.add_option("--umi-separator", dest="umi_sep",
+                      type="string", help="separator between read id and UMI",
+                      default="_")
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
@@ -447,7 +452,8 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
-            all_reads=False):
+            all_reads=False,
+            umi_sep=options.umi_sep):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
@@ -496,7 +502,8 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [x.qname.split("_")[-1] for x in reads]
+                post_cluster_umis = [umi_methods.get_umi(x, options.umi_sep)
+                                     for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
