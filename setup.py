@@ -2,8 +2,8 @@ import sys
 import os
 import glob
 
-from ez_setup import use_setuptools
-use_setuptools()
+#from ez_setup import use_setuptools
+#use_setuptools()
 import setuptools
 
 from setuptools import setup, find_packages, Extension
