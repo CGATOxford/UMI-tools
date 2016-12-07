@@ -59,7 +59,7 @@ install_requires = [
 try:
     import pysam
     if LooseVersion(pysam.__version__) < LooseVersion('0.8.4'):
-        print """
+        print("""
         
     ######################################################################
     #
@@ -70,7 +70,7 @@ try:
     #
     ######################################################################
 
-        """
+        """)
 
         install_requires.append("pysam>=0.8.4")
 
