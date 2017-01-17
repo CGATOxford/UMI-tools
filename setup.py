@@ -3,7 +3,7 @@ import os
 import glob
 
 from ez_setup import use_setuptools
-use_setuptools()
+use_setuptools("10.0")
 import setuptools
 
 from setuptools import setup, find_packages, Extension
