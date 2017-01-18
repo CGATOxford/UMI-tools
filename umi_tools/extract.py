@@ -266,10 +266,7 @@ class Extractor:
                 else:
                     return None
 
-        try:
-            umi1 = "".join([bc1[x] for x in self.umi_bases])
-        except:
-            raise ValueError()
+        umi1 = "".join([bc1[x] for x in self.umi_bases])
         sample1 = "".join([bc1[x] for x in self.bc_bases])
         sample_qual1 = "".join([bc_qual1[x] for x in self.bc_bases])
 
