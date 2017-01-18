@@ -261,9 +261,7 @@ def get_bundles(insam, read_events,
                 do_output = start > (last_pos+1000) or not read.tid == last_chr
 
             if do_output:
-
-                out_keys = [x for x in reads_dict.keys() if x <= start-1000]
-
+                out_keys = [x for x in sorted(reads_dict.keys()) if x <= start-1000]
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
                         yield bundle, read_events
