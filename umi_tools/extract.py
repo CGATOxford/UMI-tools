@@ -148,17 +148,23 @@ class Record:
 def fastqIterate(infile):
     '''iterate over contents of fastq file.'''
 
+    def convert2string(b):
+        if type(b) == str:
+            return b
+        else:
+            return b.decode("utf-8")
+
     while 1:
-        line1 = infile.readline()
+        line1 = convert2string(infile.readline())
         if not line1:
             break
         if not line1.startswith('@'):
             raise ValueError("parsing error: expected '@' in line %s" % line1)
-        line2 = infile.readline()
-        line3 = infile.readline()
+        line2 = convert2string(infile.readline())
+        line3 = convert2string(infile.readline())
         if not line3.startswith('+'):
             raise ValueError("parsing error: expected '+' in line %s" % line3)
-        line4 = infile.readline()
+        line4 = convert2string(infile.readline())
         # incomplete entry
         if not line4:
             raise ValueError("incomplete entry for %s" % line1)
@@ -260,7 +266,10 @@ class Extractor:
                 else:
                     return None
 
-        umi1 = "".join([bc1[x] for x in self.umi_bases])
+        try:
+            umi1 = "".join([bc1[x] for x in self.umi_bases])
+        except:
+            raise ValueError()
         sample1 = "".join([bc1[x] for x in self.bc_bases])
         sample_qual1 = "".join([bc_qual1[x] for x in self.bc_bases])
 
@@ -408,7 +417,7 @@ def main(argv=None):
         read2_out = U.openFile(options.read2_out, "w")
 
         for read1, read2 in izip(read1s, read2s):
-            U.info("read1: %s, read2: %s" % ( read1, read2))
+            U.info("read1: %s, read2: %s" % (read1, read2))
             new_1, new_2 = processor(read1, read2)
             if new_1:
                 options.stdout.write(str(new_1) + "\n")

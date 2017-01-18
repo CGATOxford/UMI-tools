@@ -344,8 +344,8 @@ class ReadClusterer:
         clusters = self.get_connected_components(umis, adj_list, counts)
 
         if not deduplicate:
-            groups = self.get_groups(clusters, adj_list, counts)
-
+            groups = [list(x) for x in
+                      self.get_groups(clusters, adj_list, counts)]
             return bundle, groups, counts
 
         reads, final_umis, umi_counts = self.reduce_clusters(
