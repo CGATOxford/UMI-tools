@@ -18,9 +18,7 @@ See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common u
 
 The `dedup` and `group` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
-`Biorxiv Preprint <http://dx.doi.org/10.1101/051755>`_.
-
-`Genome Science 2015 poster <http://f1000research.com/posters/4-728>`_.
+`Genome Research Publication <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_
 
 `Blog post discussing network-based methods <https://cgatoxford.wordpress.com/2015/08/14/unique-molecular-identifiers-the-problem-the-solution-and-the-proof/>`_.
 
