@@ -111,7 +111,7 @@ class ReadClusterer:
         if len(cluster) == 1:
             return list(cluster)
         else:
-            threshold = np.median(counts.values())/100
+            threshold = np.median(list(counts.values()))/100
             return [read for read in cluster if counts[read] > threshold]
 
     def _get_best_null(self, cluster, counts):
@@ -277,7 +277,6 @@ class ReadClusterer:
         reads = []
         final_umis = []
         umi_counts = []
-
         parent_umis = self.get_best(clusters, counts)
         reads.extend([bundle[umi]["read"] for umi in parent_umis])
 
@@ -344,8 +343,8 @@ class ReadClusterer:
         clusters = self.get_connected_components(umis, adj_list, counts)
 
         if not deduplicate:
-            groups = self.get_groups(clusters, adj_list, counts)
-
+            groups = [list(x) for x in
+                      self.get_groups(clusters, adj_list, counts)]
             return bundle, groups, counts
 
         reads, final_umis, umi_counts = self.reduce_clusters(

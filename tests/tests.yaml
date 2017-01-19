@@ -1,106 +1,214 @@
 extract_single:
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [processed_single.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log
+       stdin: slim.fastq.gz
+       outputs: [stdout]
+       references: [processed_single.fastq]
+       options: extract  --bc-pattern=NNNXXXXNN --log=test.log
 
 extract_3prime:
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [processed_3prime.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
+       stdin: slim.fastq.gz
+       outputs: [stdout]
+       references: [processed_3prime.fastq]
+       options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
+
+## python 2 tests ##
 
 dedup_single_ignore:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_ignore.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
 
 dedup_single_unique:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unique.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
 
 dedup_single_perc:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_perc.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
 
 dedup_single_cluster:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_cluster.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
 
 dedup_single_adj:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_adj.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
 
 dedup_single_dir:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
 
-
 dedup_single_stats:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
       references: [single_cluster.sam, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
       options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats --further-stats
 
 dedup_single_dir_edit_dist:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
 
 dedup_single_subset:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_subset.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
 
 dedup_single_sep:
+      skip_python: 3
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep.sam]
       options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
 
 group unique:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout, group_uniq.tsv]
       references: [group_uniq.sam, group_uniq.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
 
 group cluster:
+      skip_python: 3
       stdin: chr19.bam
       outputs: [stdout, group_cluster.tsv]
       references: [group_cluster.sam, group_cluster.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
 
-# group adjacency:
+# ## End of python 2 tests ##
+
+
+# ## python 3 tests ##
+
+dedup_single_ignore_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_ignore_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
+
+dedup_single_unique_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_unique_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
+
+dedup_single_perc_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_perc_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
+
+dedup_single_cluster_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_cluster_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
+
+dedup_single_adj_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_adj_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
+
+dedup_single_dir_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
+
+
+dedup_single_stats_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
+      references: [single_cluster_py3.sam, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
+      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats --further-stats
+
+dedup_single_dir_edit_dist_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir_2_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
+
+dedup_single_subset_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_subset_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
+
+dedup_single_sep_py3:
+      skip_python: 2
+      stdin: chr19_sep.bam
+      outputs: [stdout]
+      references: [single_sep_py3.sam]
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+
+group unique_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout, group_uniq.tsv]
+      references: [group_uniq_py3.sam, group_uniq_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
+
+group cluster_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout, group_cluster.tsv]
+      references: [group_cluster_py3.sam, group_cluster_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
+
+# group adjacency_py3:
+#       skip_python: 2
 #       stdin: chr19.bam
 #       outputs: [stdout, group_adj.tsv]
-#       references: [group_adj.sam, group_adj.tsv]
+#       references: [group_adj_py3.sam, group_adj_py3.tsv]
 #       options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
 
-group directional:
+group directional_py3:
+      skip_python: 2
       stdin: chr19.bam
       outputs: [stdout, group_dir.tsv]
-      references: [group_dir.sam, group_dir.tsv]
+      references: [group_dir_py3.sam, group_dir_py3.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv
+
+## End of python 3 tests ##
+
 
 ### Tests to implement ####
 
-## extract ##
-# paired end +/- split barcode
+# ## extract ##
+# # paired end +/- split barcode
 
-## dedup ##
-# mapping-quality (Need a BAM with meaningful MAPQ)
-# paired end (obv. need a paired end BAM)
-# read-length (ideally with sRNA-Seq BAM?!)
+# ## dedup ##
+# # mapping-quality (Need a BAM with meaningful MAPQ)
+# # paired end (obv. need a paired end BAM)
+# # read-length (ideally with sRNA-Seq BAM?!)
