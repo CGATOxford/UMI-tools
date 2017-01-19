@@ -1,14 +1,14 @@
 extract_single:
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [processed_single.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log
+       stdin: slim.fastq.gz
+       outputs: [stdout]
+       references: [processed_single.fastq]
+       options: extract  --bc-pattern=NNNXXXXNN --log=test.log
 
 extract_3prime:
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [processed_3prime.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
+       stdin: slim.fastq.gz
+       outputs: [stdout]
+       references: [processed_3prime.fastq]
+       options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
 
 ## python 2 tests ##
 
@@ -54,7 +54,6 @@ dedup_single_dir:
       references: [single_dir.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
 
-
 dedup_single_stats:
       skip_python: 3
       stdin: chr19.bam
@@ -96,20 +95,6 @@ group cluster:
       outputs: [stdout, group_cluster.tsv]
       references: [group_cluster.sam, group_cluster.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
-
-# group adjacency:
-#      	skip_python: 3
-#       stdin: chr19.bam
-#       outputs: [stdout, group_adj.tsv]
-#       references: [group_adj.sam, group_adj.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
-
-group directional:
-      skip_python: 3
-      stdin: chr19.bam
-      outputs: [stdout, group_dir.tsv]
-      references: [group_dir.sam, group_dir.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv
 
 # ## End of python 2 tests ##
 
@@ -220,10 +205,10 @@ group directional_py3:
 
 ### Tests to implement ####
 
-## extract ##
-# paired end +/- split barcode
+# ## extract ##
+# # paired end +/- split barcode
 
-## dedup ##
-# mapping-quality (Need a BAM with meaningful MAPQ)
-# paired end (obv. need a paired end BAM)
-# read-length (ideally with sRNA-Seq BAM?!)
+# ## dedup ##
+# # mapping-quality (Need a BAM with meaningful MAPQ)
+# # paired end (obv. need a paired end BAM)
+# # read-length (ideally with sRNA-Seq BAM?!)
