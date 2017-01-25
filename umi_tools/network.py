@@ -10,8 +10,7 @@ network.py - Network methods for dealing with UMIs
 '''
 import collections
 import itertools
-
-# required to make iteritems python2 and python3 compatible
+import sys
 import numpy as np
 
 import pyximport
@@ -19,8 +18,13 @@ pyximport.install(build_in_temp=False)
 
 try:
     from umi_tools._dedup_umi import edit_distance
+    import umi_tools.Utilities as U
+
 except:
     from _dedup_umi import edit_distance
+    import Utilities as U
+
+sys.setrecursionlimit(10000)
 
 
 def breadth_first_search(node, adj_list):
@@ -38,6 +42,26 @@ def breadth_first_search(node, adj_list):
         queue.difference_update(searched)
 
     return found
+
+
+def recursive_search(node, adj_list):
+    children = adj_list[node]
+    children = [x for x in children if x not in recursive_search.component]
+    for child in children:
+        recursive_search.component.update((child,))
+        recursive_search.component.update(
+            recursive_search(child, adj_list))
+    return recursive_search.component
+
+
+def breadth_first_search_recursive(node, adj_list):
+    try:
+        recursive_search.component = set((node,))
+        return recursive_search(node, adj_list)
+
+    except RecursionError as error:
+        U.info('Recursion Error: %s' % error)
+        return breadth_first_search(node, adj_list)
 
 
 def remove_umis(adj_list, cluster, nodes):
@@ -134,9 +158,9 @@ class ReadClusterer:
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) <= threshold and
-                      counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
+                      counts[umi] >= (counts[umi2]*2)-1 and
+                      edit_distance(umi.encode('utf-8'), umi2.encode('utf-8')) <= threshold]
+                for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):
         ''' for methods which don't use a adjacency dictionary'''
@@ -147,12 +171,17 @@ class ReadClusterer:
     def _get_connected_components_adjacency(self, umis, graph, counts):
         ''' find the connected UMIs within an adjacency dictionary'''
 
+        if len(graph) < 10000:
+            self.search = breadth_first_search_recursive
+        else:
+            self.search = breadth_first_search
+
         found = list()
         components = list()
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
-                component = breadth_first_search(node, graph)
+                component = self.search(node, graph)
                 found.extend(component)
                 components.append(component)
 
