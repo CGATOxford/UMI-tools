@@ -157,8 +157,8 @@ class ReadClusterer:
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         return {umi: [umi2 for umi2 in umis if
-                      counts[umi] >= (counts[umi2]*2)-1 and
-                      edit_distance(umi, umi2) <= threshold]
+                      edit_distance(umi, umi2) <= threshold and
+                      counts[umi] >= (counts[umi2]*2)-1]
                 for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):
