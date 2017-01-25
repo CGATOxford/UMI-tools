@@ -149,8 +149,7 @@ class ReadClusterer:
         ''' identify all umis within hamming distance threshold'''
 
         return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) <= threshold]
+                      edit_distance(umi, umi2) <= threshold]
                 for umi in umis}
 
     def _get_adj_list_directional(self, umis, counts, threshold=1):
@@ -159,7 +158,7 @@ class ReadClusterer:
 
         return {umi: [umi2 for umi2 in umis if
                       counts[umi] >= (counts[umi2]*2)-1 and
-                      edit_distance(umi.encode('utf-8'), umi2.encode('utf-8')) <= threshold]
+                      edit_distance(umi, umi2) <= threshold]
                 for umi in umis}
 
     def _get_adj_list_null(self, umis, counts, threshold):

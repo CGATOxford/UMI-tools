@@ -32,7 +32,7 @@ except:
 
 def get_umi(read, sep="_"):
     try:
-        return read.qname.split(sep)[-1]
+        return read.qname.split(sep)[-1].encode('utf-8')
     except IndexError:
         raise ValueError("Could not extract UMI from read, please"
                          "check UMI is encoded in the read name"
@@ -44,7 +44,7 @@ def get_average_umi_distance(umis):
     if len(umis) == 1:
         return -1
 
-    dists = [edit_distance(x.encode('utf-8'), y.encode('utf-8')) for
+    dists = [edit_distance(x, y) for
              x, y in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
 
