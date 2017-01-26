@@ -179,17 +179,21 @@ class ReadClusterer:
     def _get_connected_components_adjacency(self, umis, graph, counts):
         ''' find the connected UMIs within an adjacency dictionary'''
 
-        if len(graph) < 10000:
-            self.search = breadth_first_search_recursive
-        else:
-            self.search = breadth_first_search
+        # TS: TO DO: Work out why recursive function does lead to same
+        # final output. Then uncomment below
+
+        #if len(graph) < 10000:
+        #    self.search = breadth_first_search_recursive
+        #else:
+        #    self.search = breadth_first_search
 
         found = set()
         components = list()
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
-                component = self.search(node, graph)
+                #component = self.search(node, graph)
+                component = breadth_first_search(node, graph)
                 found.update(component)
                 components.append(component)
 
