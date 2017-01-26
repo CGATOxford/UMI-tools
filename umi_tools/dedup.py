@@ -561,6 +561,9 @@ def main(argv=None):
 
         # TS - see comment above regarding missing values
         agg_df = agg_df.fillna(0).astype(int)
+
+        agg_df.index = [x.decode() for x in agg_df.index]
+        agg_df.index.name = 'UMI'
         agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
         # bin distances into integer bins
