@@ -184,13 +184,13 @@ class ReadClusterer:
         else:
             self.search = breadth_first_search
 
-        found = list()
+        found = set()
         components = list()
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
                 component = self.search(node, graph)
-                found.extend(component)
+                found.update(component)
                 components.append(component)
 
         return components
