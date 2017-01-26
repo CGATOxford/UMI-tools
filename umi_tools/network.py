@@ -124,19 +124,28 @@ class ReadClusterer:
     def _get_adj_list_adjacency(self, umis, counts, threshold):
         ''' identify all umis within hamming distance threshold'''
 
-        return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) <= threshold]
-                for umi in umis}
+        adj_list = collections.defaultdict(list)
+        for umi1, umi2 in itertools.combinations(umis, 2):
+            if edit_distance(umi1, umi2) <= threshold:
+                adj_list[umi1].append(umi2)
+                adj_list[umi2].append(umi1)
+
+        return adj_list
+
 
     def _get_adj_list_directional(self, umis, counts, threshold=1):
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
-        return {umi: [umi2 for umi2 in umis if
-                      edit_distance(umi.encode('utf-8'),
-                                    umi2.encode('utf-8')) <= threshold and
-                      counts[umi] >= (counts[umi2]*2)-1] for umi in umis}
+        adj_list = collections.defaultdict(list)
+        for umi1, umi2 in itertools.combinations(umis, 2):
+            if edit_distance(umi1, umi2) <= threshold:
+                if counts[umi1] >= (counts[umi2]*2)-1:
+                    adj_list[umi1].append(umi2)
+                if counts[umi2] >= (counts[umi1]*2)-1:
+                    adj_list[umi2].append(umi1)
+
+        return adj_list
 
     def _get_adj_list_null(self, umis, counts, threshold):
         ''' for methods which don't use a adjacency dictionary'''
@@ -150,7 +159,7 @@ class ReadClusterer:
         found = list()
         components = list()
 
-        for node in sorted(graph, key=lambda x: counts[x], reverse=True):
+        for node in sorted(umis, key=lambda x: counts[x], reverse=True):
             if node not in found:
                 component = breadth_first_search(node, graph)
                 found.extend(component)
