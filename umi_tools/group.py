@@ -407,9 +407,9 @@ def main(argv=None):
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
-                            umi_methods.get_umi(read, options.umi_sep),
+                            umi_methods.get_umi(read, options.umi_sep).decode(),
                             counts[top_umi],
-                            top_umi,
+                            top_umi.decode(),
                             group_count,
                             unique_id))))
 
