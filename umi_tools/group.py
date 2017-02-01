@@ -249,6 +249,9 @@ def main(argv=None):
     parser.add_option("--umi-separator", dest="umi_sep",
                       type="string", help="separator between read id and UMI",
                       default="_")
+    parser.add_option("--subset", dest="subset", type="float",
+                      help="Use only a fraction of reads, specified by subset",
+                      default=None)
     parser.add_option("--spliced-is-unique", dest="spliced",
                       action="store_true",
                       help="Treat a spliced read as different to an unspliced"
@@ -353,7 +356,7 @@ def main(argv=None):
             infile,
             read_events,
             ignore_umi=False,
-            subset=False,
+            subset=options.subset,
             quality_threshold=options.mapping_quality,
             paired=options.paired,
             chrom=options.chrom,
