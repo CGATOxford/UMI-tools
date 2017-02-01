@@ -82,19 +82,26 @@ dedup_single_sep:
       references: [single_sep.sam]
       options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
 
-group unique:
+group_unique:
       skip_python: 3
       stdin: chr19.bam
       outputs: [stdout, group_uniq.tsv]
       references: [group_uniq.sam, group_uniq.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
 
-group cluster:
+group_cluster:
       skip_python: 3
       stdin: chr19.bam
       outputs: [stdout, group_cluster.tsv]
       references: [group_cluster.sam, group_cluster.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
+
+group_directional_subset:
+      skip_python: 3
+      stdin: chr19.bam
+      outputs: [stdout, group_dir_subset.tsv]
+      references: [group_dir_subset.sam, group_dir_subset.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset.tsv --subset=0.1
 
 # ## End of python 2 tests ##
 
