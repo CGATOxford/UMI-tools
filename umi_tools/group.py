@@ -19,6 +19,17 @@ the last word of the read name. e.g:
 
 where AATT is the UMI sequeuence.
 
+If you have used an alternative method which does not separate the
+read id and UMI with a "_", such as bcl2fastq which uses ":", you can
+specify the separator with the option "--umi-separator=<sep>",
+replacing <sep> with e.g ":".
+
+Alternatively, if your UMIs are encoded in a tag, you can specify this
+by setting the option --extract-umi-method=tag and set the tag name
+with the --umi-tag option. For example, if your UMIs are encoded in
+the 'UM' tag, provide the following options:
+"--extract-umi-method=tag --umi-tag=UM"
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -81,7 +92,7 @@ The tagged-BAM file will have two tagged per read:
 UG = Unique_id. 0-indexed unique id number for each group of reads
      with the same genomic position and UMI or UMIs inferred to be
      from the same true UMI + errors
-FU = Final UMI. The inferred true UMI for the group
+BX = Final UMI. The inferred true UMI for the group
 
 To generate the flatfile describing the read groups, include the
 --group-out=<filename> option. The columns of the read groups file are
@@ -118,6 +129,24 @@ relate to the group.
 
 Options
 -------
+
+--extract-umi-method (choice)
+      How are the UMIs encoded in the read?
+
+      Options are:
+
+      - "read_id" (default)
+            UMIs contained at the end of the read separated as
+            specified with --umi-separator option
+
+      - "tag"
+            UMIs contained in a tag, see --umi-tag option
+
+--umi-separator (string)
+      Separator between read id and UMI. See --extract-umi-method above
+
+--umi-tag (string)
+      Tag which contains UMI. See --extract-umi-method above
 
 --method (choice, string)
       Method used to identify PCR duplicates within reads. All methods
@@ -249,6 +278,12 @@ def main(argv=None):
     parser.add_option("--umi-separator", dest="umi_sep",
                       type="string", help="separator between read id and UMI",
                       default="_")
+    parser.add_option("--umi-tag", dest="umi_tag",
+                      type="string", help="tag containing umi",
+                      default='RX')
+    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
+                      choices=("read_id", "tag"), default="read_id",
+                      help="where is the read UMI encoded? [default=%default]")
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
@@ -366,6 +401,8 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             umi_sep=options.umi_sep,
+            umi_tag=options.umi_tag,
+            get_umi_method=options.get_umi_method,
             all_reads=True):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -403,7 +440,7 @@ def main(argv=None):
                         else:
                             # Add the 'UG' tag to the read
                             read.tags += [('UG', unique_id)]
-                            read.tags += [('FU', top_umi)]
+                            read.tags += [('BX', top_umi)]
                             outfile.write(read)
 
                     if options.tsv:
