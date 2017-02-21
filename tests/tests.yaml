@@ -1,14 +1,14 @@
 extract_single:
-       stdin: slim.fastq.gz
-       outputs: [stdout]
-       references: [processed_single.fastq]
-       options: extract  --bc-pattern=NNNXXXXNN --log=test.log
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_single.fastq]
+      options: extract  --bc-pattern=NNNXXXXNN --log=test.log
 
 extract_3prime:
-       stdin: slim.fastq.gz
-       outputs: [stdout]
-       references: [processed_3prime.fastq]
-       options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_3prime.fastq]
+      options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
 
 ## python 2 tests ##
 
@@ -107,6 +107,13 @@ group_directional_subset:
 
 
 # ## python 3 tests ##
+
+extract_quality_py3:
+      skip_python: 2
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [extract_quality_py3.fastq]
+      options: extract  --bc-pattern=NNNXXXXNN --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
 
 dedup_single_ignore_py3:
       skip_python: 2
