@@ -289,6 +289,9 @@ def main(argv=None):
     parser.add_option("--umi-tag", dest="umi_tag",
                       type="string", help="tag containing umi",
                       default='RX')
+    parser.add_option("--umi-group-tag", dest="umi_group_tag",
+                      type="string", help="tag for the outputted umi group",
+                      default='BX')
     parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
                       choices=("read_id", "tag"), default="read_id",
                       help="where is the read UMI encoded? [default=%default]")
@@ -456,7 +459,7 @@ def main(argv=None):
                         else:
                             # Add the 'UG' tag to the read
                             read.tags += [('UG', unique_id)]
-                            read.tags += [('BX', top_umi)]
+                            read.tags += [(options.umi_group_tag, top_umi)]
                             outfile.write(read)
 
                     if options.tsv:
