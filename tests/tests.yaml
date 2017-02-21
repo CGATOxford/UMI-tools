@@ -96,6 +96,20 @@ group_cluster:
       references: [group_cluster.sam, group_cluster.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
 
+group_adjacency:
+      skip_python: 3
+      stdin: chr19.bam
+      outputs: [stdout, group_adj.tsv]
+      references: [group_adj.sam, group_adj.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
+
+group_directional:
+      skip_python: 3
+      stdin: chr19.bam
+      outputs: [stdout, group_dir.tsv]
+      references: [group_dir.sam, group_dir.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv
+
 group_directional_subset:
       skip_python: 3
       stdin: chr19.bam
