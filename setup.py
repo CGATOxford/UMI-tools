@@ -46,7 +46,8 @@ install_requires = [
     "cython>=0.19",
     "numpy>=1.7",
     "pandas>=0.12.0",
-    "future"]
+    "future",
+    "functools"]
 
 # This is a hack. When Pysam is installed from source, the recorded
 # version is 0.2.3, even though a more recent version is actaully
