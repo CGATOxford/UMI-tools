@@ -53,12 +53,6 @@ not assigned to a "true" UMI.
       Identify clusters of connected UMIs (based on hamming distance
       threshold). Each network is a read group
 
-  "adjacency"
-      Cluster UMIs as above. For each cluster, select and remove the
-      node(UMI) with the highest counts and remove all connected
-      nodes. Repeat with remaining nodes until no nodes remain. Each
-      removal step defines a read group.
-
   "directional"
       Identify clusters of connected UMIs (based on hamming distance
       threshold) and umi A counts >= (2* umi B counts) - 1. Each
@@ -119,19 +113,24 @@ relate to the group.
 Options
 -------
 
---method (choice, string)
+--method (string, choice)
       Method used to identify PCR duplicates within reads. All methods
       start by identifying the reads with the same mapping position
 
       Options are:
 
       - "unique"
-
-      - "percentile"
+      Reads group share the exact same UMI
 
       - "cluster"
+      Identify clusters of connected UMIs (based on edit distance
+      threshold). Each network is a read group
 
-      - "adjacency"
+      - "directional"
+      Identify clusters of connected UMIs (based on edit distance
+      threshold) and umi A counts >= (2* umi B counts) - 1. Each
+      network is a read group.
+
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -156,7 +155,7 @@ Options
        junction. By setting this option, you can treat reads with at least
        this many bases soft-clipped at the 3' end as spliced.
 
---multimapping-detection-method (choice, string)
+--multimapping-detection-method (string, choice)
        If the sam/bam contains tags to identify multimapping reads, you can
        specify for use when selecting the best read at a given loci.
        Supported tags are "NH", "X0" and "XT". If not specified, the read
@@ -169,29 +168,31 @@ Options
       Consider all alignments to a single contig together. This is useful if
       you have aligned to a transcriptome multi-fasta
 
---subset
+--subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
 
 --chrom
       Only consider a single chromosome. This is useful for debugging purposes
 
+--group-out (string, filename)
+      Output a flatfile describing the read groups
+
+--output-bam (string, filename)
+      Output a tagged bam file to stdout or -S <filename>
+
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
       in BAM format. Use these options to specify the use of SAM format for
       inputs or outputs.
 
---group-out=<filename>
-      Output a flatfile describing the read groups
+-I    (string, filename) input file name
+      The input file must be sorted and indexed.
 
---output-bam
-      Output a tagged bam file to stdout or -S <filename>
+-S    (string, filename) output file name
 
--I    input file name. The input file must be sorted and indexed.
+-L    (string, filename) log file name
 
--S    output file name.
-
--L    log file name.
 
 
 Usage

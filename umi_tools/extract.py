@@ -18,7 +18,7 @@ Options
 -------
 
 
---read2-in, --read2-out
+--read2-in, --read2-out (strings, filenames)
        Optionally a file with read pairs can be provided. The UMI will
        be added to the read2 read name as well.  Assumes that reads
        are in the same order. read2-out specifies the output file.
@@ -29,7 +29,7 @@ Options
        pattern of the barcode/UMI on the second read using the option
        ``--bc-pattern2``
 
---bc-pattern
+--bc-pattern (string)
        Use this option to specify the format of the UMI/barcode. Use Ns to
        represent the random positions and Xs to indicate the bc positions.
        Bases with Ns will be extracted and added to the read name. Remaining
@@ -49,7 +49,7 @@ Options
        1AFGGCG01DFH00B1FF0B
        +
 
---bc-pattern2
+--bc-pattern2 (string)
        Use this option to specify the format of the UMI/barcode for
        the second read pair if required. If --bc-pattern2 is not
        supplied, this defaults to the same pattern as --bc-pattern
@@ -58,7 +58,7 @@ Options
        By default the barcode is assumed to be on the 5' end of the read, but
        use this option to sepecify that it is on the 3' end instead
 
--L
+-L (string, filename)
        Specify a log file to retain logging information and final statistics
 
 --supress-stats
@@ -83,6 +83,7 @@ Command line options
 
 '''
 import sys
+from six import iteritems
 
 # python 3 doesn't require izip
 try:
@@ -123,10 +124,9 @@ class Record:
        ``phred33``, ``phred64`` or ``solexa``.
 
     """
-    def __init__(self, identifier, seq, quals, format=None):
-        self.identifier, self.seq, self.quals, format = (
-            identifier, seq, quals, format)
-        self.format = None
+    def __init__(self, identifier, seq, quals, entry_format=None):
+        self.identifier, self.seq, self.quals, entry_format = (
+            identifier, seq, quals, entry_format)
 
     def guessFormat(self):
         '''return quality score format -
@@ -135,10 +135,10 @@ class Record:
         c = [ord(x) for x in self.quals]
         mi, ma = min(c), max(c)
         r = []
-        for format, v in RANGES.iteritems():
+        for entry_format, v in iteritems(RANGES):
             m1, m2 = v
             if mi >= m1 and ma < m2:
-                r.append(format)
+                r.append(entry_format)
         return r
 
     def __str__(self):
