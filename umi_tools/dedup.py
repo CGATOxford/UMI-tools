@@ -237,6 +237,8 @@ import collections
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
+from functools import partial
+
 import pysam
 
 import pandas as pd
@@ -244,11 +246,17 @@ import numpy as np
 
 try:
     import umi_tools.Utilities as U
-    import umi_tools.network as network
-    import umi_tools.umi_methods as umi_methods
-except:
+except ImportError:
     import Utilities as U
+
+try:
+    import umi_tools.network as network
+except ImportError:
     import network
+
+try:
+    import umi_tools.umi_methods as umi_methods
+except ImportError:
     import umi_methods
 
 
@@ -452,6 +460,16 @@ def main(argv=None):
                         options.detection_method, ",".join(
                             [x for x in bam_features if bam_features[x]])))
 
+    # set the method with which to extract umis from reads
+    if options.get_umi_method == "read_id":
+        umi_getter = partial(
+            umi_methods.get_umi_read_id, sep=options.umi_sep)
+    elif options.get_umi_method == "tag":
+        umi_getter = partial(
+            umi_methods.get_umi_tag, tag=options.umi_tag)
+    else:
+        raise ValueError("Unknown umi extraction method")
+
     if options.stats:
         # set up arrays to hold stats data
         stats_pre_df_dict = {"UMI": [], "counts": []}
@@ -463,9 +481,7 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom,
-            umi_sep=options.umi_sep, umi_tag=options.umi_tag,
-            get_umi_method=options.get_umi_method)
+            infile.filename, chrom=options.chrom, umi_getter=umi_getter)
 
     read_events = collections.Counter()
 
@@ -482,10 +498,8 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
-            all_reads=False,
-            umi_sep=options.umi_sep,
-            umi_tag=options.umi_tag,
-            get_umi_method=options.get_umi_method):
+            umi_getter=umi_getter,
+            all_reads=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
@@ -534,9 +548,7 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [umi_methods.get_umi(
-                    x, options.umi_sep, options.umi_tag, options.get_umi_method)
-                                     for x in reads]
+                post_cluster_umis = [umi_getter(x) for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 

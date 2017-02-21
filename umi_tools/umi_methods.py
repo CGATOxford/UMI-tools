@@ -30,28 +30,26 @@ except:
     from _dedup_umi import edit_distance
 
 
-def get_umi(read, sep="_", tag='RX', method='read_id'):
-    ''' extract the umi from either:
-    - read id using specified separator
-    - specified tag'''
+def get_umi_read_id(read, sep="_"):
+    ''' extract the umi from the read id using the specified separator '''
 
-    if method == 'read_id':
-        try:
-            return read.qname.split(sep)[-1].encode('utf-8')
-        except IndexError:
-            raise ValueError(
-                "Could not extract UMI from the read ID, please"
-                "check UMI is encoded in the read name")
+    try:
+        return read.qname.split(sep)[-1].encode('utf-8')
+    except IndexError:
+        raise ValueError(
+            "Could not extract UMI from the read ID, please"
+            "check UMI is encoded in the read name")
 
-    elif method == 'tag':
-        try:
-            return read.get_tag(tag).encode('utf-8')
-        except IndexError:
-            raise ValueError(
-                "Could not extract UMI from the read ID, please"
-                "check UMI is encoded in the read name")
-    else:
-        raise ValueError('unknown method for umi extraction')
+
+def get_umi_tag(read, tag='RX'):
+    ''' extract the umi from the specified tag '''
+
+    try:
+        return read.get_tag(tag).encode('utf-8')
+    except IndexError:
+        raise ValueError(
+            "Could not extract UMI from the read tags, please"
+            "check UMI is encoded in the read tag: %s" % tag)
 
 
 def get_average_umi_distance(umis):
@@ -188,8 +186,7 @@ def get_bundles(insam, read_events,
                 ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ", umi_sep="_", umi_tag='RX',
-                get_umi_method='read_id', all_reads=False):
+                detection_method="MAPQ", umi_getter=None, all_reads=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -298,7 +295,7 @@ def get_bundles(insam, read_events,
         if ignore_umi:
             umi = ""
         else:
-            umi = get_umi(read, umi_sep, umi_tag, get_umi_method)
+            umi = umi_getter(read)
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
@@ -363,7 +360,7 @@ class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile, chrom, umi_sep, umi_tag, get_umi_method):
+    def __init__(self, bamfile, chrom, umi_getter):
         inbam = pysam.Samfile(bamfile)
 
         if chrom:
@@ -372,9 +369,10 @@ class random_read_generator:
             self.inbam = inbam.fetch()
 
         self.umis = collections.defaultdict(int)
-        self.fill(umi_sep, umi_tag, get_umi_method)
+        self.umi_getter = umi_getter
+        self.fill()
 
-    def fill(self, umi_sep, umi_tag, get_umi_method):
+    def fill(self):
 
         self.frequency2umis = collections.defaultdict(list)
 
@@ -386,7 +384,7 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[get_umi(read, umi_sep, umi_tag, get_umi_method)] += 1
+            self.umis[self.umi_getter(read)] += 1
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())

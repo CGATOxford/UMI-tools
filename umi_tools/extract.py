@@ -92,7 +92,10 @@ except ImportError:
     # Python 3
     izip = zip
 
-import umi_tools.Utilities as U
+try:
+    import umi_tools.Utilities as U
+except ImportError:
+    import Utilities as U
 
 
 ###############################################################################

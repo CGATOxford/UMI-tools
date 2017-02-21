@@ -239,20 +239,28 @@ Usage
 import sys
 import collections
 
+from functools import partial
+
 # required to make iteritems python2 and python3 compatible
-from future.utils import iteritems
 from builtins import dict
+from future.utils import iteritems
 
 import pysam
 import numpy as np
 
 try:
     import umi_tools.Utilities as U
-    import umi_tools.network as network
-    import umi_tools.umi_methods as umi_methods
-except:
+except ImportError:
     import Utilities as U
+
+try:
+    import umi_tools.network as network
+except ImportError:
     import network
+
+try:
+    import umi_tools.umi_methods as umi_methods
+except ImportError:
     import umi_methods
 
 
@@ -383,6 +391,16 @@ def main(argv=None):
         mapping_outfile.write(
             "read_id\tcontig\tposition\tumi\tumi_count\tfinal_umi\tfinal_umi_count\tunique_id\n")
 
+    # set the method with which to extract umis from reads
+    if options.get_umi_method == "read_id":
+        umi_getter = partial(
+            umi_methods.get_umi_read_id, sep=options.umi_sep)
+    elif options.get_umi_method == "tag":
+        umi_getter = partial(
+            umi_methods.get_umi_tag, tag=options.umi_tag)
+    else:
+        raise ValueError("Unknown umi extraction method")
+
     nInput, nOutput, unique_id = 0, 0, 0
 
     read_events = collections.Counter()
@@ -400,9 +418,7 @@ def main(argv=None):
             per_contig=options.per_contig,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
-            umi_sep=options.umi_sep,
-            umi_tag=options.umi_tag,
-            get_umi_method=options.get_umi_method,
+            umi_getter=umi_getter,
             all_reads=True):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
