@@ -234,7 +234,6 @@ class ReadClusterer:
                 groups.append(temp_cluster)
 
         return groups
-        
 
     def _group_adjacency(self, clusters, adj_list, counts):
         ''' return groups for adjacency method'''
