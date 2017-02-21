@@ -127,11 +127,11 @@ Options
 
       - "unique"
 
-      - "percentile"
-
       - "cluster"
 
       - "adjacency"
+
+      - "directional"
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -305,10 +305,6 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
-
-    if options.method == 'adjacency':
-        raise ValueError('The adjacency method is not yet available '
-                         'with umi_tools group')
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
