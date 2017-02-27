@@ -111,7 +111,7 @@ Options
 --umi-tag (string)
       Tag which contains UMI. See --extract-umi-method above
 
---method (choice, string)
+--method (string, choice)
       Method used to identify PCR duplicates within reads. All methods
       start by identifying the reads with the same mapping position
 
@@ -150,7 +150,7 @@ very long (>14bp)
        junction. By setting this option, you can treat reads with at least
        this many bases soft-clipped at the 3' end as spliced.
 
---multimapping-detection-method (choice, string)
+--multimapping-detection-method (string, choice)
        If the sam/bam contains tags to identify multimapping reads, you can
        specify for use when selecting the best read at a given loci.
        Supported tags are "NH", "X0" and "XT". If not specified, the read
@@ -159,11 +159,11 @@ very long (>14bp)
 --read-length
       Use the read length as as a criteria when deduping, for e.g sRNA-Seq
 
---whole-contig
+--whole-contig (string)
       Consider all alignments to a single contig together. This is useful if
       you have aligned to a transcriptome multi-fasta
 
---output-stats (filename prefix, string)
+--output-stats (string, filename_prefix)
        Output edit distance statistics and UMI usage statistics
        using this prefix.
 
@@ -182,7 +182,7 @@ very long (>14bp)
            inluding null expectations from random sampling of UMIs from the
            UMIs observed across all positions.
 
---further-stats
+--further-stats (string, filename_prefix)
        Output additional statistics on the toplogies of the UMI
        clusters. Note: each position may contain multiple clusters of
        connected UMIs(nodes). Further stats are only possible when
@@ -198,11 +198,11 @@ very long (>14bp)
        "[prefix]_stats_nodes.tsv"
            Hisogram of the number of nodes per cluster
 
---subset
+--subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
 
---chrom
+--chrom (string)
       Only consider a single chromosome. This is useful for debugging purposes
 
 -i, --in-sam/-o, --out-sam
@@ -210,11 +210,12 @@ very long (>14bp)
       in BAM format. Use these options to specify the use of SAM format for
       inputs or outputs.
 
--I    input file name. The input file must be sorted and indexed.
+-I    (string, filename) input file name
+      The input file must be sorted and indexed.
 
--S    output file name.
+-S    (string, filename) output file name
 
--L    log file name.
+-L    (string, filename) log file name
 
 
 Usage
