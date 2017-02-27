@@ -30,13 +30,26 @@ except:
     from _dedup_umi import edit_distance
 
 
-def get_umi(read, sep="_"):
+def get_umi_read_id(read, sep="_"):
+    ''' extract the umi from the read id using the specified separator '''
+
     try:
         return read.qname.split(sep)[-1].encode('utf-8')
     except IndexError:
-        raise ValueError("Could not extract UMI from read, please"
-                         "check UMI is encoded in the read name"
-                         "following the final '_' or run with --ignore-umi")
+        raise ValueError(
+            "Could not extract UMI from the read ID, please"
+            "check UMI is encoded in the read name")
+
+
+def get_umi_tag(read, tag='RX'):
+    ''' extract the umi from the specified tag '''
+
+    try:
+        return read.get_tag(tag).encode('utf-8')
+    except IndexError:
+        raise ValueError(
+            "Could not extract UMI from the read tags, please"
+            "check UMI is encoded in the read tag: %s" % tag)
 
 
 def get_average_umi_distance(umis):
@@ -173,7 +186,7 @@ def get_bundles(insam, read_events,
                 ignore_umi=False, subset=None, quality_threshold=0,
                 paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
                 per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ", all_reads=False, umi_sep="_"):
+                detection_method="MAPQ", umi_getter=None, all_reads=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -282,7 +295,7 @@ def get_bundles(insam, read_events,
         if ignore_umi:
             umi = ""
         else:
-            umi = get_umi(read, umi_sep)
+            umi = umi_getter(read)
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
@@ -347,7 +360,7 @@ class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile, chrom):
+    def __init__(self, bamfile, chrom, umi_getter):
         inbam = pysam.Samfile(bamfile)
 
         if chrom:
@@ -356,6 +369,7 @@ class random_read_generator:
             self.inbam = inbam.fetch()
 
         self.umis = collections.defaultdict(int)
+        self.umi_getter = umi_getter
         self.fill()
 
     def fill(self):
@@ -370,7 +384,7 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[get_umi(read)] += 1
+            self.umis[self.umi_getter(read)] += 1
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())

@@ -24,6 +24,12 @@ read id and UMI with a "_", such as bcl2fastq which uses ":", you can
 specify the separator with the option "--umi-separator=<sep>",
 replacing <sep> with e.g ":".
 
+Alternatively, if your UMIs are encoded in a tag, you can specify this
+by setting the option --extract-umi-method=tag and set the tag name
+with the --umi-tag option. For example, if your UMIs are encoded in
+the 'UM' tag, provide the following options:
+"--extract-umi-method=tag --umi-tag=UM"
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -87,6 +93,23 @@ Otherwise a read is chosen at random.
 
 Options
 -------
+--extract-umi-method (choice)
+      How are the UMIs encoded in the read?
+
+      Options are:
+
+      - "read_id" (default)
+            UMIs contained at the end of the read separated as
+            specified with --umi-separator option
+
+      - "tag"
+            UMIs contained in a tag, see --umi-tag option
+
+--umi-separator (string)
+      Separator between read id and UMI. See --extract-umi-method above
+
+--umi-tag (string)
+      Tag which contains UMI. See --extract-umi-method above
 
 --method (choice, string)
       Method used to identify PCR duplicates within reads. All methods
@@ -102,7 +125,7 @@ Options
 
       - "adjacency"
 
-      - "directional"
+      - "directional" (default)
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -214,6 +237,8 @@ import collections
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
+from functools import partial
+
 import pysam
 
 import pandas as pd
@@ -221,11 +246,17 @@ import numpy as np
 
 try:
     import umi_tools.Utilities as U
-    import umi_tools.network as network
-    import umi_tools.umi_methods as umi_methods
-except:
+except ImportError:
     import Utilities as U
+
+try:
+    import umi_tools.network as network
+except ImportError:
     import network
+
+try:
+    import umi_tools.umi_methods as umi_methods
+except ImportError:
     import umi_methods
 
 
@@ -296,6 +327,12 @@ def main(argv=None):
     parser.add_option("--umi-separator", dest="umi_sep",
                       type="string", help="separator between read id and UMI",
                       default="_")
+    parser.add_option("--umi-tag", dest="umi_tag",
+                      type="string", help="tag containing umi",
+                      default='RX')
+    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
+                      choices=("read_id", "tag"), default="read_id",
+                      help="where is the read UMI encoded? [default=%default]")
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
@@ -400,8 +437,7 @@ def main(argv=None):
                              "and 'adjacency' methods")
 
     infile = pysam.Samfile(in_name, in_mode)
-    outfile = pysam.Samfile(out_name, out_mode,
-                            template=infile)
+    outfile = pysam.Samfile(out_name, out_mode, template=infile)
 
     if options.paired:
         outfile = umi_methods.TwoPassPairWriter(infile, outfile)
@@ -424,6 +460,16 @@ def main(argv=None):
                         options.detection_method, ",".join(
                             [x for x in bam_features if bam_features[x]])))
 
+    # set the method with which to extract umis from reads
+    if options.get_umi_method == "read_id":
+        umi_getter = partial(
+            umi_methods.get_umi_read_id, sep=options.umi_sep)
+    elif options.get_umi_method == "tag":
+        umi_getter = partial(
+            umi_methods.get_umi_tag, tag=options.umi_tag)
+    else:
+        raise ValueError("Unknown umi extraction method")
+
     if options.stats:
         # set up arrays to hold stats data
         stats_pre_df_dict = {"UMI": [], "counts": []}
@@ -435,7 +481,7 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom)
+            infile.filename, chrom=options.chrom, umi_getter=umi_getter)
 
     read_events = collections.Counter()
 
@@ -452,8 +498,8 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
-            all_reads=False,
-            umi_sep=options.umi_sep):
+            umi_getter=umi_getter,
+            all_reads=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
@@ -502,8 +548,7 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [umi_methods.get_umi(x, options.umi_sep)
-                                     for x in reads]
+                post_cluster_umis = [umi_getter(x) for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
