@@ -205,12 +205,33 @@ class ReadClusterer:
 
     # "group" methods #
 
-    def _group_single(self, clusters, adj_list, counts):
+    def _group_unique(self, clusters, adj_list, counts):
         ''' return groups for unique method'''
         if len(clusters) == 1:
             groups = [clusters]
         else:
             groups = [[x] for x in clusters]
+
+        return groups
+
+    def _group_directional(self, clusters, adj_list, counts):
+        ''' return groups for directional method'''
+
+        observed = set()
+        groups = []
+
+        for cluster in clusters:
+            if len(cluster) == 1:
+                groups.append(list(cluster))
+                observed.update(cluster)
+            else:
+                # need to remove any node which has already been observed
+                temp_cluster = []
+                for node in cluster:
+                    if node not in observed:
+                        temp_cluster.append(node)
+                        observed.add(node)
+                groups.append(temp_cluster)
 
         return groups
 
@@ -224,43 +245,45 @@ class ReadClusterer:
                 groups.append(list(cluster))
 
             else:
+                observed = set()
                 sorted_nodes = sorted(
                     cluster, key=lambda x: counts[x], reverse=True)
                 temp_groups = []
+
                 for i in range(len(sorted_nodes) - 1):
-                    node = sorted_nodes[i]
-                    latest_temp_group = [node]
-                    latest_temp_group.extend([
-                        x for x in adj_list[node] if x != node])
+                    top_node = sorted_nodes[i]
+                    observed.add(top_node)
+                    latest_temp_group = [top_node]
 
-                    # need to remove top node from any
+                    for connected_node in adj_list[top_node]:
+                        if connected_node == top_node:
+                            continue
+                        elif connected_node in observed:
+                            continue
+                        else:
+                            latest_temp_group.append(connected_node)
+                            observed.add(connected_node)
+
+                    # need to remove the top node from any
                     # other group where it is found
-                    top_node = latest_temp_group[0]
-
                     new_temp_groups = []
                     for temp_group in temp_groups:
                         temp_group = [x for x in temp_group if x != top_node]
                         new_temp_groups.append(temp_group)
-
                     temp_groups = new_temp_groups
+
                     temp_groups.append(latest_temp_group)
 
                     if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
-                        removed = set()
-                        for temp_group in temp_groups:
-                            temp_group = [x for x in temp_group if x not in removed]
-                            if len(temp_group) > 0:
-                                removed.update(temp_group)
-                                groups.append(temp_group)
+                        groups.extend(temp_groups)
                         break
 
         return groups
 
-    def _group_whole_network(self, clusters, adj_list, counts):
+    def _group_cluster(self, clusters, adj_list, counts):
         ''' return groups for cluster or directional methods'''
 
         groups = []
-
         for cluster in clusters:
             groups.append(sorted(cluster, key=lambda x: counts[x], reverse=True))
 
@@ -276,7 +299,6 @@ class ReadClusterer:
         # TS - the "adjacency" variant of this function requires an adjacency
         # list to identify the best umi, whereas the other variants don't
         # As temporary solution, pass adj_list to all variants
-
         reads = []
         final_umis = []
         umi_counts = []
@@ -342,14 +364,14 @@ class ReadClusterer:
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
             self.reduce_clusters = self._reduce_clusters_single
-            self.get_groups = self._group_whole_network
+            self.get_groups = self._group_directional
 
         elif cluster_method == "cluster":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
             self.get_best = self._get_best_higher_counts
             self.reduce_clusters = self._reduce_clusters_single
-            self.get_groups = self._group_whole_network
+            self.get_groups = self._group_cluster
 
         elif cluster_method == "percentile":
             self.get_adj_list = self._get_adj_list_null
@@ -364,7 +386,7 @@ class ReadClusterer:
             self.get_connected_components = self._get_connected_components_null
             self.get_best = self._get_best_null
             self.reduce_clusters = self._reduce_clusters_no_network
-            self.get_groups = self._group_single
+            self.get_groups = self._group_unique
 
     def __call__(self, bundle, threshold, stats=False, further_stats=False,
                  deduplicate=True):
