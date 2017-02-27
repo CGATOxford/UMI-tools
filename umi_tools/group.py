@@ -19,6 +19,17 @@ the last word of the read name. e.g:
 
 where AATT is the UMI sequeuence.
 
+If you have used an alternative method which does not separate the
+read id and UMI with a "_", such as bcl2fastq which uses ":", you can
+specify the separator with the option "--umi-separator=<sep>",
+replacing <sep> with e.g ":".
+
+Alternatively, if your UMIs are encoded in a tag, you can specify this
+by setting the option --extract-umi-method=tag and set the tag name
+with the --umi-tag option. For example, if your UMIs are encoded in
+the 'UM' tag, provide the following options:
+"--extract-umi-method=tag --umi-tag=UM"
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -81,7 +92,7 @@ The tagged-BAM file will have two tagged per read:
 UG = Unique_id. 0-indexed unique id number for each group of reads
      with the same genomic position and UMI or UMIs inferred to be
      from the same true UMI + errors
-FU = Final UMI. The inferred true UMI for the group
+BX = Final UMI. The inferred true UMI for the group
 
 To generate the flatfile describing the read groups, include the
 --group-out=<filename> option. The columns of the read groups file are
@@ -118,6 +129,24 @@ relate to the group.
 
 Options
 -------
+
+--extract-umi-method (choice)
+      How are the UMIs encoded in the read?
+
+      Options are:
+
+      - "read_id" (default)
+            UMIs contained at the end of the read separated as
+            specified with --umi-separator option
+
+      - "tag"
+            UMIs contained in a tag, see --umi-tag option
+
+--umi-separator (string)
+      Separator between read id and UMI. See --extract-umi-method above
+
+--umi-tag (string)
+      Tag which contains UMI. See --extract-umi-method above
 
 --method (choice, string)
       Method used to identify PCR duplicates within reads. All methods
@@ -210,20 +239,28 @@ Usage
 import sys
 import collections
 
+from functools import partial
+
 # required to make iteritems python2 and python3 compatible
-from future.utils import iteritems
 from builtins import dict
+from future.utils import iteritems
 
 import pysam
 import numpy as np
 
 try:
     import umi_tools.Utilities as U
-    import umi_tools.network as network
-    import umi_tools.umi_methods as umi_methods
-except:
+except ImportError:
     import Utilities as U
+
+try:
+    import umi_tools.network as network
+except ImportError:
     import network
+
+try:
+    import umi_tools.umi_methods as umi_methods
+except ImportError:
     import umi_methods
 
 
@@ -249,6 +286,15 @@ def main(argv=None):
     parser.add_option("--umi-separator", dest="umi_sep",
                       type="string", help="separator between read id and UMI",
                       default="_")
+    parser.add_option("--umi-tag", dest="umi_tag",
+                      type="string", help="tag containing umi",
+                      default='RX')
+    parser.add_option("--umi-group-tag", dest="umi_group_tag",
+                      type="string", help="tag for the outputted umi group",
+                      default='BX')
+    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
+                      choices=("read_id", "tag"), default="read_id",
+                      help="where is the read UMI encoded? [default=%default]")
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
@@ -344,6 +390,16 @@ def main(argv=None):
         mapping_outfile.write(
             "read_id\tcontig\tposition\tumi\tumi_count\tfinal_umi\tfinal_umi_count\tunique_id\n")
 
+    # set the method with which to extract umis from reads
+    if options.get_umi_method == "read_id":
+        umi_getter = partial(
+            umi_methods.get_umi_read_id, sep=options.umi_sep)
+    elif options.get_umi_method == "tag":
+        umi_getter = partial(
+            umi_methods.get_umi_tag, tag=options.umi_tag)
+    else:
+        raise ValueError("Unknown umi extraction method")
+
     nInput, nOutput, unique_id = 0, 0, 0
 
     read_events = collections.Counter()
@@ -361,7 +417,7 @@ def main(argv=None):
             per_contig=options.per_contig,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
-            umi_sep=options.umi_sep,
+            umi_getter=umi_getter,
             all_reads=True):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -399,7 +455,7 @@ def main(argv=None):
                         else:
                             # Add the 'UG' tag to the read
                             read.tags += [('UG', unique_id)]
-                            read.tags += [('FU', top_umi)]
+                            read.tags += [(options.umi_group_tag, top_umi)]
                             outfile.write(read)
 
                     if options.tsv:
