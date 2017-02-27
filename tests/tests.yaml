@@ -89,6 +89,13 @@ dedup_single_sep:
       references: [single_sep.sam]
       options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
 
+dedup_single_tag:
+      skip_python: 3
+      stdin: chr19_tag.bam
+      outputs: [stdout]
+      references: [single_tag.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
+
 group_unique:
       skip_python: 3
       stdin: chr19.bam
@@ -192,6 +199,13 @@ dedup_single_sep_py3:
       outputs: [stdout]
       references: [single_sep_py3.sam]
       options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+
+dedup_single_tag_py3:
+      skip_python: 2
+      stdin: chr19_tag.bam
+      outputs: [stdout]
+      references: [single_tag_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
 
 group_unique_py3:
       skip_python: 2
