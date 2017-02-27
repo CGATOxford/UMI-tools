@@ -414,7 +414,6 @@ def main(argv=None):
         read2_out = U.openFile(options.read2_out, "w")
 
         for read1, read2 in izip(read1s, read2s):
-            U.info("read1: %s, read2: %s" % (read1, read2))
             new_1, new_2 = processor(read1, read2)
             if new_1:
                 options.stdout.write(str(new_1) + "\n")
