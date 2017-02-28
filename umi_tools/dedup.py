@@ -217,12 +217,18 @@ very long (>14bp)
       align to a reference transcriptome with more than one transcript
       per gene. You need to also provide --gene-transcript-map option
 
---gene_transcript_map (string)
+--gene-transcript-map (string)
       File mapping genes to transripts (tab separated), e.g:
 
       gene1   transcript1
       gene1   transcript2
       gene2   transcript3
+
+--gene-tag (string)
+      Deduplicate per gene. As per --per-gene except here the gene
+      information is encoded in the bam read tag specified so you do
+      not need to supply --gene-transcript-map
+
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
@@ -424,6 +430,11 @@ def main(argv=None):
                       type="string",
                       help="file mapping transcripts to genes (tab separated)",
                       default=None)
+    parser.add_option("--gene-tag", dest="gene_tag",
+                      type="string",
+                      help=("Deduplicate per gene where gene is"
+                            "defined by this bam tag [default=%default]"),
+                      default=None)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -537,6 +548,7 @@ def main(argv=None):
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
             per_gene=options.per_gene,
+            gene_tag=options.gene_tag,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,

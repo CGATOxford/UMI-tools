@@ -220,12 +220,17 @@ Options
       This will also add a metacontig ('MC') tag to the reads if used
       in conjunction with --output-bam
 
---gene_transcript_map (string)
+--gene-transcript-map (string)
       File mapping genes to transripts (tab separated), e.g:
 
       gene1   transcript1
       gene1   transcript2
       gene2   transcript3
+
+--gene-tag (string)
+      Deduplicate per gene. As per --per-gene except here the gene
+      information is encoded in the bam read tag specified so you do
+      not need to supply --gene-transcript-map
 
 --group-out (string, filename)
       Output a flatfile describing the read groups
@@ -362,10 +367,16 @@ def main(argv=None):
                       type="string",
                       help="file mapping transcripts to genes (tab separated)",
                       default=None)
+    parser.add_option("--gene-tag", dest="gene_tag",
+                      type="string",
+                      help=("Deduplicate per gene where gene is"
+                            "defined by this bam tag [default=%default]"),
+                      default=None)
     parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
                       default=False,
-                      help="Read whole contig before outputting bundles: guarantees that no reads"
-                           "are missed, but increases memory usage")
+                      help="Read whole contig before outputting"
+                           "bundles: guarantees that no reads are"
+                           "missed, but increases memory usage")
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"

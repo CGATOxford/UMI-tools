@@ -211,7 +211,8 @@ def metafetcher(bamfile, metacontig2contig):
 def get_bundles(inreads, ignore_umi=False, subset=None,
                 quality_threshold=0, paired=False, spliced=False,
                 soft_clip_threshold=0, per_contig=False,
-                per_gene=False, whole_contig=False, read_length=False,
+                per_gene=False, gene_tag=None,
+                whole_contig=False, read_length=False,
                 detection_method="MAPQ", umi_getter=None,
                 all_reads=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
@@ -266,34 +267,23 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                 read_events['Read 2 unmapped'] += 1
             continue
 
-        # TS - some methods require deduping on a per contig basis
-        # (each contig is a gene), e.g Soumillon et al 2014 or else a
-        # per-gene basis (multiple transcripts per gene, each contig
-        # is a transcript)
-        # To fit in with current workflow, simply assign pos and key
-        # as contig
+        # TS - some methods require deduping on a per contig or per
+        # gene basis. To fit in with current workflow, simply assign
+        # pos and key as contig
 
-        if per_contig:
+        if per_contig or per_gene or gene_tag:
 
-            pos = read.tid
-            key = read.tid
-            if not read.tid == last_chr:
+            if per_contig:
+                pos = read.tid
+                key = pos
+            elif per_gene:
+                pos = read.get_tag('MC')
+                key = pos
+            elif gene_tag:
+                pos = read.get_tag(gene_tag)
+                key = pos
 
-                out_keys = list(reads_dict.keys())
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle, read_events
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_chr = read.tid
-
-        elif per_gene:
-
-            pos = read.get_tag('MC')
-            key = read.get_tag('MC')
-            if not read.get_tag('MC') == last_chr:
+            if not pos == last_chr:
 
                 out_keys = list(reads_dict.keys())
 
@@ -303,7 +293,7 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                     del reads_dict[p]
                     del read_counts[p]
 
-                last_chr = read.get_tag('MC')
+                last_chr = pos
 
         else:
 
