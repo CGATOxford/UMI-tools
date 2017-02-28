@@ -206,6 +206,27 @@ Options
 --chrom
       Only consider a single chromosome. This is useful for debugging purposes
 
+--per-contig (string)
+      Deduplicate per contig. All reads with the same contig will be
+      considered to have the same alignment position. This is useful
+      if your library prep generates PCR duplicates with non identical
+      alignment positions such as CEL-Seq. In this case, you would
+      align to a reference transcriptome with one transcript per gene
+
+--per-gene (string)
+      Deduplicate per gene. As above except with this option you can
+      align to a reference transcriptome with more than one transcript
+      per gene. You need to also provide --gene-transcript-map option.
+      This will also add a metacontig ('MC') tag to the reads if used
+      in conjunction with --output-bam
+
+--gene_transcript_map (string)
+      File mapping genes to transripts (tab separated), e.g:
+
+      gene1   transcript1
+      gene1   transcript2
+      gene2   transcript3
+
 --group-out (string, filename)
       Output a flatfile describing the read groups
 
@@ -331,6 +352,16 @@ def main(argv=None):
                       default=False,
                       help=("dedup per contig,"
                             " e.g for transcriptome where contig = gene"))
+    parser.add_option("--per-gene", dest="per_gene", action="store_true",
+                      default=False,
+                      help=("Deduplicate per gene,"
+                            "e.g for transcriptome where contig = transcript"
+                            "must also provide a transript to gene map with"
+                            "--gene-transcript-map [default=%default]"))
+    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
+                      type="string",
+                      help="file mapping transcripts to genes (tab separated)",
+                      default=None)
     parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
                       default=False,
                       help="Read whole contig before outputting bundles: guarantees that no reads"
@@ -379,6 +410,10 @@ def main(argv=None):
     else:
         out_mode = "wb"
 
+    if options.per_gene:
+        if not options.gene_transcript_map:
+            raise ValueError("--per-gene option requires --gene-transcript-map")
+
     infile = pysam.Samfile(in_name, in_mode)
 
     if options.output_bam:
@@ -405,16 +440,22 @@ def main(argv=None):
 
     nInput, nOutput, unique_id = 0, 0, 0
 
-    read_events = collections.Counter()
+    if options.chrom:
+        inreads = infile.fetch(reference=options.chrom)
+    else:
+        if options.per_gene:
+            metacontig2contig = umi_methods.getMetaContig2contig(
+                options.gene_transcript_map)
+            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+        else:
+            inreads = infile.fetch()
 
     for bundle, read_events in umi_methods.get_bundles(
-            infile,
-            read_events,
+            inreads,
             ignore_umi=False,
             subset=options.subset,
             quality_threshold=options.mapping_quality,
             paired=options.paired,
-            chrom=options.chrom,
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,

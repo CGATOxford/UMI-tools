@@ -205,6 +205,25 @@ very long (>14bp)
 --chrom (string)
       Only consider a single chromosome. This is useful for debugging purposes
 
+--per-contig (string)
+      Deduplicate per contig. All reads with the same contig will be
+      considered to have the same alignment position. This is useful
+      if your library prep generates PCR duplicates with non identical
+      alignment positions such as CEL-Seq. In this case, you would
+      align to a reference transcriptome with one transcript per gene
+
+--per-gene (string)
+      Deduplicate per gene. As above except with this option you can
+      align to a reference transcriptome with more than one transcript
+      per gene. You need to also provide --gene-transcript-map option
+
+--gene_transcript_map (string)
+      File mapping genes to transripts (tab separated), e.g:
+
+      gene1   transcript1
+      gene1   transcript2
+      gene2   transcript3
+
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
       in BAM format. Use these options to specify the use of SAM format for
@@ -369,10 +388,6 @@ def main(argv=None):
     parser.add_option("--further-stats", dest="further_stats",
                       action="store_true", default=False,
                       help="Output further stats")
-    parser.add_option("--per-contig", dest="per_contig", action="store_true",
-                      default=False,
-                      help=("dedup per contig,"
-                            " e.g for transcriptome where contig = gene"))
     parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
                       default=False,
                       help="Read whole contig before outputting bundles: guarantees that no reads"
@@ -395,6 +410,20 @@ def main(argv=None):
                       default=False,
                       help=("use read length in addition to position and UMI"
                             "to identify possible duplicates [default=%default]"))
+    parser.add_option("--per-contig", dest="per_contig", action="store_true",
+                      default=False,
+                      help=("dedup per contig,"
+                            " e.g for transcriptome where contig = gene"))
+    parser.add_option("--per-gene", dest="per_gene", action="store_true",
+                      default=False,
+                      help=("Deduplicate per gene,"
+                            "e.g for transcriptome where contig = transcript"
+                            "must also provide a transript to gene map with"
+                            "--gene-transcript-map [default=%default]"))
+    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
+                      type="string",
+                      help="file mapping transcripts to genes (tab separated)",
+                      default=None)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -436,6 +465,10 @@ def main(argv=None):
         if options.method not in ["cluster", "adjacency"]:
             raise ValueError("'--further-stats' only enabled with 'cluster' "
                              "and 'adjacency' methods")
+
+    if options.per_gene:
+        if not options.gene_transcript_map:
+            raise ValueError("--per-gene option requires --gene-transcript-map")
 
     infile = pysam.Samfile(in_name, in_mode)
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
@@ -484,18 +517,26 @@ def main(argv=None):
         read_gn = umi_methods.random_read_generator(
             infile.filename, chrom=options.chrom, umi_getter=umi_getter)
 
-    read_events = collections.Counter()
+    if options.chrom:
+        inreads = infile.fetch(reference=options.chrom)
+    else:
+        if options.per_gene:
+            metacontig2contig = umi_methods.getMetaContig2contig(
+                options.gene_transcript_map)
+            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+        else:
+            inreads = infile.fetch()
 
     for bundle, read_events in umi_methods.get_bundles(
-            infile,
-            read_events,
+            inreads,
             ignore_umi=options.ignore_umi,
             subset=options.subset,
             quality_threshold=options.mapping_quality,
-            paired=options.paired, chrom=options.chrom,
+            paired=options.paired,
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
+            per_gene=options.per_gene,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
