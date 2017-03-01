@@ -86,10 +86,14 @@ class TwoPassPairWriter:
         else:
             self.read2tags = None
 
-    def write(self, read, unique_id=None, umi=None):
+    def write(self, read, unique_id=None, umi=None, unmapped=False):
         '''Check if chromosome has changed since last time. If it has, scan
         for mates. Write the read to outfile and save the identity for paired
         end retrieval'''
+
+        if unmapped:
+            self.outfile.write(read)
+            return
 
         if not self.chrom == read.reference_id:
             self.write_mates()
@@ -216,7 +220,7 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                 per_gene=False, gene_tag=None,
                 whole_contig=False, read_length=False,
                 detection_method="MAPQ", umi_getter=None,
-                all_reads=False):
+                all_reads=False, return_unmapped=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -236,9 +240,33 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
     for read in inreads:
 
         if read.is_read2:
+            if read.is_unmapped and return_unmapped:
+                yield read, read_events, 'unmapped'
             continue
+
         else:
             read_events['Input Reads'] += 1
+
+        if read.is_unmapped:
+            if paired:
+                if read.mate_is_unmapped:
+                    read_events['Both unmapped'] += 1
+                else:
+                    read_events['Read 1 unmapped'] += 1
+            else:
+                read_events['Single end unmapped'] += 1
+
+            if return_unmapped:
+                read_events['Input Reads'] += 1
+                yield read, read_events, 'unmapped'
+            continue
+
+        if read.mate_is_unmapped and paired:
+            if not read.is_unmapped:
+                read_events['Read 2 unmapped'] += 1
+            if return_unmapped:
+                yield read, read_events, 'unmapped'
+            continue
 
         if paired:
             read_events['Paired Reads'] += 1
@@ -252,22 +280,6 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
             if read.mapq < quality_threshold:
                 read_events['< MAPQ threshold'] += 1
                 continue
-
-        if read.is_unmapped:
-            if paired:
-                if read.mate_is_unmapped:
-                    read_events['Both unmapped'] += 1
-                else:
-                    read_events['Read 1 unmapped'] += 1
-            else:
-                read_events['Single end unmapped'] += 1
-
-            continue
-
-        if read.mate_is_unmapped and paired:
-            if not read.is_unmapped:
-                read_events['Read 2 unmapped'] += 1
-            continue
 
         # TS - some methods require deduping on a per contig or per
         # gene basis. To fit in with current workflow, simply assign
@@ -291,7 +303,7 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
 
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle, read_events
+                        yield bundle, read_events, 'mapped'
                     del reads_dict[p]
                     del read_counts[p]
 
@@ -308,10 +320,14 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                 do_output = start > (last_pos+1000) or not read.tid == last_chr
 
             if do_output:
-                out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+                if not read.tid == last_chr:
+                    out_keys = list(reads_dict.keys())
+                else:
+                    out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle, read_events
+                        yield bundle, read_events, 'mapped'
                     del reads_dict[p]
                     del read_counts[p]
 
@@ -385,9 +401,15 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                     reads_dict[pos][key][umi]["read"] = read
 
     # yield remaining bundles
+    for x in reads_dict:
+        U.info(reads_dict[x])
+        for y in reads_dict[x]:
+            U.info(x)
+            U.info(y)
+
     for p in reads_dict:
         for bundle in reads_dict[p].values():
-            yield bundle, read_events
+            yield bundle, read_events, 'mapped'
 
 
 class random_read_generator:

@@ -538,7 +538,7 @@ def main(argv=None):
         else:
             inreads = infile.fetch()
 
-    for bundle, read_events in umi_methods.get_bundles(
+    for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
             ignore_umi=options.ignore_umi,
             subset=options.subset,
@@ -553,7 +553,8 @@ def main(argv=None):
             read_length=options.read_length,
             detection_method=options.detection_method,
             umi_getter=umi_getter,
-            all_reads=False):
+            all_reads=False,
+            return_unmapped=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 

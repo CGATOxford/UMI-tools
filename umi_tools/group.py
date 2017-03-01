@@ -386,6 +386,9 @@ def main(argv=None):
                       help="Minimum mapping quality for a read to be retained"
                       " [default=%default]",
                       default=0)
+    parser.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
+                      default=False,
+                      help=("Retain all unmapped reads in output[default=%default]"))
     parser.add_option("--group-out", dest="tsv", type="string",
                       help="Outfile name for file mapping read id to read group",
                       default=None)
@@ -459,9 +462,9 @@ def main(argv=None):
                 options.gene_transcript_map)
             inreads = umi_methods.metafetcher(infile, metacontig2contig)
         else:
-            inreads = infile.fetch()
+            inreads = infile.fetch(until_eof=options.output_unmapped)
 
-    for bundle, read_events in umi_methods.get_bundles(
+    for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
             ignore_umi=False,
             subset=options.subset,
@@ -473,7 +476,15 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             umi_getter=umi_getter,
-            all_reads=True):
+            all_reads=True,
+            return_unmapped=options.output_unmapped):
+
+        if status == 'unmapped' and options.output_unmapped:
+            # bundle is just a single read here
+            outfile.write(bundle)
+            nInput += 1
+            nOutput += 1
+            continue
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
