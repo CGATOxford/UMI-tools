@@ -159,7 +159,7 @@ the deduplication procedure on it:
 
     $ umi_tools dedup -I example.bam --output-stats=deduplicated -S deduplicated.bam
 
-The `--output-stats` option is optional, but selecting output will provide a range
+The `--output-stats` option is optional, but selecting it will provide a range
 of statistics about the run. One of the most interesting is the
 distribution of edit distances (here named deduplicated_edit_distance.tsv).
 The content of this file after running the above will look something like:
