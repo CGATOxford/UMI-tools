@@ -131,6 +131,15 @@ group_directional_subset:
       references: [group_dir_subset.sam, group_dir_subset.tsv]
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset.tsv --subset=0.1
 
+
+group_directional_unmapped:
+      skip_python: 3
+      stdin: unmapped.bam
+      outputs: [stdout, group_dir_unmapped.tsv]
+      references: [group_dir_unmapped.sam, group_dir_unmapped.tsv]
+      options: group --output-unmapped -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped.tsv
+
+
 # ## End of python 2 tests ##
 
 
