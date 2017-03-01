@@ -10,6 +10,7 @@ UMI-Tools quick start guide
   * [Common variations](#common-variations)
     + [Paired-end sequencing](#paired-end-sequencing)
     + [Mapping to the transcriptome](#mapping-to-the-transcriptome)
+    + [Read grouping](#read-grouping)
     + [Bespoke UMI extraction](#bespoke-umi-extraction)
     + [Other options](#other-options)
 
@@ -226,14 +227,62 @@ than single-ended.
 ### Mapping to the transcriptome ###
 
 A common practice in single cell RNA-seq is to map to the
-transcriptome rather than the genome. The identify of the transcript
-is usually indicated by the contig to which reads are mapped. In these
+transcriptome rather than the genome. The identify of the gene
+is indicated by the contig to which reads are mapped. In these
 cases, the precise location of mapping is not informative (because
 fragmentation happens after amplication), only the identify of the
-gene. UMI-tools can be instructed to use this scheme using the
-`--per-contig` option:
+gene.
+
+If the transcriptome contains just a single transcript per gene, UMI-tools can be instructed
+to use this scheme using the `--per-contig` option:
 
     $ umi_tools dedup -I transcriptome_mapped.bam --per-contig -S deduplicated.bam
+   
+Alternatively, if the transcriptome contains multiple transcripts per gene you can provide
+the `--per-gene` option and a file mapping transcript and gene ids with the
+`--gene-transcript-map` option.
+
+This file should be in the following format (tab separated):
+
+gene_1    transcript_1
+gene_1    transcript_2
+gene_2    transcript_3
+gene_3    transcript_4
+
+    $ umi_tools dedup -I transcriptome_mapped.bam --per-gene --gene-transcript-map=gene2transcript.tsv -S deduplicated.bam
+
+Finally, if the gene_id is contained in a BAM tag, you can use the `--gene-tag` option.
+
+    $ umi_tools dedup -I transcriptome_mapped.bam --gene-tag=GI -S deduplicated.bam
+
+Regardless which route you take, all reads which align to the same gene
+will be considered to have the same alignment coordinates.
+
+
+
+
+### Read grouping ###
+For some applications it may be neccessary to mark the duplicates but retain all reads, for example,
+where the PCR duplicates are used to correct sequence errors by generating a consensus sequence. In
+these cases, the _group_ command can be used to mark each read with its read group. Optionally a flatfile
+detailing the read groups and read identifiers can also be output using the `--group-out` option:
+
+    $ umi_tools group -I mapped.bam --paired --group-out=groups.tsv --output-bam -S mapped_grouped.bam
+    
+The output bam will contain two tags: UG = read group id, BX = read group UMI.
+The tag containing the read group UMI can be modified with the `--umi-group-tag` option.
+
+The groups flatfile contains the following columns:
+- read_id
+- contig
+- position
+- umi = raw umi
+- umi_count = how many times was this umi observed at the same alignment coordinates
+- final_umi = the error corrected umi
+- final_umi_count = how many times was the umi observed at the same alignment coordinates, inc. error correction
+- unique_id = the unique identifier for this group
+    
+
 
 ### Bespoke UMI extraction ###
 We have tried to accommodate the common ways in which UMIs are encoded in the reads for umi_tools extract,
@@ -248,6 +297,7 @@ identifier in order to be retained in the BAM following alignment. In addition,
 if you have paired end reads, both with a UMI, the UMI sequence is the concatenation
 of the 2 UMIs so that each read has the exact same UMI. If you are having trouble with
 bespoke UMI extraction, raise a GitHub issue and we'll try and help out.
+
 
 #### Example UMI extraction: ####
 
