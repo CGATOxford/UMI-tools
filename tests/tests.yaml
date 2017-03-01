@@ -272,7 +272,7 @@ group_directional_unmapped_py3:
       stdin: unmapped.bam
       outputs: [stdout, group_dir_unmapped_py3.tsv]
       references: [group_dir_unmapped_py3.sam, group_dir_unmapped_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv --output-unmapped
 
 
 ## End of python 3 tests ##
