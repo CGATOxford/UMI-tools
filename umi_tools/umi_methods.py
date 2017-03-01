@@ -47,7 +47,7 @@ def get_umi_tag(read, tag='RX'):
     try:
         # 10X pipelines append a 'GEM' tag to the UMI, e.g
         # AGAGSGATAGATA-1
-        return read.get_tag(tag).encode('utf-8').split("-")[0]
+        return read.get_tag(tag).split("-")[0].encode('utf-8')
     except IndexError:
         raise ValueError(
             "Could not extract UMI from the read tags, please"
