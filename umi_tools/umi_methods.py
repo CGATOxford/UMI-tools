@@ -184,11 +184,39 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def get_bundles(insam, read_events,
-                ignore_umi=False, subset=None, quality_threshold=0,
-                paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ", umi_getter=None, all_reads=False):
+def getMetaContig2contig(gene_transcript_map):
+    ''' '''
+    metacontig2contig = collections.defaultdict(set)
+    for line in U.openFile(gene_transcript_map, "r"):
+
+        if line.startswith("#"):
+            continue
+
+        if len(line.strip()) == 0:
+            break
+
+        gene, transcript = line.strip().split("\t")
+        metacontig2contig[gene].add(transcript)
+
+    return metacontig2contig
+
+
+def metafetcher(bamfile, metacontig2contig):
+    ''' return reads in order of metacontigs'''
+    for metacontig in metacontig2contig:
+        for contig in metacontig2contig[metacontig]:
+            for read in bamfile.fetch(contig):
+                read.tags += [('MC', metacontig)]
+                yield read
+
+
+def get_bundles(inreads, ignore_umi=False, subset=None,
+                quality_threshold=0, paired=False, spliced=False,
+                soft_clip_threshold=0, per_contig=False,
+                per_gene=False, gene_tag=None,
+                whole_contig=False, read_length=False,
+                detection_method="MAPQ", umi_getter=None,
+                all_reads=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -204,11 +232,6 @@ def get_bundles(insam, read_events,
         lambda: collections.defaultdict(dict))
 
     read_events = collections.Counter()
-
-    if chrom:
-        inreads = insam.fetch(reference=chrom)
-    else:
-        inreads = insam.fetch()
 
     for read in inreads:
 
@@ -246,16 +269,25 @@ def get_bundles(insam, read_events,
                 read_events['Read 2 unmapped'] += 1
             continue
 
-        # TS - some methods require deduping on a per contig
-        # (gene for transcriptome) basis, e.g Soumillon et al 2014
-        # to fit in with current workflow, simply assign pos and key as contig
-        if per_contig:
+        # TS - some methods require deduping on a per contig or per
+        # gene basis. To fit in with current workflow, simply assign
+        # pos and key as contig
 
-            pos = read.tid
-            key = read.tid
-            if not read.tid == last_chr:
+        if per_contig or per_gene or gene_tag:
 
-                out_keys = reads_dict.keys()
+            if per_contig:
+                pos = read.tid
+                key = pos
+            elif per_gene:
+                pos = read.get_tag('MC')
+                key = pos
+            elif gene_tag:
+                pos = read.get_tag(gene_tag)
+                key = pos
+
+            if not pos == last_chr:
+
+                out_keys = list(reads_dict.keys())
 
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
@@ -263,7 +295,7 @@ def get_bundles(insam, read_events,
                     del reads_dict[p]
                     del read_counts[p]
 
-                last_chr = read.tid
+                last_chr = pos
 
         else:
 
