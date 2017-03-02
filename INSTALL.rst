@@ -29,7 +29,22 @@ or grab a zip of the `lastest release`_ from github and unpack
     $ python setup.py install --user
 
 If these options don't work, see below.
- 
+
+A note about installing with `sudo`
+-----------------------------------
+
+It is perfectly possible to install UMI-tools without root access to the machine you are install on (although this will make installing things like `zlib` easier). However if you do install as root using any of::
+
+    $ sudo pip install umi_tools
+    $ sudo conda install -c https://conda.anaconda.org/toms umi_tools
+    $ sydo python setup.py install
+    
+You may need to run umi_tools with `sudo` the first time you run the `dedup` command, like so::
+
+    $ sudo umi_tools dedup --help
+    
+After this first run, you should be able to use `umi_tools` without `sudo` on all subsequent occasions. This is because the cython extensions are compiled the first time the tool is run and they require access to the install directory to successfully complete. 
+
 Conda package manager
 ----------------------
 
