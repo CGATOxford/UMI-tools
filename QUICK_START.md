@@ -25,19 +25,19 @@ The general pipeline is:
 extract UMI from raw reads -> map reads -> deduplicate reads based on UMIs
 
 The most computationally intensive part of this is the middle part -
-mapping the reads, is also the least interesting for us here. To aid
+mapping the reads. It is also the least interesting for us here. To aid
 the ability of folks to follow along without having to worry if they
 have the correct indexs install etc, we have provided a BAM file of
 the mapped reads from this example. You can download it [here](https://github.com/CGATOxford/UMI-tools/releases/download/v0.2.3/example.bam>). It
 will need indexing with `samtools index` before use. You can then skip
-striaght to Step 5 below.
+straight to Step 5 below.
 
 Step 1: Install `UMI-Tools`
 ----------------------------
 
-The easiest way to install `UMI-Tools` is using your favoirte python
+The easiest way to install `UMI-Tools` is using your favorite python
 package manager, either `pip` or `conda`. If you don't know which you
-have install, we recommend trying both, starting with `conda`:
+have installed, we recommend trying both, starting with `conda`:
 
     $ conda install -c https://conda.anaconda.org/toms umi_tools
 
@@ -102,16 +102,16 @@ The processed reads could then be passed to a demultiplexing tool to
 deal with the library part of the barcode.
 
 Since the file we have downloaded contains only one library, here we
-will treat the whole barcode as a UMI, and os the pattern will contain
+will treat the whole barcode as a UMI, and so the pattern will contain
 only Ns.
 
     $ umi_tools extract --stdin=example.fastq.gz --bc-pattern=NNNNNNNNN --log=processed.log --stdout processed.fastq.gz 
 
-Note that `extract` can output to a gziped or uncompressed file
-depending on the file extension. It can also output to `stdout` if not
-output is specified. A log file is saved contianing the paramemeters
-which which `extract` was run and the frequency of each UMI
-encountered. This can be redirected with `--log` or supprssed with
+Note that `extract` can output to a gzipped or uncompressed file
+depending on the file extension. It can also output to `stdout` if no
+output is specified. A log file is saved containing the parameters
+with which `extract` was run and the frequency of each UMI
+encountered. This can be redirected with `--log` or suppressed with
 `--supress-stats` (run parameters are still output).
 
 
@@ -125,7 +125,7 @@ a BAM file from the results. If you don't wish to spend the time doing
 this, or don't have access to `bowtie` or `samtools` (or suitable
 alternatives), we provide a premapped BAM file (see command at the end of this step).
 
-First map the reads with your favoirte read mapper, here `bowtie`
+First map the reads with your favorite read mapper, here `bowtie`,
 using parameters from the paper which we stole the sample from. This
 assumes the mm9 `bowtie` index and fasta are in your current
 directory.
@@ -133,7 +133,7 @@ directory.
     $ bowtie --threads 4 -v 2 -m 10 -a mm9 <( gunzip < processed.fastq.gz ) --sam > mapped.sam
 
 Next we need to convert the SAM file to BAM (actually `dedup` will use
-SAM filesfor single ended analysis, but its much slower).
+SAM files for single ended analysis, but it's much slower).
 
     $ samtools import mm9.fa mapped.sam mapped.bam  
 
@@ -155,11 +155,11 @@ Step 5: Deduplication
 ----------------------
 
 Now that we have a mapped, sorted, indexed file, we can proceed to run
-the deduplication proceedure on it:
+the deduplication procedure on it:
 
     $ umi_tools dedup -I example.bam --output-stats=deduplicated -S deduplicated.bam
 
-The `--output-stats` option is optional, but selecting output a range
+The `--output-stats` option is optional, but selecting it will provide a range
 of statistics about the run. One of the most interesting is the
 distribution of edit distances (here named deduplicated_edit_distance.tsv).
 The content of this file after running the above will look something like:
@@ -191,8 +191,8 @@ in the overall usage of particular UMI sequences). The last two
 columns the same, but for the naive `unique` deduplication method
 where every UMI is assumed to represent an independent molecule in the
 biological sample. Looking at the third row, we see that there are
-11167 positions where we see that the average edit distance between
-UMIs is 1, where as in the random null (in the final column) we would
+11167 positions where the average edit distance between
+UMIs is 1, whereas in the random null (in the final column) we would
 only expect to see 33 such bases.
 
 The statistics options signficantly reduce the speed at which
@@ -217,7 +217,7 @@ provide the second read like so:
 This assumes the UMI is on the 5' end of read1. For other
 possibilities (such as a UMI on both reads) see `umi_tools extract
 --help`. After paired-end mapping, paired end deduplication can be
-achieved by adding the `--paired` to the call to `dedup`:
+achieved by adding the `--paired` option to the call to `dedup`:
 
     $ umi_tools dedup -I mapped.bam --paired -S deduplicated.bam
 
@@ -227,10 +227,10 @@ than single-ended.
 ### Mapping to the transcriptome ###
 
 A common practice in single cell RNA-seq is to map to the
-transcriptome rather than the genome. The identify of the gene
+transcriptome rather than the genome. The identity of the gene
 is indicated by the contig to which reads are mapped. In these
 cases, the precise location of mapping is not informative (because
-fragmentation happens after amplication), only the identify of the
+fragmentation happens after amplification), only the identity of the
 gene.
 
 If the transcriptome contains just a single transcript per gene, UMI-tools can be instructed
@@ -255,7 +255,7 @@ Finally, if the gene_id is contained in a BAM tag, you can use the `--gene-tag` 
 
     $ umi_tools dedup -I transcriptome_mapped.bam --gene-tag=GI -S deduplicated.bam
 
-Regardless which route you take, all reads which align to the same gene
+Regardless which route you take, all reads that align to the same gene
 will be considered to have the same alignment coordinates.
 
 
