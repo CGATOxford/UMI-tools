@@ -401,12 +401,6 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
                     reads_dict[pos][key][umi]["read"] = read
 
     # yield remaining bundles
-    for x in reads_dict:
-        U.info(reads_dict[x])
-        for y in reads_dict[x]:
-            U.info(x)
-            U.info(y)
-
     for p in reads_dict:
         for bundle in reads_dict[p].values():
             yield bundle, read_events, 'mapped'
