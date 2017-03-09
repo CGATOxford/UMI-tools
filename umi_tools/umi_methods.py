@@ -45,7 +45,9 @@ def get_umi_tag(read, tag='RX'):
     ''' extract the umi from the specified tag '''
 
     try:
-        return read.get_tag(tag).encode('utf-8')
+        # 10X pipelines append a 'GEM' tag to the UMI, e.g
+        # AGAGSGATAGATA-1
+        return read.get_tag(tag).split("-")[0].encode('utf-8')
     except IndexError:
         raise ValueError(
             "Could not extract UMI from the read tags, please"
@@ -84,10 +86,14 @@ class TwoPassPairWriter:
         else:
             self.read2tags = None
 
-    def write(self, read, unique_id=None, umi=None):
+    def write(self, read, unique_id=None, umi=None, unmapped=False):
         '''Check if chromosome has changed since last time. If it has, scan
         for mates. Write the read to outfile and save the identity for paired
         end retrieval'''
+
+        if unmapped:
+            self.outfile.write(read)
+            return
 
         if not self.chrom == read.reference_id:
             self.write_mates()
@@ -182,11 +188,39 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def get_bundles(insam, read_events,
-                ignore_umi=False, subset=None, quality_threshold=0,
-                paired=False, chrom=None, spliced=False, soft_clip_threshold=0,
-                per_contig=False, whole_contig=False, read_length=False,
-                detection_method="MAPQ", umi_getter=None, all_reads=False):
+def getMetaContig2contig(gene_transcript_map):
+    ''' '''
+    metacontig2contig = collections.defaultdict(set)
+    for line in U.openFile(gene_transcript_map, "r"):
+
+        if line.startswith("#"):
+            continue
+
+        if len(line.strip()) == 0:
+            break
+
+        gene, transcript = line.strip().split("\t")
+        metacontig2contig[gene].add(transcript)
+
+    return metacontig2contig
+
+
+def metafetcher(bamfile, metacontig2contig):
+    ''' return reads in order of metacontigs'''
+    for metacontig in metacontig2contig:
+        for contig in metacontig2contig[metacontig]:
+            for read in bamfile.fetch(contig):
+                read.tags += [('MC', metacontig)]
+                yield read
+
+
+def get_bundles(inreads, ignore_umi=False, subset=None,
+                quality_threshold=0, paired=False, spliced=False,
+                soft_clip_threshold=0, per_contig=False,
+                per_gene=False, gene_tag=None,
+                whole_contig=False, read_length=False,
+                detection_method="MAPQ", umi_getter=None,
+                all_reads=False, return_unmapped=False):
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -203,17 +237,36 @@ def get_bundles(insam, read_events,
 
     read_events = collections.Counter()
 
-    if chrom:
-        inreads = insam.fetch(reference=chrom)
-    else:
-        inreads = insam.fetch()
-
     for read in inreads:
 
         if read.is_read2:
+            if read.is_unmapped and return_unmapped:
+                yield read, read_events, 'unmapped'
             continue
+
         else:
             read_events['Input Reads'] += 1
+
+        if read.is_unmapped:
+            if paired:
+                if read.mate_is_unmapped:
+                    read_events['Both unmapped'] += 1
+                else:
+                    read_events['Read 1 unmapped'] += 1
+            else:
+                read_events['Single end unmapped'] += 1
+
+            if return_unmapped:
+                read_events['Input Reads'] += 1
+                yield read, read_events, 'unmapped'
+            continue
+
+        if read.mate_is_unmapped and paired:
+            if not read.is_unmapped:
+                read_events['Read 2 unmapped'] += 1
+            if return_unmapped:
+                yield read, read_events, 'unmapped'
+            continue
 
         if paired:
             read_events['Paired Reads'] += 1
@@ -228,40 +281,33 @@ def get_bundles(insam, read_events,
                 read_events['< MAPQ threshold'] += 1
                 continue
 
-        if read.is_unmapped:
-            if paired:
-                if read.mate_is_unmapped:
-                    read_events['Both unmapped'] += 1
-                else:
-                    read_events['Read 1 unmapped'] += 1
-            else:
-                read_events['Single end unmapped'] += 1
+        # TS - some methods require deduping on a per contig or per
+        # gene basis. To fit in with current workflow, simply assign
+        # pos and key as contig
 
-            continue
+        if per_contig or per_gene or gene_tag:
 
-        if read.mate_is_unmapped and paired:
-            if not read.is_unmapped:
-                read_events['Read 2 unmapped'] += 1
-            continue
+            if per_contig:
+                pos = read.tid
+                key = pos
+            elif per_gene:
+                pos = read.get_tag('MC')
+                key = pos
+            elif gene_tag:
+                pos = read.get_tag(gene_tag)
+                key = pos
 
-        # TS - some methods require deduping on a per contig
-        # (gene for transcriptome) basis, e.g Soumillon et al 2014
-        # to fit in with current workflow, simply assign pos and key as contig
-        if per_contig:
+            if not pos == last_chr:
 
-            pos = read.tid
-            key = read.tid
-            if not read.tid == last_chr:
-
-                out_keys = reads_dict.keys()
+                out_keys = list(reads_dict.keys())
 
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle, read_events
+                        yield bundle, read_events, 'mapped'
                     del reads_dict[p]
                     del read_counts[p]
 
-                last_chr = read.tid
+                last_chr = pos
 
         else:
 
@@ -274,10 +320,14 @@ def get_bundles(insam, read_events,
                 do_output = start > (last_pos+1000) or not read.tid == last_chr
 
             if do_output:
-                out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+                if not read.tid == last_chr:
+                    out_keys = list(reads_dict.keys())
+                else:
+                    out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+
                 for p in out_keys:
                     for bundle in reads_dict[p].values():
-                        yield bundle, read_events
+                        yield bundle, read_events, 'mapped'
                     del reads_dict[p]
                     del read_counts[p]
 
@@ -353,7 +403,7 @@ def get_bundles(insam, read_events,
     # yield remaining bundles
     for p in reads_dict:
         for bundle in reads_dict[p].values():
-            yield bundle, read_events
+            yield bundle, read_events, 'mapped'
 
 
 class random_read_generator:

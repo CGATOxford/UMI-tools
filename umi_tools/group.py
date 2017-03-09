@@ -206,6 +206,32 @@ Options
 --chrom
       Only consider a single chromosome. This is useful for debugging purposes
 
+--per-contig (string)
+      Deduplicate per contig. All reads with the same contig will be
+      considered to have the same alignment position. This is useful
+      if your library prep generates PCR duplicates with non identical
+      alignment positions such as CEL-Seq. In this case, you would
+      align to a reference transcriptome with one transcript per gene
+
+--per-gene (string)
+      Deduplicate per gene. As above except with this option you can
+      align to a reference transcriptome with more than one transcript
+      per gene. You need to also provide --gene-transcript-map option.
+      This will also add a metacontig ('MC') tag to the reads if used
+      in conjunction with --output-bam
+
+--gene-transcript-map (string)
+      File mapping genes to transripts (tab separated), e.g:
+
+      gene1   transcript1
+      gene1   transcript2
+      gene2   transcript3
+
+--gene-tag (string)
+      Deduplicate per gene. As per --per-gene except here the gene
+      information is encoded in the bam read tag specified so you do
+      not need to supply --gene-transcript-map
+
 --group-out (string, filename)
       Output a flatfile describing the read groups
 
@@ -331,10 +357,26 @@ def main(argv=None):
                       default=False,
                       help=("dedup per contig,"
                             " e.g for transcriptome where contig = gene"))
+    parser.add_option("--per-gene", dest="per_gene", action="store_true",
+                      default=False,
+                      help=("Deduplicate per gene,"
+                            "e.g for transcriptome where contig = transcript"
+                            "must also provide a transript to gene map with"
+                            "--gene-transcript-map [default=%default]"))
+    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
+                      type="string",
+                      help="file mapping transcripts to genes (tab separated)",
+                      default=None)
+    parser.add_option("--gene-tag", dest="gene_tag",
+                      type="string",
+                      help=("Deduplicate per gene where gene is"
+                            "defined by this bam tag [default=%default]"),
+                      default=None)
     parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
                       default=False,
-                      help="Read whole contig before outputting bundles: guarantees that no reads"
-                           "are missed, but increases memory usage")
+                      help="Read whole contig before outputting"
+                           "bundles: guarantees that no reads are"
+                           "missed, but increases memory usage")
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"
@@ -344,6 +386,9 @@ def main(argv=None):
                       help="Minimum mapping quality for a read to be retained"
                       " [default=%default]",
                       default=0)
+    parser.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
+                      default=False,
+                      help=("Retain all unmapped reads in output[default=%default]"))
     parser.add_option("--group-out", dest="tsv", type="string",
                       help="Outfile name for file mapping read id to read group",
                       default=None)
@@ -379,6 +424,10 @@ def main(argv=None):
     else:
         out_mode = "wb"
 
+    if options.per_gene:
+        if not options.gene_transcript_map:
+            raise ValueError("--per-gene option requires --gene-transcript-map")
+
     infile = pysam.Samfile(in_name, in_mode)
 
     if options.output_bam:
@@ -405,23 +454,37 @@ def main(argv=None):
 
     nInput, nOutput, unique_id = 0, 0, 0
 
-    read_events = collections.Counter()
+    if options.chrom:
+        inreads = infile.fetch(reference=options.chrom)
+    else:
+        if options.per_gene:
+            metacontig2contig = umi_methods.getMetaContig2contig(
+                options.gene_transcript_map)
+            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+        else:
+            inreads = infile.fetch(until_eof=options.output_unmapped)
 
-    for bundle, read_events in umi_methods.get_bundles(
-            infile,
-            read_events,
+    for bundle, read_events, status in umi_methods.get_bundles(
+            inreads,
             ignore_umi=False,
             subset=options.subset,
             quality_threshold=options.mapping_quality,
             paired=options.paired,
-            chrom=options.chrom,
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             umi_getter=umi_getter,
-            all_reads=True):
+            all_reads=True,
+            return_unmapped=options.output_unmapped):
+
+        if status == 'unmapped' and options.output_unmapped:
+            # bundle is just a single read here
+            outfile.write(bundle)
+            nInput += 1
+            nOutput += 1
+            continue
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
