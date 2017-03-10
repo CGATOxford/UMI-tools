@@ -21,7 +21,7 @@ or::
 
     $ pip install umi_tools
 
-or grab a zip of the `lastest release`_ from github and unpack
+or grab a zip of the `latest release`_ from github and unpack
 (replace ``wget`` with ``curl -O``) for OS X::
 
     $ unzip v0.2.4.zip
