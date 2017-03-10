@@ -176,7 +176,7 @@ The content of this file after running the above will look something like:
 |89                   |4                         |6            |59    |5          |
 |21                   |2                         |7            |21    |2          |
 |0                    |0                         |8            |0     |0          |
-+---------------------+--------------------------+-------------+------+-----------+
+
 
 
 
