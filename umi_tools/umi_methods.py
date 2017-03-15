@@ -99,7 +99,7 @@ class TwoPassPairWriter:
             self.write_mates()
             self.chrom = read.reference_name
 
-        key = read.query_name, read.reference_name, read.next_reference_start
+        key = read.query_name, read.next_reference_name, read.next_reference_start
         self.read1s.add(key)
 
         if self.read2tags is not None:
