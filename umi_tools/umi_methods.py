@@ -115,8 +115,7 @@ class TwoPassPairWriter:
         if self.chrom is not None:
             U.debug("Dumping %i mates for contig %s" % (
                 len(self.read1s), self.chrom))
-        
-        
+
         for read in self.infile.fetch(reference=self.chrom, multiple_iterators=True):
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
