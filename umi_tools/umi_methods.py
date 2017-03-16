@@ -95,11 +95,11 @@ class TwoPassPairWriter:
             self.outfile.write(read)
             return
 
-        if not self.chrom == read.reference_id:
+        if not self.chrom == read.reference_name:
             self.write_mates()
-            self.chrom = read.reference_id
+            self.chrom = read.reference_name
 
-        key = read.query_name, read.next_reference_id, read.next_reference_start
+        key = read.query_name, read.next_reference_name, read.next_reference_start
         self.read1s.add(key)
 
         if self.read2tags is not None:
@@ -112,16 +112,15 @@ class TwoPassPairWriter:
     def write_mates(self):
         '''Scan the current chromosome for matches to any of the reads stored
         in the read1s buffer'''
-
         if self.chrom is not None:
             U.debug("Dumping %i mates for contig %s" % (
-                len(self.read1s), self.infile.get_reference_name(self.chrom)))
+                len(self.read1s), self.chrom))
 
-        for read in self.infile.fetch(tid=self.chrom, multiple_iterators=True):
+        for read in self.infile.fetch(reference=self.chrom, multiple_iterators=True):
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
 
-            key = read.query_name, read.reference_id, read.reference_start
+            key = read.query_name, read.reference_name, read.reference_start
             if key in self.read1s:
                 if self.read2tags is not None:
                     unique_id, umi = self.read2tags[key]
