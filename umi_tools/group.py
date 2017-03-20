@@ -498,7 +498,7 @@ def main(argv=None):
         # specified options.method
         processor = network.ReadClusterer(options.method)
 
-        bundle, groups, counts = processor(
+        bundle, groups, counts, _, _ = processor(
             bundle=bundle,
             threshold=options.threshold,
             stats=True,

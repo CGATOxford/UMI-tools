@@ -76,8 +76,11 @@ def remove_umis(adj_list, cluster, nodes):
     return cluster - nodes_to_remove
 
 
-class ReadClusterer:
-    '''A functor that clusters a bundle of reads.
+class UMIClusterer:
+    '''A functor that clusters a dictionary of UMIs and their counts.
+    The primary return value is either a list of representative UMIs
+    or a list of lists where each inner list represents the contents of
+    one cluster. 
 
     Optionally:
 
@@ -293,63 +296,56 @@ class ReadClusterer:
 
     # "reduce_clusters" methods #
 
-    def _reduce_clusters_multiple(self, bundle, clusters,
-                                  adj_list, counts, stats=False):
+    def _reduce_clusters_multiple(self, clusters, adj_list, counts,
+                                  stats=False):
         ''' collapse clusters down to the UMI(s) which account for the cluster
         using the adjacency dictionary and return the list of final UMIs'''
 
         # TS - the "adjacency" variant of this function requires an adjacency
         # list to identify the best umi, whereas the other variants don't
         # As temporary solution, pass adj_list to all variants
-        reads = []
         final_umis = []
         umi_counts = []
 
         for cluster in clusters:
             parent_umis = self.get_best(cluster, adj_list, counts)
-            reads.extend([bundle[umi]["read"] for umi in parent_umis])
+            final_umis.extend(parent_umis)
 
             if stats:
-                final_umis.extend(parent_umis)
                 umi_counts.extend([counts[umi] for umi in parent_umis])
 
-        return reads, final_umis, umi_counts
+        return final_umis, umi_counts
 
-    def _reduce_clusters_single(self, bundle, clusters,
-                                adj_list, counts, stats=False):
+    def _reduce_clusters_single(self, clusters, adj_list,
+                                counts, stats=False):
         ''' collapse clusters down to the UMI which accounts for the cluster
         using the adjacency dictionary and return the list of final UMIs'''
 
-        reads = []
         final_umis = []
         umi_counts = []
 
         for cluster in clusters:
             parent_umi = self.get_best(cluster, counts)
-            reads.append(bundle[parent_umi]["read"])
+            final_umis.append(parent_umi)
 
             if stats:
-                final_umis.append(parent_umi)
                 umi_counts.append(sum([counts[x] for x in cluster]))
 
-        return reads, final_umis, umi_counts
+        return final_umis, umi_counts
 
-    def _reduce_clusters_no_network(self, bundle, clusters,
-                                    adj_list, counts, stats=False):
+    def _reduce_clusters_no_network(self, clusters, adj_list,
+                                    counts, stats=False):
         ''' collapse down to the UMIs which accounts for the cluster
         and return the list of final UMIs'''
 
-        reads = []
         final_umis = []
         umi_counts = []
-        parent_umis = self.get_best(clusters, counts)
-        reads.extend([bundle[umi]["read"] for umi in parent_umis])
+        final_umis = self.get_best(clusters, counts)
 
         if stats:
-            final_umis.extend(parent_umis)
-            umi_counts.extend([counts[umi] for umi in parent_umis])
+            umi_counts.extend([counts[umi] for umi in final_umis])
 
-        return reads, final_umis, umi_counts
+        return final_umis, umi_counts
 
     def __init__(self, cluster_method="directional"):
         ''' select the required class methods for the cluster_method'''
@@ -390,30 +386,25 @@ class ReadClusterer:
             self.reduce_clusters = self._reduce_clusters_no_network
             self.get_groups = self._group_unique
 
-    def __call__(self, bundle, threshold, stats=False, further_stats=False,
+    def __call__(self, umis, counts, threshold, stats=False, further_stats=False,
                  deduplicate=True):
-        ''' '''
-
-        umis = bundle.keys()
-
-        len_umis = [len(x) for x in umis]
-        assert max(len_umis) == min(len_umis), (
-            "not all umis are the same length(!):  %d - %d" % (
-                min(len_umis), max(len_umis)))
-
-        counts = {umi: bundle[umi]["count"] for umi in umis}
+        '''Counts is a directionary that maps UMIs to their counts'''
 
         adj_list = self.get_adj_list(umis, counts, threshold)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
 
         if not deduplicate:
-            groups = [list(x) for x in
+            final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
-            return bundle, groups, counts
+            umi_counts = counts
 
-        reads, final_umis, umi_counts = self.reduce_clusters(
-            bundle, clusters, adj_list, counts, stats)
+            # Stats not compatible with grouping (not sure why)
+            stats = False
+            further_stats = False
+        else:
+            final_umis, umi_counts = self.reduce_clusters(
+                clusters, adj_list, counts, stats)
 
         if further_stats:
             topologies = collections.Counter()
@@ -441,4 +432,39 @@ class ReadClusterer:
             topologies = None
             nodes = None
 
-        return reads, final_umis, umi_counts, topologies, nodes
+        return final_umis, umi_counts, topologies, nodes
+
+
+class ReadClusterer:
+    '''This is a wrapper for applying the UMI methods to bundles of BAM reads. 
+    It is currently a pretty transparent wrapper on UMIClusterer. Basically
+    taking a read bundle, extracting the UMIs and Counts, running UMIClusterer
+    and returning the results along with annotated reads'''
+
+    def __init__(self, cluster_method="directional"):
+        
+        self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
+
+    def __call__(self, bundle, threshold, stats=False, further_stats=False,
+                 deduplicate=True):
+
+        umis = bundle.keys()
+
+        len_umis = [len(x) for x in umis]
+        assert max(len_umis) == min(len_umis), (
+            "not all umis are the same length(!):  %d - %d" % (
+                min(len_umis), max(len_umis)))
+
+        counts = {umi: bundle[umi]["count"] for umi in umis}
+        
+        cluster_results = self.UMIClusterer(umis, counts, threshold, stats,
+                                            further_stats, deduplicate)
+
+        final_umis, umi_counts, topologies, nodes = cluster_results
+
+        if deduplicate:
+            reads = [bundle[umi]["read"] for umi in final_umis]
+        else:
+            reads = bundle
+
+        return (reads, final_umis, umi_counts, topologies, nodes)
