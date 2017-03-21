@@ -251,51 +251,16 @@ class UMIClusterer:
 
             else:
                 observed = set()
-                sorted_nodes = sorted(
-                    cluster, key=lambda x: counts[x], reverse=True)
-                
-                lead_umis = self._get_best_min_account(cluster, adj_list, counts)
-#                if lead_umis is None:
-#                    print cluster
+
+                lead_umis = self._get_best_min_account(cluster,
+                                                       adj_list, counts)
                 observed.update(lead_umis)
 
                 for lead_umi in lead_umis:
                     connected_nodes = set(adj_list[lead_umi])
-                    groups.append([lead_umi] + list(connected_nodes - observed))
+                    groups.append([lead_umi] +
+                                  list(connected_nodes - observed))
                     observed.update(connected_nodes)
-
-        return groups
-
-        for cluster in clusters:
-                temp_groups = []
-
-                for i in range(len(sorted_nodes) - 1):
-                    top_node = sorted_nodes[i]
-                    observed.add(top_node)
-                    latest_temp_group = [top_node]
-
-                    for connected_node in adj_list[top_node]:
-                        if connected_node == top_node:
-                            continue
-                        elif connected_node in observed:
-                            continue
-                        else:
-                            latest_temp_group.append(connected_node)
-                            observed.add(connected_node)
-
-                    # need to remove the top node from any
-                    # other group where it is found
-                    new_temp_groups = []
-                    for temp_group in temp_groups:
-                        temp_group = [x for x in temp_group if x != top_node]
-                        new_temp_groups.append(temp_group)
-                    temp_groups = new_temp_groups
-
-                    temp_groups.append(latest_temp_group)
-
-                    if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
-                        groups.extend(temp_groups)
-                        break
 
         return groups
 
