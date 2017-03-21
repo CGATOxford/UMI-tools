@@ -253,6 +253,20 @@ class UMIClusterer:
                 observed = set()
                 sorted_nodes = sorted(
                     cluster, key=lambda x: counts[x], reverse=True)
+                
+                lead_umis = self._get_best_min_account(cluster, adj_list, counts)
+#                if lead_umis is None:
+#                    print cluster
+                observed.update(lead_umis)
+
+                for lead_umi in lead_umis:
+                    connected_nodes = set(adj_list[lead_umi])
+                    groups.append([lead_umi] + list(connected_nodes - observed))
+                    observed.update(connected_nodes)
+
+        return groups
+
+        for cluster in clusters:
                 temp_groups = []
 
                 for i in range(len(sorted_nodes) - 1):
