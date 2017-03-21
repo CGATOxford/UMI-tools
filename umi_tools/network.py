@@ -80,7 +80,7 @@ class UMIClusterer:
     '''A functor that clusters a dictionary of UMIs and their counts.
     The primary return value is either a list of representative UMIs
     or a list of lists where each inner list represents the contents of
-    one cluster. 
+    one cluster.
 
     Optionally:
 
@@ -122,15 +122,6 @@ class UMIClusterer:
             if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
                 return sorted_nodes[:i+1]
 
-    def _get_best_higher_counts(self, cluster, counts):
-        ''' return the UMI with the highest counts'''
-        if len(cluster) == 1:
-            return list(cluster)[0]
-        else:
-            sorted_nodes = sorted(cluster, key=lambda x: counts[x],
-                                  reverse=True)
-            return sorted_nodes[0]
-
     def _get_best_percentile(self, cluster, counts):
         ''' return all UMIs with counts >1% of the
         median counts in the cluster '''
@@ -140,11 +131,6 @@ class UMIClusterer:
         else:
             threshold = np.median(list(counts.values()))/100
             return [read for read in cluster if counts[read] > threshold]
-
-    def _get_best_null(self, cluster, counts):
-        ''' return all UMIs in the cluster'''
-
-        return list(cluster)
 
     # "get_adj_list" methods #
 
@@ -182,7 +168,7 @@ class UMIClusterer:
     def _get_connected_components_adjacency(self, umis, graph, counts):
         ''' find the connected UMIs within an adjacency dictionary'''
 
-        # TS: TO DO: Work out why recursive function does lead to same
+        # TS: TO DO: Work out why recursive function doesn't lead to same
         # final output. Then uncomment below
 
         #if len(graph) < 10000:
@@ -269,7 +255,8 @@ class UMIClusterer:
 
         groups = []
         for cluster in clusters:
-            groups.append(sorted(cluster, key=lambda x: counts[x], reverse=True))
+            groups.append(sorted(cluster, key=lambda x: counts[x],
+                                 reverse=True))
 
         return groups
 
@@ -279,63 +266,10 @@ class UMIClusterer:
         method. This just returns the retained UMIs in a structure similar
         to other methods '''
 
-        retained_umis = self.get_best(clusters, counts)
+        retained_umis = self._get_best_percentile(clusters, counts)
         groups = [[x] for x in retained_umis]
 
         return groups
-
-    # "reduce_clusters" methods #
-
-    def _reduce_clusters_multiple(self, clusters, adj_list, counts,
-                                  stats=False):
-        ''' collapse clusters down to the UMI(s) which account for the cluster
-        using the adjacency dictionary and return the list of final UMIs'''
-
-        # TS - the "adjacency" variant of this function requires an adjacency
-        # list to identify the best umi, whereas the other variants don't
-        # As temporary solution, pass adj_list to all variants
-        final_umis = []
-        umi_counts = []
-
-        for cluster in clusters:
-            parent_umis = self.get_best(cluster, adj_list, counts)
-            final_umis.extend(parent_umis)
-
-            if stats:
-                umi_counts.extend([counts[umi] for umi in parent_umis])
-
-        return final_umis, umi_counts
-
-    def _reduce_clusters_single(self, clusters, adj_list,
-                                counts, stats=False):
-        ''' collapse clusters down to the UMI which accounts for the cluster
-        using the adjacency dictionary and return the list of final UMIs'''
-
-        final_umis = []
-        umi_counts = []
-
-        for cluster in clusters:
-            parent_umi = self.get_best(cluster, counts)
-            final_umis.append(parent_umi)
-
-            if stats:
-                umi_counts.append(sum([counts[x] for x in cluster]))
-
-        return final_umis, umi_counts
-
-    def _reduce_clusters_no_network(self, clusters, adj_list,
-                                    counts, stats=False):
-        ''' collapse down to the UMIs which accounts for the cluster
-        and return the list of final UMIs'''
-
-        final_umis = []
-        umi_counts = []
-        final_umis = self.get_best(clusters, counts)
-
-        if stats:
-            umi_counts.extend([counts[umi] for umi in final_umis])
-
-        return final_umis
 
     def __init__(self, cluster_method="directional"):
         ''' select the required class methods for the cluster_method'''
@@ -343,37 +277,27 @@ class UMIClusterer:
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_min_account
-            self.reduce_clusters = self._reduce_clusters_multiple
             self.get_groups = self._group_adjacency
 
         elif cluster_method == "directional":
             self.get_adj_list = self._get_adj_list_directional
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_higher_counts
-            self.reduce_clusters = self._reduce_clusters_single
             self.get_groups = self._group_directional
 
         elif cluster_method == "cluster":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
-            self.get_best = self._get_best_higher_counts
-            self.reduce_clusters = self._reduce_clusters_single
             self.get_groups = self._group_cluster
 
         elif cluster_method == "percentile":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
-            self.get_best = self._get_best_percentile
-            self.reduce_clusters = self._reduce_clusters_no_network
             # percentile method incompatible with defining UMI groups
             self.get_groups = self._group_percentile
 
         if cluster_method == "unique":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
-            self.get_best = self._get_best_null
-            self.reduce_clusters = self._reduce_clusters_no_network
             self.get_groups = self._group_unique
 
     def __call__(self, umis, counts, threshold):
@@ -401,16 +325,41 @@ class ReadClusterer:
     and returning the results along with annotated reads'''
 
     def __init__(self, cluster_method="directional"):
-        
+
         self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
 
     def __call__(self, bundle, threshold, stats=False, further_stats=False,
                  deduplicate=True):
+        '''Process the the bundled reads according to the method specified
+        in the constructor. Note that in this implementation, stats and
+        further_stats have no effect and their corresponding return values
+        are always None. Only present to maintain signature with previous
+        versions. Return signature is:
+ 
+        reads, final_umis, umi_counts, topologies, nodes
+
+        Meaning of these depends on whether deduplicate is True or not.
+        If True:
+        reads:        predicted best reads for deduplicated position
+        final_umis:   list of predicted parent UMIs
+        umi_counts:   Some of read counts for reads represented by the
+                      corresponding UMI
+        topologies:   Always None
+        nodes:        Always None
+
+        If False:
+        reads:        identical to bundle as called
+        final_umis:   list of lists of UMIs that are predicted to arise
+                      from same biological molecule.
+        umi_counts:   dictionary mapping UMIs to counts.
+        topologies:   Always None
+        nodes:        Alyways None
+
+        '''
 
         umis = bundle.keys()
-
         counts = {umi: bundle[umi]["count"] for umi in umis}
-        
+
         clusters = self.UMIClusterer(umis, counts, threshold)
 
         if deduplicate:
