@@ -225,6 +225,8 @@ class ReadClusterer:
                 groups.append(list(cluster))
                 observed.update(cluster)
             else:
+                cluster = sorted(cluster, key=lambda x: counts[x],
+                                 reverse=True)
                 # need to remove any node which has already been observed
                 temp_cluster = []
                 for node in cluster:
