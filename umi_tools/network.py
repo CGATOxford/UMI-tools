@@ -32,7 +32,7 @@ def breadth_first_search(node, adj_list):
     queue = set()
     queue.update((node,))
     searched.update((node,))
-
+    
     while len(queue) > 0:
         node = queue.pop()
         for next_node in adj_list[node]:
@@ -224,7 +224,7 @@ class ReadClusterer:
                 groups.append(list(cluster))
                 observed.update(cluster)
             else:
-                cluster = sorted(cluster, key=lambda x: (counts[x], x),
+                cluster = sorted(cluster, key=lambda x: counts[x],
                                  reverse=True)
                 # need to remove any node which has already been observed
                 temp_cluster = []
