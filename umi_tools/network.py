@@ -32,7 +32,7 @@ def breadth_first_search(node, adj_list):
     queue = set()
     queue.update((node,))
     searched.update((node,))
-    
+
     while len(queue) > 0:
         node = queue.pop()
         for next_node in adj_list[node]:
