@@ -143,19 +143,24 @@ class TwoPassPairWriter:
                len(self.read1s))
 
         found = 0
-        for name, chrom, pos in self.read1s:
-            for read in self.infile.fetch(start=pos, end=pos+1, tid=chrom):
-                if (read.query_name, read.pos) == (name, pos):
-                    if self.read2tags:
-                        unique_id, umi = self.read2tags[name, chrom, pos]
-                        read.tags += [('UG', unique_id)]
-                        read.tags += [('FU', umi)]
+        for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
 
-                    self.outfile.write(read)
-                    found += 1
-                    break
+            if read.is_unmapped:
+                continue
 
-        U.info("%i mates never found" % (len(self.read1s) - found))
+            key = read.query_name, read.reference_name, read.reference_start
+            if key in self.read1s:
+                if self.read2tags:
+                    unique_id, umi = self.read2tags[key]
+                    read.tags += [('UG', unique_id)]
+                    read.tags += [('FU', umi)]
+
+                self.outfile.write(read)
+                self.read1s.remove(key)
+                found += 1
+                continue
+
+        U.info("%i mates never found" % len(self.read1s))
         self.outfile.close()
 
 
