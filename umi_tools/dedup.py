@@ -631,16 +631,12 @@ def main(argv=None):
         def makeHist(df):
             'return a histograms of counts per UMI at each position'
             return df.pivot_table(columns=df["counts"], values="counts",
-                                  aggfunc=len).to_frame()
+                                  aggfunc=len)
 
-        UMI_counts_df = pd.merge(
-            makeHist(stats_pre_df),
-            makeHist(stats_post_df),
-            left_index=True, right_index=True,
-            sort=True, how='left')
-
-        UMI_counts_df.columns = ["instances_pre", "instances_post"]
-        U.info(UMI_counts_df)
+        UMI_counts_df = pd.DataFrame(
+            {"instances_pre": makeHist(stats_pre_df),
+             "instances_post": makeHist(stats_post_df)},
+            columns=["instances_pre", "instances_post"])
 
         # TS - if count value not observed either pre/post-dedup,
         # merge will leave an empty cell and the column will be cast as a float
