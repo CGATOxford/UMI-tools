@@ -628,21 +628,19 @@ def main(argv=None):
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
-        # generate histograms of counts per UMI at each position
-        UMI_counts_df_pre = pd.DataFrame(
-            {"instances":
-             stats_pre_df.pivot_table(
-                 columns=stats_pre_df["counts"],
-                 values="counts", aggfunc=len)})
+        def makeHist(df):
+            'return a histograms of counts per UMI at each position'
+            series = df.pivot_table(columns=df["counts"], values="counts",
+                                    aggfunc=len)
+            return series
 
-        UMI_counts_df_post = pd.DataFrame(
-            {"instances": stats_post_df.pivot_table(
-                columns=stats_post_df["counts"],
-                values="counts", aggfunc=len)})
+        UMI_counts_df = pd.merge(
+            makeHist(stats_pre_df),
+            makeHist(stats_post_df),
+            left_index=True, right_index=True,
+            sort=True, how='left')
 
-        UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
-                                 how='left', left_index=True, right_index=True,
-                                 sort=True, suffixes=["_pre", "_post"])
+        UMI_counts_df.columns = ["instances_pre", "instances_post"]
 
         # TS - if count value not observed either pre/post-dedup,
         # merge will leave an empty cell and the column will be cast as a float
