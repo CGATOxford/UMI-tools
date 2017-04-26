@@ -629,13 +629,16 @@ def main(argv=None):
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
         # generate histograms of counts per UMI at each position
-        UMI_counts_df_pre = pd.DataFrame(stats_pre_df.pivot_table(
-            columns=stats_pre_df["counts"], values="counts", aggfunc=len))
-        UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
-            columns=stats_post_df["counts"], values="counts", aggfunc=len))
+        UMI_counts_df_pre = pd.DataFrame(
+            {"instances":
+             stats_pre_df.pivot_table(
+                 columns=stats_pre_df["counts"],
+                 values="counts", aggfunc=len)})
 
-        UMI_counts_df_pre.columns = ["instances"]
-        UMI_counts_df_post.columns = ["instances"]
+        UMI_counts_df_post = pd.DataFrame(
+            {"instances": stats_post_df.pivot_table(
+                columns=stats_post_df["counts"],
+                values="counts", aggfunc=len)})
 
         UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
                                  how='left', left_index=True, right_index=True,
