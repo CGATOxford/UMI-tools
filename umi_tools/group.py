@@ -420,7 +420,7 @@ def main(argv=None):
         in_mode = "rb"
 
     if options.out_sam:
-        out_mode = "w"
+        out_mode = "wh"
     else:
         out_mode = "wb"
 
