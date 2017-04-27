@@ -530,8 +530,10 @@ def main(argv=None):
             metacontig2contig = umi_methods.getMetaContig2contig(
                 options.gene_transcript_map)
             inreads = umi_methods.metafetcher(infile, metacontig2contig)
+            gene_tag = "MC"
         else:
             inreads = infile.fetch()
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -542,13 +544,13 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
-            per_gene=options.per_gene,
-            gene_tag=options.gene_tag,
+            gene_tag=gene_tag,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
             umi_getter=umi_getter,
             all_reads=False,
+            return_read2=False,
             return_unmapped=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
