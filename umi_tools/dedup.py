@@ -625,28 +625,20 @@ def main(argv=None):
 
     if options.stats:
 
+        # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
-        def makeHist(df):
-            'return a histograms of counts per UMI at each position'
-            return df.pivot_table(columns=df["counts"], values="counts",
-                                  aggfunc=len)
-
-        UMI_counts_df = pd.DataFrame(
-            {"instances_pre": makeHist(stats_pre_df),
-             "instances_post": makeHist(stats_post_df)},
-            columns=["instances_pre", "instances_post"])
-
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        UMI_counts_df = UMI_counts_df.fillna(0).astype(int)
-
-        UMI_counts_df.to_csv(
-            options.stats + "_per_umi_per_position.tsv", sep="\t")
+        # tally the counts per umi per position
+        pre_counts = collections.Counter(stats_pre_df["counts"])
+        post_counts = collections.Counter(stats_post_df["counts"])
+        counts_index = list(set(pre_counts.keys()).union(set(post_counts.keys())))
+        counts_index.sort()
+        with U.openFile(options.stats + "_per_umi_per_position.tsv", "w") as outf:
+            outf.write("counts\tinstances_pre\tinstances_post\n")
+            for count in counts_index:
+                values = (count, pre_counts[count], post_counts[count])
+                outf.write("\t".join(map(str, values)) + "\n")
 
         # aggregate stats pre/post per UMI
         agg_pre_df = aggregateStatsDF(stats_pre_df)
@@ -656,7 +648,11 @@ def main(argv=None):
                           left_index=True, right_index=True,
                           sort=True, suffixes=["_pre", "_post"])
 
-        # TS - see comment above regarding missing values
+        # TS - if count value not observed either pre/post-dedup,
+        # merge will leave an empty cell and the column will be cast as a float
+        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+        # --> Missing data casting rules and indexing
+        # so, back fill with zeros and convert back to int
         agg_df = agg_df.fillna(0).astype(int)
 
         agg_df.index = [x.decode() for x in agg_df.index]
