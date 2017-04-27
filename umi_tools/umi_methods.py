@@ -91,7 +91,7 @@ class TwoPassPairWriter:
         for mates. Write the read to outfile and save the identity for paired
         end retrieval'''
 
-        if unmapped:
+        if unmapped or read.mate_is_unmapped:
             self.outfile.write(read)
             return
 
