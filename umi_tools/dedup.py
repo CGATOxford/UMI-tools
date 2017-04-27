@@ -312,20 +312,15 @@ def detect_bam_features(bamfile, n_entries=1000):
 
 
 def aggregateStatsDF(stats_df):
-    ''' return a data from with aggregated counts per UMI'''
+    ''' return a dataframe with aggregated counts per UMI'''
 
-    agg_df_dict = {}
+    grouped = stats_df.groupby("UMI")
 
-    agg_df_dict['total_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.sum)
+    agg_dict = {'counts': [np.median, len, np.sum]}
+    agg_df = grouped.agg(agg_dict)
 
-    agg_df_dict['median_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.median)
-
-    agg_df_dict['times_observed'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=len)
-
-    return pd.DataFrame(agg_df_dict)
+    agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
+    return agg_df
 
 
 def main(argv=None):
@@ -460,7 +455,7 @@ def main(argv=None):
         in_mode = "rb"
 
     if options.out_sam:
-        out_mode = "w"
+        out_mode = "wh"
     else:
         out_mode = "wb"
 
@@ -625,31 +620,20 @@ def main(argv=None):
 
     if options.stats:
 
+        # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
-        # generate histograms of counts per UMI at each position
-        UMI_counts_df_pre = pd.DataFrame(stats_pre_df.pivot_table(
-            columns=stats_pre_df["counts"], values="counts", aggfunc=len))
-        UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
-            columns=stats_post_df["counts"], values="counts", aggfunc=len))
-
-        UMI_counts_df_pre.columns = ["instances"]
-        UMI_counts_df_post.columns = ["instances"]
-
-        UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
-                                 how='left', left_index=True, right_index=True,
-                                 sort=True, suffixes=["_pre", "_post"])
-
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        UMI_counts_df = UMI_counts_df.fillna(0).astype(int)
-
-        UMI_counts_df.to_csv(
-            options.stats + "_per_umi_per_position.tsv", sep="\t")
+        # tally the counts per umi per position
+        pre_counts = collections.Counter(stats_pre_df["counts"])
+        post_counts = collections.Counter(stats_post_df["counts"])
+        counts_index = list(set(pre_counts.keys()).union(set(post_counts.keys())))
+        counts_index.sort()
+        with U.openFile(options.stats + "_per_umi_per_position.tsv", "w") as outf:
+            outf.write("counts\tinstances_pre\tinstances_post\n")
+            for count in counts_index:
+                values = (count, pre_counts[count], post_counts[count])
+                outf.write("\t".join(map(str, values)) + "\n")
 
         # aggregate stats pre/post per UMI
         agg_pre_df = aggregateStatsDF(stats_pre_df)
@@ -659,7 +643,11 @@ def main(argv=None):
                           left_index=True, right_index=True,
                           sort=True, suffixes=["_pre", "_post"])
 
-        # TS - see comment above regarding missing values
+        # TS - if count value not observed either pre/post-dedup,
+        # merge will leave an empty cell and the column will be cast as a float
+        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+        # --> Missing data casting rules and indexing
+        # so, back fill with zeros and convert back to int
         agg_df = agg_df.fillna(0).astype(int)
 
         agg_df.index = [x.decode() for x in agg_df.index]
