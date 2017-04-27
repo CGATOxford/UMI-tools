@@ -312,20 +312,15 @@ def detect_bam_features(bamfile, n_entries=1000):
 
 
 def aggregateStatsDF(stats_df):
-    ''' return a data from with aggregated counts per UMI'''
+    ''' return a dataframe with aggregated counts per UMI'''
 
-    agg_df_dict = {}
+    grouped = stats_df.groupby("UMI")
 
-    agg_df_dict['total_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.sum)
+    agg_dict = {'counts': [np.median, len, np.sum]}
+    agg_df = grouped.agg(agg_dict)
 
-    agg_df_dict['median_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.median)
-
-    agg_df_dict['times_observed'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=len)
-
-    return pd.DataFrame(agg_df_dict)
+    agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
+    return agg_df
 
 
 def main(argv=None):
