@@ -188,12 +188,12 @@ def getMetaContig2contig(gene_transcript_map):
     return metacontig2contig
 
 
-def metafetcher(bamfile, metacontig2contig):
+def metafetcher(bamfile, metacontig2contig, metatag):
     ''' return reads in order of metacontigs'''
     for metacontig in metacontig2contig:
         for contig in metacontig2contig[metacontig]:
             for read in bamfile.fetch(contig):
-                read.tags += [('MC', metacontig)]
+                read.tags += [(metatag, metacontig)]
                 yield read
 
 

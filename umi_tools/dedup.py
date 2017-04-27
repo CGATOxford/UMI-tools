@@ -529,8 +529,9 @@ def main(argv=None):
         if options.per_gene:
             metacontig2contig = umi_methods.getMetaContig2contig(
                 options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
-            gene_tag = "MC"
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
         else:
             inreads = infile.fetch()
             gene_tag = options.gene_tag
