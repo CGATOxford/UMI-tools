@@ -229,6 +229,9 @@ very long (>14bp)
       information is encoded in the bam read tag specified so you do
       not need to supply --gene-transcript-map
 
+--skip-tags-regex (string)
+      Used in conjunction with the --gene-tag option. Skip any reads
+      where the gene tag matches this regex. Defualt = "Unassigned\s*"
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
@@ -258,7 +261,7 @@ Usage
 '''
 import sys
 import collections
-
+import re
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -430,6 +433,11 @@ def main(argv=None):
                       help=("Deduplicate per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
+    parser.add_option("--skip-tags-regex", dest="skip_regex",
+                      type="string",
+                      help=("Used with --gene-tag. "
+                            "Ignore reads where the gene-tag matches this regex"),
+                      default="Unassigned\s*")
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -473,8 +481,14 @@ def main(argv=None):
                              "and 'adjacency' methods")
 
     if options.per_gene:
-        if not options.gene_transcript_map:
-            raise ValueError("--per-gene option requires --gene-transcript-map")
+        if not options.gene_transcript_map and not options.gene_map:
+            raise ValueError("--per-gene option requires --gene-transcript-map "
+                             "or --gene-tag")
+    try:
+        re.compile(options.skip_regex)
+    except re.error:
+        raise ValueError("skip-regex '%s' is not a "
+                         "valid regex" % options.skip_regex)
 
     infile = pysam.Samfile(in_name, in_mode)
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
@@ -526,7 +540,7 @@ def main(argv=None):
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
-        if options.per_gene:
+        if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
                 options.gene_transcript_map)
             inreads = umi_methods.metafetcher(infile, metacontig2contig)
@@ -544,6 +558,7 @@ def main(argv=None):
             per_contig=options.per_contig,
             per_gene=options.per_gene,
             gene_tag=options.gene_tag,
+            skip_regex=options.skip_regex,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
