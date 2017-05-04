@@ -23,7 +23,4 @@ before_script:
   - pip install pyyaml
 
 script: 
-  - umi_tools --help
-  - umi_tools extract --help
-  - umi_tools dedup --help
   - ./test_umi_tools.sh
