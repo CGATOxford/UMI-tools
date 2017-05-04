@@ -231,7 +231,9 @@ very long (>14bp)
 
 --skip-tags-regex (string)
       Used in conjunction with the --gene-tag option. Skip any reads
-      where the gene tag matches this regex. Defualt = "Unassigned\s*"
+      where the gene tag matches this regex.
+      Defualt matches anything which starts with "__" or "Unassigned":
+      ("^[__|Unassigned]")
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
@@ -437,7 +439,7 @@ def main(argv=None):
                       type="string",
                       help=("Used with --gene-tag. "
                             "Ignore reads where the gene-tag matches this regex"),
-                      default="Unassigned\s*")
+                      default="^[__|Unassigned]")
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
