@@ -499,7 +499,16 @@ def openFile(filename, mode="r", create_dir=False):
             os.makedirs(dirname)
 
     if ext.lower() in (".gz", ".z"):
-        return gzip.open(filename, mode)
+        if sys.version_info.major >= 3:
+            if mode == "r":
+                return gzip.open(filename, 'rt', encoding="ascii")
+            elif mode == "w":
+                return gzip.open(filename, 'wt', encoding="ascii")
+            else:
+                raise NotImplementedError(
+                    "mode '{}' not implemented".format(mode))
+        else:
+            return gzip.open(filename, mode)
     else:
         return open(filename, mode)
 

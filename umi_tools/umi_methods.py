@@ -14,6 +14,7 @@ import collections
 import random
 import numpy as np
 import pysam
+import re
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
@@ -171,8 +172,9 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def getMetaContig2contig(gene_transcript_map):
+def getMetaContig2contig(bamfile, gene_transcript_map):
     ''' '''
+    references = bamfile.references
     metacontig2contig = collections.defaultdict(set)
     for line in U.openFile(gene_transcript_map, "r"):
 
@@ -183,7 +185,8 @@ def getMetaContig2contig(gene_transcript_map):
             break
 
         gene, transcript = line.strip().split("\t")
-        metacontig2contig[gene].add(transcript)
+        if transcript in references:
+            metacontig2contig[gene].add(transcript)
 
     return metacontig2contig
 
@@ -206,6 +209,7 @@ def get_bundles(inreads,
                 soft_clip_threshold=0,
                 per_contig=False,
                 gene_tag=None,
+                skip_regex=None,
                 whole_contig=False,
                 read_length=False,
                 detection_method=False,
@@ -213,6 +217,7 @@ def get_bundles(inreads,
                 all_reads=False,
                 return_read2=False,
                 return_unmapped=False):
+
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
@@ -236,6 +241,10 @@ def get_bundles(inreads,
 
     gene_tag: use just the umi and gene as the dict key. Get the gene
     id from the this tag
+
+    skip_regex: skip genes matching this regex. Useful to ignore
+    unassigned reads where the 'gene' is a descriptive tag such as
+    "Unassigned"
 
     whole_contig: read the whole contig before yielding a bundle
 
@@ -321,6 +330,8 @@ def get_bundles(inreads,
             elif gene_tag:
                 pos = read.get_tag(gene_tag)
                 key = pos
+                if re.search(skip_regex, pos):
+                    continue
 
             if not pos == last_chr:
 

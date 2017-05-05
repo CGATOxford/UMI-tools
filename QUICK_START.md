@@ -245,8 +245,11 @@ the `--per-gene` option and a file mapping transcript and gene ids with the
 This file should be in the following format (tab separated):
 
 gene_1    transcript_1
+
 gene_1    transcript_2
+
 gene_2    transcript_3
+
 gene_3    transcript_4
 
     $ umi_tools dedup -I transcriptome_mapped.bam --per-gene --gene-transcript-map=gene2transcript.tsv -S deduplicated.bam
