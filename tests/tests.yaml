@@ -26,6 +26,13 @@ dedup_single_ignore:
       references: [single_ignore.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
 
+dedup_single_chrom:
+      skip_python: 3
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_chrom.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
+
 dedup_single_unique:
       skip_python: 3
       stdin: chr19.bam
@@ -158,6 +165,13 @@ dedup_single_ignore_py3:
       outputs: [stdout]
       references: [single_ignore_py3.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
+
+dedup_single_chrom_py3:
+      skip_python: 2
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_chrom_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
 
 dedup_single_unique_py3:
       skip_python: 2
