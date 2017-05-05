@@ -14,6 +14,7 @@ import collections
 import random
 import numpy as np
 import pysam
+import re
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
@@ -218,7 +219,7 @@ def metafetcher(bamfile, metacontig2contig):
 def get_bundles(inreads, ignore_umi=False, subset=None,
                 quality_threshold=0, paired=False, spliced=False,
                 soft_clip_threshold=0, per_contig=False,
-                per_gene=False, gene_tag=None,
+                per_gene=False, gene_tag=None, skip_regex=None,
                 whole_contig=False, read_length=False,
                 detection_method="MAPQ", umi_getter=None,
                 all_reads=False, return_unmapped=False):
@@ -297,6 +298,8 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
             elif gene_tag:
                 pos = read.get_tag(gene_tag)
                 key = pos
+                if re.search(skip_regex, pos):
+                    continue
 
             if not pos == last_chr:
 
