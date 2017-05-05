@@ -234,7 +234,8 @@ fragmentation happens after amplification), only the identity of the
 gene.
 
 If the transcriptome contains just a single transcript per gene, UMI-tools can be instructed
-to use this scheme using the `--per-contig` option:
+to use this scheme using the `--per-contig` option to instruct UMI-tools to treat all reads
+with the same value in field 3 of the BAM (RNAME) as having the same alignment coordinates:
 
     $ umi_tools dedup -I transcriptome_mapped.bam --per-contig -S deduplicated.bam
    
