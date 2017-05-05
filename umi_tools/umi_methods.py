@@ -187,8 +187,9 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def getMetaContig2contig(gene_transcript_map):
+def getMetaContig2contig(bamfile, gene_transcript_map):
     ''' '''
+    references = bamfile.references
     metacontig2contig = collections.defaultdict(set)
     for line in U.openFile(gene_transcript_map, "r"):
 
@@ -199,7 +200,8 @@ def getMetaContig2contig(gene_transcript_map):
             break
 
         gene, transcript = line.strip().split("\t")
-        metacontig2contig[gene].add(transcript)
+        if transcript in references:
+            metacontig2contig[gene].add(transcript)
 
     return metacontig2contig
 
