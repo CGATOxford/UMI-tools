@@ -206,7 +206,8 @@ very long (>14bp)
       Only consider a single chromosome. This is useful for debugging purposes
 
 --per-contig (string)
-      Deduplicate per contig. All reads with the same contig will be
+      Deduplicate per contig (field 3 in BAM; RNAME).
+      All reads with the same contig will be
       considered to have the same alignment position. This is useful
       if your library prep generates PCR duplicates with non identical
       alignment positions such as CEL-Seq. In this case, you would
@@ -418,7 +419,7 @@ def main(argv=None):
                             "to identify possible duplicates [default=%default]"))
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
                       default=False,
-                      help=("dedup per contig,"
+                      help=("dedup per contig (field 3 in BAM; RNAME),"
                             " e.g for transcriptome where contig = gene"))
     parser.add_option("--per-gene", dest="per_gene", action="store_true",
                       default=False,
