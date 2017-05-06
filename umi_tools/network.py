@@ -8,6 +8,7 @@ network.py - Network methods for dealing with UMIs
 :Tags: Python UMI
 
 '''
+import random
 import collections
 import itertools
 import sys
@@ -73,6 +74,47 @@ def remove_umis(adj_list, cluster, nodes):
                            for node in adj_list[x]] + nodes)
 
     return cluster - nodes_to_remove
+
+
+def build_substr_idx(umis, sub_size, idx_size):
+    '''
+    Added by Matt 06/05/17
+    Build a dictionary of nearest neighbours using substrings, can be used
+    to heuristically reduce the number of pairwise comparisons.
+
+    see:
+    https://cs.stackexchange.com/questions/73865/approximate-similarity-search
+    for more details.
+    '''
+    # create index for string where sub_size chars are selected
+    idx = sub_size * [1, ] + (len(umis[0]) - sub_size) * [0, ]
+    substr_idx = collections.defaultdict(
+        lambda: collections.defaultdict(set))
+    for _ in range(idx_size):
+        # each section of the substr_idx uses different random substrings of
+        # the same length.
+        random.shuffle(idx)
+        idx_tup = tuple(idx)
+        for u in umis:
+            u_sub = ''.join(n for i, n in zip(idx, u) if i)
+            substr_idx[idx_tup][u_sub].add(u)
+    return substr_idx
+
+
+def iter_nearest_neighbours(umis, substr_idx):
+    '''
+    Added by Matt 06/05/17
+    use substring dict to get (approximately) all the nearest neighbours to
+    each in a set of umis.
+    '''
+    for u in umis:
+        neighbours = set()
+        for idx, substr_map in substr_idx.items():
+            u_sub = ''.join(n for i, n in zip(idx, u) if i)
+            neighbours = neighbours.union(substr_map[u_sub])
+        neighbours.remove(u)
+        for nbr in neighbours:
+            yield u, nbr
 
 
 class ReadClusterer:
@@ -144,23 +186,37 @@ class ReadClusterer:
 
     # "get_adj_list" methods #
 
-    def _get_adj_list_adjacency(self, umis, counts, threshold):
+    def _get_adj_list_adjacency(self, umis, counts, threshold,
+                                use_substr_idx=False):
         ''' identify all umis within hamming distance threshold'''
+        if use_substr_idx:
+            substr_idx = build_substr_idx(umis, 8, 15)
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        if use_substr_idx:
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 adj_list[umi1].append(umi2)
                 adj_list[umi2].append(umi1)
 
         return adj_list
 
-    def _get_adj_list_directional(self, umis, counts, threshold=1):
+    def _get_adj_list_directional(self, umis, counts, threshold=1,
+                                 use_substr_idx=False):
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
+        if use_substr_idx:
+            substr_idx = build_substr_idx(umis, 8, 15)
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        if use_substr_idx:
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 if counts[umi1] >= (counts[umi2]*2)-1:
                     adj_list[umi1].append(umi2)
@@ -390,7 +446,7 @@ class ReadClusterer:
             self.get_groups = self._group_unique
 
     def __call__(self, bundle, threshold, stats=False, further_stats=False,
-                 deduplicate=True):
+                 deduplicate=True, use_substr_idx=False):
         ''' '''
 
         umis = bundle.keys()
@@ -402,7 +458,7 @@ class ReadClusterer:
 
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
-        adj_list = self.get_adj_list(umis, counts, threshold)
+        adj_list = self.get_adj_list(umis, counts, threshold, use_substr_idx)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
 
