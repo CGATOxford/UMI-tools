@@ -82,10 +82,6 @@ class TwoPassPairWriter:
         self.outfile = outfile
         self.read1s = set()
         self.chrom = None
-        if tags:
-            self.read2tags = {}
-        else:
-            self.read2tags = None
 
     def write(self, read, unique_id=None, umi=None, unmapped=False):
         '''Check if chromosome has changed since last time. If it has, scan
@@ -103,11 +99,6 @@ class TwoPassPairWriter:
         key = read.query_name, read.next_reference_name, read.next_reference_start
         self.read1s.add(key)
 
-        if self.read2tags is not None:
-            self.read2tags[key] = (unique_id, umi)
-            read.tags += [('UG', unique_id)]
-            read.tags += [('FU', umi)]
-
         self.outfile.write(read)
 
     def write_mates(self):
@@ -123,13 +114,6 @@ class TwoPassPairWriter:
 
             key = read.query_name, read.reference_name, read.reference_start
             if key in self.read1s:
-                if self.read2tags is not None:
-                    unique_id, umi = self.read2tags[key]
-                    self.read2tags.pop(key)
-
-                    read.tags += [('UG', unique_id)]
-                    read.tags += [('FU', umi)]
-
                 self.outfile.write(read)
                 self.read1s.remove(key)
 
@@ -144,19 +128,19 @@ class TwoPassPairWriter:
                len(self.read1s))
 
         found = 0
-        for name, chrom, pos in self.read1s:
-            for read in self.infile.fetch(start=pos, end=pos+1, tid=chrom):
-                if (read.query_name, read.pos) == (name, pos):
-                    if self.read2tags:
-                        unique_id, umi = self.read2tags[name, chrom, pos]
-                        read.tags += [('UG', unique_id)]
-                        read.tags += [('FU', umi)]
+        for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
 
-                    self.outfile.write(read)
-                    found += 1
-                    break
+            if read.is_unmapped:
+                continue
 
-        U.info("%i mates never found" % (len(self.read1s) - found))
+            key = read.query_name, read.reference_name, read.reference_start
+            if key in self.read1s:
+                self.outfile.write(read)
+                self.read1s.remove(key)
+                found += 1
+                continue
+
+        U.info("%i mates never found" % len(self.read1s))
         self.outfile.close()
 
 
@@ -207,27 +191,78 @@ def getMetaContig2contig(bamfile, gene_transcript_map):
     return metacontig2contig
 
 
-def metafetcher(bamfile, metacontig2contig):
+def metafetcher(bamfile, metacontig2contig, metatag):
     ''' return reads in order of metacontigs'''
     for metacontig in metacontig2contig:
         for contig in metacontig2contig[metacontig]:
             for read in bamfile.fetch(contig):
-                read.tags += [('MC', metacontig)]
+                read.tags += [(metatag, metacontig)]
                 yield read
 
 
-def get_bundles(inreads, ignore_umi=False, subset=None,
-                quality_threshold=0, paired=False, spliced=False,
-                soft_clip_threshold=0, per_contig=False,
-                per_gene=False, gene_tag=None, skip_regex=None,
-                whole_contig=False, read_length=False,
-                detection_method="MAPQ", umi_getter=None,
-                all_reads=False, return_unmapped=False):
+def get_bundles(inreads,
+                ignore_umi=False,
+                subset=None,
+                quality_threshold=0,
+                paired=False,
+                spliced=False,
+                soft_clip_threshold=0,
+                per_contig=False,
+                gene_tag=None,
+                skip_regex=None,
+                whole_contig=False,
+                read_length=False,
+                detection_method=False,
+                umi_getter=None,
+                all_reads=False,
+                return_read2=False,
+                return_unmapped=False):
+
     ''' Returns a dictionary of dictionaries, representing the unique reads at
     a position/spliced/strand combination. The key to the top level dictionary
     is a umi. Each dictionary contains a "read" entry with the best read, and a
     count entry with the number of reads with that position/spliced/strand/umi
-    combination'''
+    combination
+
+    ignore_umi: don't include the umi in the dict key
+
+    subset: randomly exclude 1-subset fraction of reads
+
+    quality_threshold: exclude reads with MAPQ below this
+
+    paired: input is paired
+
+    spliced: include the spliced/not-spliced status in the dict key
+
+    soft_clip_threshold: reads with less than this 3' soft clipped are
+    treated as spliced
+
+    per_contig: use just the umi and contig as the dict key
+
+    gene_tag: use just the umi and gene as the dict key. Get the gene
+    id from the this tag
+
+    skip_regex: skip genes matching this regex. Useful to ignore
+    unassigned reads where the 'gene' is a descriptive tag such as
+    "Unassigned"
+
+    whole_contig: read the whole contig before yielding a bundle
+
+    read_length: include the read length in the dict key
+
+    detection_method: which method to use to detect multimapping
+    reads. options are NH", "X0", "XT". defaults to False (just select
+    the 'best' read by MAPQ)
+
+    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+
+    all_reads: if true, return all reads in the dictionary. Else,
+    return the 'best' read (using MAPQ +/- multimapping) for each key
+
+    return_read2: Return read2s immediately as a single read
+
+    return_unmapped: Return unmapped reads immediately as a single read
+    '''
 
     last_pos = 0
     last_chr = ""
@@ -242,10 +277,10 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
     for read in inreads:
 
         if read.is_read2:
-            if read.is_unmapped and return_unmapped:
-                yield read, read_events, 'unmapped'
+            if return_read2:
+                if not read.is_unmapped or (read.is_unmapped and return_unmapped):
+                    yield read, read_events, 'single_read'
             continue
-
         else:
             read_events['Input Reads'] += 1
 
@@ -260,14 +295,14 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
 
             if return_unmapped:
                 read_events['Input Reads'] += 1
-                yield read, read_events, 'unmapped'
+                yield read, read_events, 'single_read'
             continue
 
         if read.mate_is_unmapped and paired:
             if not read.is_unmapped:
                 read_events['Read 2 unmapped'] += 1
             if return_unmapped:
-                yield read, read_events, 'unmapped'
+                yield read, read_events, 'single_read'
             continue
 
         if paired:
@@ -287,13 +322,10 @@ def get_bundles(inreads, ignore_umi=False, subset=None,
         # gene basis. To fit in with current workflow, simply assign
         # pos and key as contig
 
-        if per_contig or per_gene or gene_tag:
+        if per_contig or gene_tag:
 
             if per_contig:
                 pos = read.tid
-                key = pos
-            elif per_gene:
-                pos = read.get_tag('MC')
                 key = pos
             elif gene_tag:
                 pos = read.get_tag(gene_tag)

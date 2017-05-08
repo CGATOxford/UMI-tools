@@ -433,8 +433,6 @@ def main(argv=None):
 
     if options.output_bam:
         outfile = pysam.Samfile(out_name, out_mode, template=infile)
-        if options.paired:
-            outfile = umi_methods.TwoPassPairWriter(infile, outfile, tags=True)
     else:
         outfile = None
 
@@ -478,9 +476,11 @@ def main(argv=None):
             read_length=options.read_length,
             umi_getter=umi_getter,
             all_reads=True,
+            return_read2=True,
             return_unmapped=options.output_unmapped):
 
-        if status == 'unmapped' and options.output_unmapped:
+        # write out read2s and unmapped if option set
+        if status == 'single_read':
             # bundle is just a single read here
             outfile.write(bundle)
             nInput += 1
