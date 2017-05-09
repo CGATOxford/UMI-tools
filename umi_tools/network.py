@@ -92,14 +92,11 @@ class UMIClusterer:
 
       ** get_adj_list ** - returns the edges connecting the UMIs
 
-      ** connected_components ** - returns clusters of connected components
-                                   using the edges in the adjacency list
+      ** get_connected_components ** - returns clusters of connected components
+                                       using the edges in the adjacency list
 
-      ** get_best ** - returns the parent UMI(s) in the connected_components
-
-      ** reduce_clusters ** - loops through the connected components in a
-                              cluster and returns the unique reads. Optionally
-                              returns lists of umis and counts per umi also
+      ** get_groups ** - returns the groups of umis,
+                         with the parent umi at position 0
 
     Note: The get_adj_list and connected_components methods are not required by
     all custering methods. Where there are not required, the methods return
@@ -340,7 +337,7 @@ class ReadClusterer:
         If True:
         reads:        predicted best reads for deduplicated position
         final_umis:   list of predicted parent UMIs
-        umi_counts:   Some of read counts for reads represented by the
+        umi_counts:   Sum of read counts for reads represented by the
                       corresponding UMI
 
         If False:
