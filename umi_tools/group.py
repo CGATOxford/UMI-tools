@@ -343,9 +343,6 @@ def main(argv=None):
                       default=1,
                       help="Edit distance theshold at which to join two UMIs"
                            "when clustering. [default=%default]")
-    parser.add_option("--heuristic", dest="heuristic", action="store_true",
-                      help="Use heuristic method to reduce pairwise UMI comps",
-                      default=False)
     parser.add_option("--chrom", dest="chrom", type="string",
                       help="Restrict to one chromosome",
                       default=None)
@@ -506,8 +503,7 @@ def main(argv=None):
             bundle=bundle,
             threshold=options.threshold,
             stats=True,
-            deduplicate=False,
-            use_substr_idx=options.heuristic)
+            deduplicate=False)
 
         for umi_group in groups:
             top_umi = umi_group[0]
