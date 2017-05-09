@@ -233,10 +233,12 @@ Complete reference
 
 '''
 
-############################################################################
-# The code for Utilities.py has been taken directly from CGAT.Experiment.py
+########################################################################################
+# The code for Utilities.py has been taken with permission from CGAT.Experiment.py
 # https://github.com/CGATOxford/cgat/blob/master/CGAT/Experiment.py
-############################################################################
+# and CGATPipelines.CGATPipelines.Pipeline.Files.py
+# https://github.com/CGATOxford/CGATPipelines/blob/master/CGATPipelines/Pipeline/Files.py
+#########################################################################################
 
 
 import re
@@ -252,6 +254,7 @@ import optparse
 import textwrap
 import random
 import uuid
+import tempfile
 
 from builtins import bytes, chr
 
@@ -885,3 +888,63 @@ def error(message):
 def critical(message):
     '''log critical message, see the :mod:`logging` module'''
     logging.critical(message)
+
+
+def getTempFile(dir=None, shared=False, suffix=""):
+    '''get a temporary file.
+
+    The file is created and the caller needs to close and delete
+    the temporary file once it is not used any more.
+
+    Arguments
+    ---------
+    dir : string
+        Directory of the temporary file and if not given is set to the
+        default temporary location in the global configuration dictionary.
+    shared : bool
+        If set, the tempory file will be in a shared temporary
+        location (given by the global configuration directory).
+    suffix : string
+        Filename suffix
+
+    Returns
+    -------
+    file : File
+        A file object of the temporary file.
+    '''
+    if dir is None:
+        if shared:
+            dir = PARAMS['shared_tmpdir']
+        else:
+            dir = PARAMS['tmpdir']
+
+    return tempfile.NamedTemporaryFile(dir=dir, delete=False, prefix="ctmp",
+                                       suffix=suffix)
+
+
+def getTempFilename(dir=None, shared=False, suffix=""):
+    '''return a temporary filename.
+
+    The file is created and the caller needs to delete the temporary
+    file once it is not used any more.
+
+    Arguments
+    ---------
+    dir : string
+        Directory of the temporary file and if not given is set to the
+        default temporary location in the global configuration dictionary.
+    shared : bool
+        If set, the tempory file will be in a shared temporary
+        location.
+    suffix : string
+        Filename suffix
+
+    Returns
+    -------
+    filename : string
+        Absolute pathname of temporary file.
+
+    '''
+    tmpfile = getTempFile(dir=dir, shared=shared, suffix=suffix)
+    tmpfile.close()
+    return tmpfile.name

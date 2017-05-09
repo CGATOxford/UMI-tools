@@ -133,6 +133,13 @@ Options
        increased. The default value of 1 works best unless the UMI is
 very long (>14bp)
 
+--sort-output
+       By default, output from UMI-tools is not guarenteed to be
+       sorted as the reads are considered in the order of their start
+       position which is may not be the same as their alignment
+       coordinate due to soft-clipping and reverse alignments. This
+       option ensures the output is sorted.
+
 --paired
        BAM is paired end - output both read pairs. This will also
        force the Use of the template length to determine reads with
@@ -249,6 +256,7 @@ Usage
 import sys
 import collections
 import re
+import os
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -373,6 +381,9 @@ def main(argv=None):
                                "percentile", "unique", "cluster"),
                       default="directional",
                       help="method to use for umi deduping [default=%default]")
+    parser.add_option("--sort-output", dest="sort_output", action="store_true",
+                      default=False,
+                      help="Sort the output")
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=False,
                       help="Specify location to output stats")
@@ -436,10 +447,24 @@ def main(argv=None):
         raise ValueError("Input on standard in not currently supported")
 
     if options.stdout != sys.stdout:
-        out_name = options.stdout.name
+        if options.sort_output:
+            out_name = U.getTempFilename(dir="./")
+            sorted_out_name = options.stdout.name
+        else:
+            out_name = options.stdout.name
         options.stdout.close()
     else:
-        out_name = "-"
+        if options.sort_output:
+            out_name = U.getTempFilename(dir="./")
+            sorted_out_name = "-"
+        else:
+            out_name = "-"
+
+    if options.sort_output:  # need to determine the output format for sort
+        if options.out_sam:
+            sort_format = "sam"
+        else:
+            sort_format = "bam"
 
     if options.in_sam:
         in_mode = "r"
@@ -604,6 +629,11 @@ def main(argv=None):
                 post_cluster_stats_null.append(average_distance_null)
 
     outfile.close()
+
+    if options.sort_output:
+        # sort the output
+        pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
+        os.unlink(out_name)  # delete the tempfile
 
     if options.stats:
 
