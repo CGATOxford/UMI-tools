@@ -356,7 +356,7 @@ def main(argv=None):
             inreads = infile.fetch()
             gene_tag = options.gene_tag
 
-    options.stdout.write("%s\t%s\n" % ("gene", "count"))
+    options.stdout.write("%s\t%s\n" % ("feature", "count"))
     for gene, bundle, read_events in umi_methods.get_gene_count(
             inreads,
             subset=options.subset,
