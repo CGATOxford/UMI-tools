@@ -92,14 +92,11 @@ class UMIClusterer:
 
       ** get_adj_list ** - returns the edges connecting the UMIs
 
-      ** connected_components ** - returns clusters of connected components
-                                   using the edges in the adjacency list
+      ** get_connected_components ** - returns clusters of connected components
+                                       using the edges in the adjacency list
 
-      ** get_best ** - returns the parent UMI(s) in the connected_components
-
-      ** reduce_clusters ** - loops through the connected components in a
-                              cluster and returns the unique reads. Optionally
-                              returns lists of umis and counts per umi also
+      ** get_groups ** - returns the groups of umis,
+                         with the parent umi at position 0
 
     Note: The get_adj_list and connected_components methods are not required by
     all custering methods. Where there are not required, the methods return
@@ -317,7 +314,7 @@ class UMIClusterer:
         return final_umis
 
 
-class ReadClusterer:
+class ReadDeduplicator:
     '''This is a wrapper for applying the UMI methods to bundles of BAM reads.
     It is currently a pretty transparent wrapper on UMIClusterer. Basically
     taking a read bundle, extracting the UMIs and Counts, running UMIClusterer
@@ -327,28 +324,16 @@ class ReadClusterer:
 
         self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
 
-    def __call__(self, bundle, threshold, deduplicate=True):
+    def __call__(self, bundle, threshold):
         '''Process the the bundled reads according to the method specified
-        in the constructor. Note that in this implementation, stats and
-        further_stats have no effect and their corresponding return values
-        are always None. Only present to maintain signature with previous
-        versions. Return signature is:
+        in the constructor. Return signature is:
 
         reads, final_umis, umi_counts, topologies, nodes
 
-        Meaning of these depends on whether deduplicate is True or not.
-        If True:
         reads:        predicted best reads for deduplicated position
         final_umis:   list of predicted parent UMIs
-        umi_counts:   Some of read counts for reads represented by the
+        umi_counts:   Sum of read counts for reads represented by the
                       corresponding UMI
-
-        If False:
-        reads:        identical to bundle as called
-        final_umis:   list of lists of UMIs that are predicted to arise
-                      from same biological molecule.
-        umi_counts:   dictionary mapping UMIs to counts.
-
         '''
 
         umis = bundle.keys()
@@ -356,15 +341,9 @@ class ReadClusterer:
 
         clusters = self.UMIClusterer(umis, counts, threshold)
 
-        if deduplicate:
-            final_umis = [cluster[0] for cluster in clusters]
-            umi_counts = [sum(counts[umi] for umi in cluster)
-                          for cluster in clusters]
-            reads = [bundle[umi]["read"] for umi in final_umis]
-
-        else:
-            reads = bundle
-            umi_counts = counts
-            final_umis = clusters
+        final_umis = [cluster[0] for cluster in clusters]
+        umi_counts = [sum(counts[umi] for umi in cluster)
+                      for cluster in clusters]
+        reads = [bundle[umi]["read"] for umi in final_umis]
 
         return (reads, final_umis, umi_counts)

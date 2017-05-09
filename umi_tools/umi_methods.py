@@ -442,6 +442,102 @@ def get_bundles(inreads,
             yield bundle, read_events, 'mapped'
 
 
+def get_gene_count(inreads,
+                   subset=None,
+                   quality_threshold=0,
+                   paired=False,
+                   per_contig=False,
+                   gene_tag=None,
+                   skip_regex=None,
+                   umi_getter=None):
+
+    ''' Yields the counts per umi for each gene
+
+    ignore_umi: don't include the umi in the dict key
+
+    subset: randomly exclude 1-subset fraction of reads
+
+    quality_threshold: exclude reads with MAPQ below this
+
+    paired: input is paired
+
+    per_contig: use just the umi and contig as the dict key
+
+    gene_tag: use just the umi and gene as the dict key. Get the gene
+              id from the this tag
+
+    skip_regex: skip genes matching this regex. Useful to ignore
+                unassigned reads where the 'gene' is a descriptive tag
+                such as "Unassigned"
+
+    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    '''
+
+    last_chr = ""
+    gene = ""
+
+    # make an empty counts_dict counter
+    counts_dict = collections.defaultdict(
+        lambda: collections.defaultdict(dict))
+
+    read_events = collections.Counter()
+
+    for read in inreads:
+
+        if read.is_read2:
+            continue
+        else:
+            read_events['Input Reads'] += 1
+
+        if read.is_unmapped:
+            read_events['Skipped - Unmapped Reads'] += 1
+            continue
+
+        if paired:
+            read_events['Paired Reads'] += 1
+
+        if subset:
+            if random.random() >= subset:
+                read_events['Skipped - Randomly excluded'] += 1
+                continue
+
+        if quality_threshold:
+            if read.mapq < quality_threshold:
+                read_events['Skipped - < MAPQ threshold'] += 1
+                continue
+
+        if per_contig:
+            gene = read.tid
+        elif gene_tag:
+            gene = read.get_tag(gene_tag)
+            if re.search(skip_regex, gene):
+                read_events['Skipped - matches --skip-tags-regex'] += 1
+                continue
+
+        # only output when the contig changes to avoid problems with
+        # overlapping genes
+        if read.tid != last_chr:
+
+            for gene in counts_dict:
+                yield gene, counts_dict[gene], read_events
+
+            last_chr = read.tid
+
+            # make a new empty counts_dict counter
+            counts_dict = collections.defaultdict(
+                lambda: collections.defaultdict(dict))
+
+        umi = umi_getter(read)
+        try:
+            counts_dict[gene][umi]["count"] += 1
+        except KeyError:
+            counts_dict[gene][umi]["count"] = 1
+
+    # yield remaining genes
+    for gene in counts_dict:
+        yield gene, counts_dict[gene], read_events
+
+
 class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
