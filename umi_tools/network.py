@@ -170,9 +170,9 @@ class UMIClusterer:
         # TS: TO DO: Work out why recursive function doesn't lead to same
         # final output. Then uncomment below
 
-        #if len(graph) < 10000:
+        # if len(graph) < 10000:
         #    self.search = breadth_first_search_recursive
-        #else:
+        # else:
         #    self.search = breadth_first_search
 
         found = set()
@@ -180,7 +180,7 @@ class UMIClusterer:
 
         for node in sorted(graph, key=lambda x: counts[x], reverse=True):
             if node not in found:
-                #component = self.search(node, graph)
+                # component = self.search(node, graph)
                 component = breadth_first_search(node, graph)
                 found.update(component)
                 components.append(component)
@@ -314,7 +314,7 @@ class UMIClusterer:
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
 
-        return final_umis
+        return final_umis, adj_list
 
 
 class ReadClusterer:
@@ -327,14 +327,14 @@ class ReadClusterer:
 
         self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
 
-    def __call__(self, bundle, threshold, stats=False, further_stats=False,
+    def __call__(self, bundle, threshold, topology_stats=False,
                  deduplicate=True):
         '''Process the the bundled reads according to the method specified
         in the constructor. Note that in this implementation, stats and
         further_stats have no effect and their corresponding return values
         are always None. Only present to maintain signature with previous
         versions. Return signature is:
- 
+
         reads, final_umis, umi_counts, topologies, nodes
 
         Meaning of these depends on whether deduplicate is True or not.
@@ -359,19 +359,43 @@ class ReadClusterer:
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
-        clusters = self.UMIClusterer(umis, counts, threshold)
+        clusters, adj_list = self.UMIClusterer(umis, counts, threshold)
+
+        topologies = None
+        nodes = None
 
         if deduplicate:
             final_umis = [cluster[0] for cluster in clusters]
             umi_counts = [sum(counts[umi] for umi in cluster)
                           for cluster in clusters]
             reads = [bundle[umi]["read"] for umi in final_umis]
+
+            if topology_stats:
+
+                topologies = collections.Counter()
+                nodes = collections.Counter()
+
+                if len(clusters) == len(umis):
+                    topologies["single node"] = len(umis)
+                    nodes[1] = len(umis)
+                else:
+                    for cluster in clusters:
+                        if len(cluster) == 1:
+                            topologies["single node"] += 1
+                            nodes[1] += 1
+                        else:
+                            most_con = max([len(adj_list[umi]) for umi in cluster])
+
+                            if most_con == len(cluster):
+                                topologies["single hub"] += 1
+                                nodes[len(cluster)] += 1
+                            else:
+                                topologies["complex"] += 1
+                                nodes[len(cluster)] += 1
+
         else:
             reads = bundle
             umi_counts = counts
             final_umis = clusters
-
-        topologies = None
-        nodes = None
 
         return (reads, final_umis, umi_counts, topologies, nodes)

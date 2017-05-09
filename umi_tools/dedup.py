@@ -605,8 +605,7 @@ def main(argv=None):
             reads, umis, umi_counts, topologies, nodes = processor(
                 bundle=bundle,
                 threshold=options.threshold,
-                stats=options.stats,
-                further_stats=options.further_stats)
+                topology_stats=options.further_stats)
 
             for read in reads:
                 outfile.write(read)

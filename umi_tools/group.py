@@ -502,7 +502,6 @@ def main(argv=None):
         bundle, groups, counts, _, _ = processor(
             bundle=bundle,
             threshold=options.threshold,
-            stats=True,
             deduplicate=False)
 
         for umi_group in groups:
