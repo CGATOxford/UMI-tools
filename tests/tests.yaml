@@ -275,9 +275,9 @@ group_cluster_py3:
 group_adjacency_py3:
       skip_python: 2
       stdin: chr19.bam
-      outputs: [stdout, group_adj.tsv]
+      outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv
 
 group_directional_py3:
       skip_python: 2
