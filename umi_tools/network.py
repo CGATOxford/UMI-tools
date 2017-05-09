@@ -91,14 +91,14 @@ def get_substr_slices(umi_length, idx_size):
     return slices
 
 
-def build_substr_idx(umis, umi_length, idx_size):
+def build_substr_idx(umis, umi_length, min_edit):
     '''
     Build a dictionary of nearest neighbours using substrings, can be used
     to reduce the number of pairwise comparisons.
     '''
     substr_idx = collections.defaultdict(
         lambda: collections.defaultdict(set))
-    slices = get_substr_slices(umi_length, idx_size)
+    slices = get_substr_slices(umi_length, min_edit + 1)
     for idx in slices:
         for u in umis:
             u_sub = u[slice(*idx)]
@@ -196,7 +196,11 @@ class ReadClusterer:
         umi_length = len(umis[0])
         substr_idx = build_substr_idx(umis, umi_length, threshold)
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in iter_nearest_neighbours(umis, substr_idx):
+        if len(umis) > 25:
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 adj_list[umi1].append(umi2)
                 adj_list[umi2].append(umi1)
@@ -209,7 +213,11 @@ class ReadClusterer:
         umi_length = len(umis[0])
         substr_idx = build_substr_idx(umis, umi_length, threshold)
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in iter_nearest_neighbours(umis, substr_idx):
+        if len(umis) > 25:
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 if counts[umi1] >= (counts[umi2]*2)-1:
                     adj_list[umi1].append(umi2)
@@ -439,10 +447,10 @@ class ReadClusterer:
             self.get_groups = self._group_unique
 
     def __call__(self, bundle, threshold, stats=False, further_stats=False,
-                 deduplicate=True, use_substr_idx=False):
+                 deduplicate=True):
         ''' '''
 
-        umis = bundle.keys()
+        umis = list(bundle.keys())
 
         len_umis = [len(x) for x in umis]
         assert max(len_umis) == min(len_umis), (
@@ -451,7 +459,7 @@ class ReadClusterer:
 
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
-        adj_list = self.get_adj_list(umis, counts, threshold, use_substr_idx)
+        adj_list = self.get_adj_list(umis, counts, threshold)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
 
