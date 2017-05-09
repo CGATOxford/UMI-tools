@@ -314,7 +314,7 @@ class UMIClusterer:
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
 
-        return final_umis, adj_list
+        return final_umis
 
 
 class ReadClusterer:
@@ -327,8 +327,7 @@ class ReadClusterer:
 
         self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
 
-    def __call__(self, bundle, threshold, topology_stats=False,
-                 deduplicate=True):
+    def __call__(self, bundle, threshold, deduplicate=True):
         '''Process the the bundled reads according to the method specified
         in the constructor. Note that in this implementation, stats and
         further_stats have no effect and their corresponding return values
@@ -343,26 +342,19 @@ class ReadClusterer:
         final_umis:   list of predicted parent UMIs
         umi_counts:   Some of read counts for reads represented by the
                       corresponding UMI
-        topologies:   Always None
-        nodes:        Always None
 
         If False:
         reads:        identical to bundle as called
         final_umis:   list of lists of UMIs that are predicted to arise
                       from same biological molecule.
         umi_counts:   dictionary mapping UMIs to counts.
-        topologies:   Always None
-        nodes:        Alyways None
 
         '''
 
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
-        clusters, adj_list = self.UMIClusterer(umis, counts, threshold)
-
-        topologies = None
-        nodes = None
+        clusters = self.UMIClusterer(umis, counts, threshold)
 
         if deduplicate:
             final_umis = [cluster[0] for cluster in clusters]
@@ -370,32 +362,9 @@ class ReadClusterer:
                           for cluster in clusters]
             reads = [bundle[umi]["read"] for umi in final_umis]
 
-            if topology_stats:
-
-                topologies = collections.Counter()
-                nodes = collections.Counter()
-
-                if len(clusters) == len(umis):
-                    topologies["single node"] = len(umis)
-                    nodes[1] = len(umis)
-                else:
-                    for cluster in clusters:
-                        if len(cluster) == 1:
-                            topologies["single node"] += 1
-                            nodes[1] += 1
-                        else:
-                            most_con = max([len(adj_list[umi]) for umi in cluster])
-
-                            if most_con == len(cluster):
-                                topologies["single hub"] += 1
-                                nodes[len(cluster)] += 1
-                            else:
-                                topologies["complex"] += 1
-                                nodes[len(cluster)] += 1
-
         else:
             reads = bundle
             umi_counts = counts
             final_umis = clusters
 
-        return (reads, final_umis, umi_counts, topologies, nodes)
+        return (reads, final_umis, umi_counts)
