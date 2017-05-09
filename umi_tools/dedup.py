@@ -448,14 +448,14 @@ def main(argv=None):
 
     if options.stdout != sys.stdout:
         if options.sort_output:
-            out_name = U.getTempFilename(dir="./")
+            out_name = U.getTempFilename()
             sorted_out_name = options.stdout.name
         else:
             out_name = options.stdout.name
         options.stdout.close()
     else:
         if options.sort_output:
-            out_name = U.getTempFilename(dir="./")
+            out_name = U.getTempFilename()
             sorted_out_name = "-"
         else:
             out_name = "-"

@@ -912,11 +912,6 @@ def getTempFile(dir=None, shared=False, suffix=""):
     file : File
         A file object of the temporary file.
     '''
-    if dir is None:
-        if shared:
-            dir = PARAMS['shared_tmpdir']
-        else:
-            dir = PARAMS['tmpdir']
 
     return tempfile.NamedTemporaryFile(dir=dir, delete=False, prefix="ctmp",
                                        suffix=suffix)
