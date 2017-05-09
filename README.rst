@@ -7,14 +7,17 @@ Tools for dealing with Unique Molecular Identifiers
 
 This repository contains tools for dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags (RMTs). Currently there are three tools:
 
-* extract: Flexible removal of UMI sequences from fastq reads.
-    UMIs are removed and appended to the read name. Any other barcode, for example a library barcode, is left on the read.
+* extract:
+   **Flexible removal of UMI sequences from fastq reads.**
+      UMIs are removed and appended to the read name. Any other barcode, for example a library barcode, is left on the read.  
 
-* dedup: Removes PCR duplicates. Implements a number of different UMI deduplication schemes.
-    The recommended method is `directional`.
+* dedup:
+   **Removes PCR duplicates.**
+      Implements a number of different UMI deduplication schemes. The recommended method is `directional`.
     
-* group: Groups PCR duplicates using the same methods available through `dedup`.
-    This is useful when you want to interrogate the PCR duplicates
+* group: 
+   **Groups PCR duplicates using the same methods available through `dedup`.**
+      This is useful when you want to interrogate the PCR duplicates
 
 See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
 

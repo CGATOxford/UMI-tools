@@ -29,19 +29,18 @@ sys.setrecursionlimit(10000)
 
 def breadth_first_search(node, adj_list):
     searched = set()
-    found = set()
     queue = set()
     queue.update((node,))
-    found.update((node,))
+    searched.update((node,))
 
     while len(queue) > 0:
-        node = (list(queue))[0]
-        found.update(adj_list[node])
-        queue.update(adj_list[node])
-        searched.update((node,))
-        queue.difference_update(searched)
+        node = queue.pop()
+        for next_node in adj_list[node]:
+            if next_node not in searched:
+                queue.update((next_node,))
+                searched.update((next_node,))
 
-    return found
+    return searched
 
 
 def recursive_search(node, adj_list):

@@ -206,7 +206,8 @@ very long (>14bp)
       Only consider a single chromosome. This is useful for debugging purposes
 
 --per-contig (string)
-      Deduplicate per contig. All reads with the same contig will be
+      Deduplicate per contig (field 3 in BAM; RNAME).
+      All reads with the same contig will be
       considered to have the same alignment position. This is useful
       if your library prep generates PCR duplicates with non identical
       alignment positions such as CEL-Seq. In this case, you would
@@ -229,6 +230,11 @@ very long (>14bp)
       information is encoded in the bam read tag specified so you do
       not need to supply --gene-transcript-map
 
+--skip-tags-regex (string)
+      Used in conjunction with the --gene-tag option. Skip any reads
+      where the gene tag matches this regex.
+      Defualt matches anything which starts with "__" or "Unassigned":
+      ("^[__|Unassigned]")
 
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and output are output
@@ -258,7 +264,7 @@ Usage
 '''
 import sys
 import collections
-
+import re
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -312,20 +318,15 @@ def detect_bam_features(bamfile, n_entries=1000):
 
 
 def aggregateStatsDF(stats_df):
-    ''' return a data from with aggregated counts per UMI'''
+    ''' return a dataframe with aggregated counts per UMI'''
 
-    agg_df_dict = {}
+    grouped = stats_df.groupby("UMI")
 
-    agg_df_dict['total_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.sum)
+    agg_dict = {'counts': [np.median, len, np.sum]}
+    agg_df = grouped.agg(agg_dict)
 
-    agg_df_dict['median_counts'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=np.median)
-
-    agg_df_dict['times_observed'] = stats_df.pivot_table(
-        columns="UMI", values="counts", aggfunc=len)
-
-    return pd.DataFrame(agg_df_dict)
+    agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
+    return agg_df
 
 
 def main(argv=None):
@@ -418,7 +419,7 @@ def main(argv=None):
                             "to identify possible duplicates [default=%default]"))
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
                       default=False,
-                      help=("dedup per contig,"
+                      help=("dedup per contig (field 3 in BAM; RNAME),"
                             " e.g for transcriptome where contig = gene"))
     parser.add_option("--per-gene", dest="per_gene", action="store_true",
                       default=False,
@@ -435,6 +436,11 @@ def main(argv=None):
                       help=("Deduplicate per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
+    parser.add_option("--skip-tags-regex", dest="skip_regex",
+                      type="string",
+                      help=("Used with --gene-tag. "
+                            "Ignore reads where the gene-tag matches this regex"),
+                      default="^[__|Unassigned]")
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -460,7 +466,7 @@ def main(argv=None):
         in_mode = "rb"
 
     if options.out_sam:
-        out_mode = "w"
+        out_mode = "wh"
     else:
         out_mode = "wb"
 
@@ -478,8 +484,14 @@ def main(argv=None):
                              "and 'adjacency' methods")
 
     if options.per_gene:
-        if not options.gene_transcript_map:
-            raise ValueError("--per-gene option requires --gene-transcript-map")
+        if not options.gene_transcript_map and not options.gene_map:
+            raise ValueError("--per-gene option requires --gene-transcript-map "
+                             "or --gene-tag")
+    try:
+        re.compile(options.skip_regex)
+    except re.error:
+        raise ValueError("skip-regex '%s' is not a "
+                         "valid regex" % options.skip_regex)
 
     infile = pysam.Samfile(in_name, in_mode)
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
@@ -531,12 +543,16 @@ def main(argv=None):
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
-        if options.per_gene:
+        if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
-                options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+                infile, options.gene_transcript_map)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
         else:
             inreads = infile.fetch()
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -547,13 +563,14 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
-            per_gene=options.per_gene,
             gene_tag=options.gene_tag,
+            skip_regex=options.skip_regex,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
             umi_getter=umi_getter,
             all_reads=False,
+            return_read2=False,
             return_unmapped=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -625,31 +642,20 @@ def main(argv=None):
 
     if options.stats:
 
+        # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
 
-        # generate histograms of counts per UMI at each position
-        UMI_counts_df_pre = pd.DataFrame(stats_pre_df.pivot_table(
-            columns=stats_pre_df["counts"], values="counts", aggfunc=len))
-        UMI_counts_df_post = pd.DataFrame(stats_post_df.pivot_table(
-            columns=stats_post_df["counts"], values="counts", aggfunc=len))
-
-        UMI_counts_df_pre.columns = ["instances"]
-        UMI_counts_df_post.columns = ["instances"]
-
-        UMI_counts_df = pd.merge(UMI_counts_df_pre, UMI_counts_df_post,
-                                 how='left', left_index=True, right_index=True,
-                                 sort=True, suffixes=["_pre", "_post"])
-
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        UMI_counts_df = UMI_counts_df.fillna(0).astype(int)
-
-        UMI_counts_df.to_csv(
-            options.stats + "_per_umi_per_position.tsv", sep="\t")
+        # tally the counts per umi per position
+        pre_counts = collections.Counter(stats_pre_df["counts"])
+        post_counts = collections.Counter(stats_post_df["counts"])
+        counts_index = list(set(pre_counts.keys()).union(set(post_counts.keys())))
+        counts_index.sort()
+        with U.openFile(options.stats + "_per_umi_per_position.tsv", "w") as outf:
+            outf.write("counts\tinstances_pre\tinstances_post\n")
+            for count in counts_index:
+                values = (count, pre_counts[count], post_counts[count])
+                outf.write("\t".join(map(str, values)) + "\n")
 
         # aggregate stats pre/post per UMI
         agg_pre_df = aggregateStatsDF(stats_pre_df)
@@ -659,7 +665,11 @@ def main(argv=None):
                           left_index=True, right_index=True,
                           sort=True, suffixes=["_pre", "_post"])
 
-        # TS - see comment above regarding missing values
+        # TS - if count value not observed either pre/post-dedup,
+        # merge will leave an empty cell and the column will be cast as a float
+        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+        # --> Missing data casting rules and indexing
+        # so, back fill with zeros and convert back to int
         agg_df = agg_df.fillna(0).astype(int)
 
         agg_df.index = [x.decode() for x in agg_df.index]
