@@ -131,7 +131,7 @@ Options
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
        increased. The default value of 1 works best unless the UMI is
-very long (>14bp)
+       very long (>14bp)
 
 --sort-output
        By default, output from UMI-tools is not guarenteed to be
@@ -597,7 +597,7 @@ def main(argv=None):
 
             # set up ReadCluster functor with methods specific to
             # specified options.method
-            processor = network.ReadClusterer(options.method)
+            processor = network.ReadDeduplicator(options.method)
 
             # dedup using umis and write out deduped bam
             reads, umis, umi_counts = processor(

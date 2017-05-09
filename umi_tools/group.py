@@ -64,6 +64,13 @@ not assigned to a "true" UMI.
       Identify clusters of connected UMIs (based on hamming distance
       threshold). Each network is a read group
 
+  "adjacency"
+      Cluster UMIs as above. For each cluster, select the node(UMI)
+      with the highest counts. Visit all nodes one edge away. If all
+      nodes have been visted, stop. Otherise, repeat with remaining
+      nodes until all nodes have been visted. Each step
+      defines a read group.
+
   "directional"
       Identify clusters of connected UMIs (based on hamming distance
       threshold) and umi A counts >= (2* umi B counts) - 1. Each
@@ -149,19 +156,12 @@ Options
       Options are:
 
       - "unique"
-      Reads group share the exact same UMI
 
       - "cluster"
-      Identify clusters of connected UMIs (based on edit distance
-      threshold). Each network is a read group
 
-      - "directional"
-      Identify clusters of connected UMIs (based on edit distance
-      threshold) and umi A counts >= (2* umi B counts) - 1. Each
-      network is a read group.
+      - "adjacency"
 
-
-      - "directional"
+      - "directional" (default)
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -202,10 +202,6 @@ Options
 --read-length
       Use the read length as as a criteria when deduping, for e.g sRNA-Seq
 
---whole-contig
-      Consider all alignments to a single contig together. This is useful if
-      you have aligned to a transcriptome multi-fasta
-
 --subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
@@ -218,7 +214,7 @@ Options
       All reads with the same contig will be
       considered to have the same alignment position. This is useful
       if your library prep generates PCR duplicates with non identical
-      alignment positions such as CEL-Seq. In this case, you would
+      alignment positions such as CEL-Seq. In this case, you could
       align to a reference transcriptome with one transcript per gene
 
 --per-gene (string)
@@ -384,11 +380,6 @@ def main(argv=None):
                       help=("Deduplicate per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
-    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
-                      default=False,
-                      help="Read whole contig before outputting"
-                           "bundles: guarantees that no reads are"
-                           "missed, but increases memory usage")
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"
@@ -497,7 +488,6 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
-            whole_contig=options.whole_contig,
             read_length=options.read_length,
             umi_getter=umi_getter,
             all_reads=True,
@@ -512,7 +502,10 @@ def main(argv=None):
             nOutput += 1
             continue
 
-        nInput += sum([bundle[umi]["count"] for umi in bundle])
+        umis = bundle.keys()
+        counts = {umi: bundle[umi]["count"] for umi in umis}
+
+        nInput += sum(counts.values())
 
         if nOutput % 10000 == 0:
             U.debug("Outputted %i" % nOutput)
@@ -520,14 +513,15 @@ def main(argv=None):
         if nInput % 1000000 == 0:
             U.debug("Read %i input reads" % nInput)
 
-        # set up ReadCluster functor with methods specific to
+        # set up UMIClusterer functor with methods specific to
         # specified options.method
-        processor = network.ReadClusterer(options.method)
+        processor = network.UMIClusterer(options.method)
 
-        bundle, groups, counts = processor(
-            bundle=bundle,
-            threshold=options.threshold,
-            deduplicate=False)
+        # group the umis
+        groups = processor(
+            umis,
+            counts,
+            threshold=options.threshold)
 
         for umi_group in groups:
             top_umi = umi_group[0]
