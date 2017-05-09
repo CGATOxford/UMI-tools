@@ -367,17 +367,20 @@ def main(argv=None):
             skip_regex=options.skip_regex,
             umi_getter=umi_getter):
 
+        umis = bundle.keys()
+        counts = {umi: bundle[umi]["count"] for umi in umis}
+
+        nInput += sum(counts.values())
+
         # set up ReadCluster functor with methods specific to
         # specified options.method
-        processor = network.ReadClusterer(options.method)
-
-        nInput += sum([bundle[umi]['count'] for umi in bundle.keys()])
+        processor = network.UMIClusterer(options.method)
 
         # group the umis
-        bundle, groups, counts = processor(
-            bundle,
-            threshold=options.threshold,
-            deduplicate=False)
+        groups = processor(
+            umis,
+            counts,
+            threshold=options.threshold)
 
         gene_count = len(groups)
         options.stdout.write("%s\t%i\n" % (gene, gene_count))
