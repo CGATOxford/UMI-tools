@@ -572,7 +572,7 @@ def main(argv=None):
 
             # set up ReadCluster functor with methods specific to
             # specified options.method
-            processor = network.ReadClusterer(options.method)
+            processor = network.ReadDeduplicator(options.method)
 
             # dedup using umis and write out deduped bam
             reads, umis, umi_counts = processor(

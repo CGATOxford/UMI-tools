@@ -372,7 +372,7 @@ def main(argv=None):
 
         nInput += sum(counts.values())
 
-        # set up ReadCluster functor with methods specific to
+        # set up UMIClusterer functor with methods specific to
         # specified options.method
         processor = network.UMIClusterer(options.method)
 

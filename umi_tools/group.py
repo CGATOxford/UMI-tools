@@ -477,7 +477,10 @@ def main(argv=None):
             nOutput += 1
             continue
 
-        nInput += sum([bundle[umi]["count"] for umi in bundle])
+        umis = bundle.keys()
+        counts = {umi: bundle[umi]["count"] for umi in umis}
+
+        nInput += sum(counts.values())
 
         if nOutput % 10000 == 0:
             U.debug("Outputted %i" % nOutput)
@@ -485,14 +488,15 @@ def main(argv=None):
         if nInput % 1000000 == 0:
             U.debug("Read %i input reads" % nInput)
 
-        # set up ReadCluster functor with methods specific to
+        # set up UMIClusterer functor with methods specific to
         # specified options.method
-        processor = network.ReadClusterer(options.method)
+        processor = network.UMIClusterer(options.method)
 
-        bundle, groups, counts = processor(
-            bundle=bundle,
-            threshold=options.threshold,
-            deduplicate=False)
+        # group the umis
+        groups = processor(
+            umis,
+            counts,
+            threshold=options.threshold)
 
         for umi_group in groups:
             top_umi = umi_group[0]
