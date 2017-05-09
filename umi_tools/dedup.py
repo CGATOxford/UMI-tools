@@ -133,12 +133,14 @@ Options
        increased. The default value of 1 works best unless the UMI is
        very long (>14bp)
 
---sort-output
-       By default, output from UMI-tools is not guarenteed to be
-       sorted as the reads are considered in the order of their start
-       position which is may not be the same as their alignment
-       coordinate due to soft-clipping and reverse alignments. This
-       option ensures the output is sorted.
+--no-sort-output
+       By default, output from UMI-tools are sorted. This involves the
+       use of a temporary unsorted file since reads are considered in
+       the order of their start position which is may not be the same
+       as their alignment coordinate due to soft-clipping and reverse
+       alignments. The temp file will be saved in $TMPDIR and deleted
+       when it has been sorted to the outfile. Use this option to turn
+       off sorting.
 
 --paired
        BAM is paired end - output both read pairs. This will also
@@ -381,8 +383,8 @@ def main(argv=None):
                                "percentile", "unique", "cluster"),
                       default="directional",
                       help="method to use for umi deduping [default=%default]")
-    parser.add_option("--sort-output", dest="sort_output", action="store_true",
-                      default=False,
+    parser.add_option("--no-sort-output", dest="no_sort_output",
+                      action="store_true", default=False,
                       help="Sort the output")
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=False,
@@ -447,20 +449,20 @@ def main(argv=None):
         raise ValueError("Input on standard in not currently supported")
 
     if options.stdout != sys.stdout:
-        if options.sort_output:
+        if options.no_sort_output:
+            out_name = options.stdout.name
+        else:
             out_name = U.getTempFilename()
             sorted_out_name = options.stdout.name
-        else:
-            out_name = options.stdout.name
         options.stdout.close()
     else:
-        if options.sort_output:
+        if options.no_sort_output:
+            out_name = "-"
+        else:
             out_name = U.getTempFilename()
             sorted_out_name = "-"
-        else:
-            out_name = "-"
 
-    if options.sort_output:  # need to determine the output format for sort
+    if not options.no_sort_output:  # need to determine the output format for sort
         if options.out_sam:
             sort_format = "sam"
         else:
@@ -630,7 +632,7 @@ def main(argv=None):
 
     outfile.close()
 
-    if options.sort_output:
+    if not options.no_sort_output:
         # sort the output
         pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
         os.unlink(out_name)  # delete the tempfile
