@@ -514,21 +514,18 @@ def get_gene_count(inreads,
                 read_events['Skipped - matches --skip-tags-regex'] += 1
                 continue
 
-        # commented out since we are now yielding all genes in sort
-        # order once all reads have been read
+        # only output when the contig changes to avoid problems with
+        # overlapping genes
+        if read.tid != last_chr:
 
-        # # only output when the contig changes to avoid problems with
-        # # overlapping genes
-        # if read.tid != last_chr:
+            for gene in counts_dict:
+                yield gene, counts_dict[gene], read_events
 
-        #     for gene in counts_dict:
-        #         yield gene, counts_dict[gene], read_events
+            last_chr = read.tid
 
-        #     last_chr = read.tid
-
-        #     # make a new empty counts_dict counter
-        #     counts_dict = collections.defaultdict(
-        #         lambda: collections.defaultdict(dict))
+            # make a new empty counts_dict counter
+            counts_dict = collections.defaultdict(
+                lambda: collections.defaultdict(dict))
 
         umi = umi_getter(read)
         try:
@@ -537,7 +534,7 @@ def get_gene_count(inreads,
             counts_dict[gene][umi]["count"] = 1
 
     # yield gene counts
-    for gene in sorted(list(counts_dict.keys())):
+    for gene in counts_dict:
         yield gene, counts_dict[gene], read_events
 
 
