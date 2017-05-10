@@ -117,6 +117,13 @@ count_single_gene_tag:
       references: [single_gene_tag.tsv]
       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
+count_tab_single:
+      skip_python: 3
+      stdin: chr19_gene_assigned.tsv
+      outputs: [stdout]
+      references: [count_tab.tsv]
+      options: count_tab -L test.log
+
 group_unique:
       skip_python: 3
       stdin: chr19.bam
@@ -265,13 +272,19 @@ dedup_single_gene_tag_py3:
       references: [single_gene_tag_py3.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
-
 count_single_gene_tag:
       skip_python: 2
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag_py3.tsv]
       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+
+count_tab_single:
+      skip_python: 2
+      stdin: chr19_gene_assigned.tsv
+      outputs: [stdout]
+      references: [count_tab_py3.tsv]
+      options: count_tab -L test.log
 
 group_unique_py3:
       skip_python: 2

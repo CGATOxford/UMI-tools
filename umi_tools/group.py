@@ -252,7 +252,7 @@ Options
 Usage
 -----
 
-    python group -I infile.bam --output-bam -S grouped.bam -L group.log --
+    umi_tools group -I infile.bam --output-bam -S grouped.bam -L group.log --
 
 
 .. note::

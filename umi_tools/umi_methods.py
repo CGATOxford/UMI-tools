@@ -55,6 +55,18 @@ def get_umi_tag(read, tag='RX'):
             "check UMI is encoded in the read tag: %s" % tag)
 
 
+def get_umi_read_string(read_id, sep="_"):
+    ''' extract the umi from the read id (input as a string) using the
+    specified separator '''
+
+    try:
+        return read_id.split(sep)[-1].encode('utf-8')
+    except IndexError:
+        raise ValueError(
+            "Could not extract UMI from the read ID, please"
+            "check UMI is encoded in the read name")
+
+
 def get_average_umi_distance(umis):
 
     if len(umis) == 1:
@@ -536,6 +548,47 @@ def get_gene_count(inreads,
     # yield remaining genes
     for gene in counts_dict:
         yield gene, counts_dict[gene], read_events
+
+
+def get_gene_count_tab(infile,
+                       umi_getter=None):
+
+    ''' Yields the counts per umi for each gene
+
+    ignore_umi: don't include the umi in the dict key
+
+    skip_regex: skip genes matching this regex. Useful to ignore
+                unassigned reads where the 'gene' is a descriptive tag
+                such as "Unassigned"
+
+    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    '''
+
+    gene = None
+    counts = collections.Counter()
+
+    for line in infile:
+
+        values = line.strip().split("\t")
+
+        assert len(values) == 2, "line: %s does not contain 2 columns" % line
+
+        read_id, assigned_gene = values
+
+        # only output when the contig changes to avoid problems with
+        # overlapping genes
+        if assigned_gene != gene:
+            if gene:
+                yield gene, counts
+
+            gene = assigned_gene
+            counts = collections.Counter()
+
+        umi = umi_getter(read_id)
+        counts[umi] += 1
+
+    # yield final gene
+    yield gene, counts
 
 
 class random_read_generator:
