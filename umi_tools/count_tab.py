@@ -111,7 +111,7 @@ Usage
 
 The input must be in the following format (tab separated), where the
 first column is the read identifier and the second column is the
-assigned read. The input must be sorted by the gene identifier:
+assigned gene. The input must be sorted by the gene identifier:
 
 NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA    ENSG00000279457.3
 NS500668:144:H5FCJBGXY:3:23405:3971:19716_CGATG     ENSG00000225972.1
