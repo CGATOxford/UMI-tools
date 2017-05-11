@@ -2,22 +2,36 @@ extract_single:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [processed_single.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log
+      options: extract  --barcode-regex="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --log=test.log
 
 extract_3prime:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [processed_3prime.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --log=test.log --3prime
-
-## python 2 tests ##
+      options: extract  --barcode-regex=".*(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})$" --log=test.log
 
 extract_quality:
-      skip_python: 3
+      skip_python:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [extract_quality.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
+      options: extract  --barcode-regex="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
+
+extract_scrb_seq:
+      skip_python:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [scrb_extract.fastq]
+      references: [scrb_extract.fastq]
+      options: extract  --read2-in=<DIR>/scrb_seq_fastq.2.gz --barcode-regex="(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist-tsv=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+
+extract_indrop:
+      skip_python:
+      stdin: indrop.fastq.1.gz
+      outputs: [indrop_extract.fastq]
+      references: [indrop_extract.fastq]
+      options: extract --read2-in=<DIR>/indrop.fastq.2.gz --barcode-regex="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq
+
+## python 2 tests ##
 
 dedup_single_ignore:
       skip_python: 3
@@ -165,13 +179,6 @@ group_directional_unmapped:
 
 
 # ## python 3 tests ##
-
-extract_quality_py3:
-      skip_python: 2
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [extract_quality_py3.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
 
 dedup_single_ignore_py3:
       skip_python: 2

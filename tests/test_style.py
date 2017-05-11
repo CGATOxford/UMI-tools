@@ -27,6 +27,7 @@ EXPRESSIONS = (
 IGNORE = set(('E201',  # whitespace after '('
               'E202',  # whitespace before ')'
               'E122',  # continuation line missing indentation or outdented
+              'E129',  # visually indented line with same indent as next logical line
               'E265',  # block comment should start with '# '
               'E501',  # line too long (82 > 79 characters)
               'E731',  # do not assign a lambda expression, use a def
