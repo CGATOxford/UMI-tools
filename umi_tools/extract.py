@@ -351,7 +351,7 @@ class ExtractFilterAndUpdate:
         self.read_counts['Input Reads'] += 1
 
         if self.pattern:
-            match = regex.match(self.pattern, read1.seq)
+            match = self.pattern.match(read1.seq)
             if not match:
                 self.read_counts['regex does not match read1'] += 1
                 return None
@@ -359,7 +359,7 @@ class ExtractFilterAndUpdate:
                 self.read_counts['regex matches read1'] += 1
 
         if read2 and self.pattern2:
-            match2 = regex.match(self.pattern2, read2.seq)
+            match2 = self.pattern2.match(read2.seq)
             if not match2:
                 self.read_counts['regex does not match read1'] += 1
                 return None
@@ -447,7 +447,7 @@ class ExtractFilterAndUpdate:
 def getCellBarcode(read1, read2=None, pattern=None, pattern2=None):
 
     if read2 is None:
-        match = regex.match(pattern, read1.seq)
+        match = pattern.match(read1.seq)
         if match:
             cell_barcode = ExtractBarcodes(
                 read1, match, extract_cell=True)[0]
@@ -460,10 +460,10 @@ def getCellBarcode(read1, read2=None, pattern=None, pattern2=None):
         match1, match2 = None, None
 
         if pattern:
-            match1 = regex.match(pattern, read1.seq)
+            match1 = pattern.match(read1.seq)
 
         if pattern2:
-            match2 = regex.match(pattern2, read2.seq)
+            match2 = pattern2.match(read2.seq)
 
         # check matches have been made
         if not ((pattern and not match1) or
