@@ -45,6 +45,7 @@ Command line options
 '''
 import sys
 import re
+import regex
 import collections
 from six import iteritems
 
@@ -194,12 +195,12 @@ def ExtractBarcodes(read, match,
                     extract_umi=False,
                     extract_cell=False,
                     discard=False):
-    '''Extract the cell and umi barcodes using a re.match object
+    '''Extract the cell and umi barcodes using a regex.match object
 
     inputs:
 
     - read 1 and read2 = Record objects
-    - match = re.match object
+    - match = regex.match object
     - extract_umi and extract_cell = switches to determine whether these
                                      barcodes should be extracted
 
@@ -350,7 +351,7 @@ class ExtractFilterAndUpdate:
         self.read_counts['Input Reads'] += 1
 
         if self.pattern:
-            match = re.match(self.pattern, read1.seq)
+            match = regex.match(self.pattern, read1.seq)
             if not match:
                 self.read_counts['regex does not match read1'] += 1
                 return None
@@ -358,7 +359,7 @@ class ExtractFilterAndUpdate:
                 self.read_counts['regex matches read1'] += 1
 
         if read2 and self.pattern2:
-            match2 = re.match(self.pattern2, read2.seq)
+            match2 = regex.match(self.pattern2, read2.seq)
             if not match2:
                 self.read_counts['regex does not match read1'] += 1
                 return None
@@ -446,7 +447,7 @@ class ExtractFilterAndUpdate:
 def getCellBarcode(read1, read2=None, pattern=None, pattern2=None):
 
     if read2 is None:
-        match = re.match(pattern, read1.seq)
+        match = regex.match(pattern, read1.seq)
         if match:
             cell_barcode = ExtractBarcodes(
                 read1, match, extract_cell=True)[0]
@@ -459,10 +460,10 @@ def getCellBarcode(read1, read2=None, pattern=None, pattern2=None):
         match1, match2 = None, None
 
         if pattern:
-            match1 = re.match(pattern, read1.seq)
+            match1 = regex.match(pattern, read1.seq)
 
         if pattern2:
-            match2 = re.match(pattern2, read2.seq)
+            match2 = regex.match(pattern2, read2.seq)
 
         # check matches have been made
         if not ((pattern and not match1) or
@@ -569,8 +570,8 @@ def main(argv=None):
 
     if options.barcode_regex:
         try:
-            pattern = re.compile(options.barcode_regex)
-        except re.error:
+            pattern = regex.compile(options.barcode_regex)
+        except regex.error:
             raise ValueError("barcode_regex '%s' is not a "
                              "valid regex" % options.barcode_regex)
     else:
@@ -583,8 +584,8 @@ def main(argv=None):
 
     if options.barcode_regex2:
         try:
-            pattern2 = re.compile(options.barcode_regex2)
-        except re.error:
+            pattern2 = regex.compile(options.barcode_regex2)
+        except regex.Error:
             raise ValueError("barcode_regex2 '%s' is not a "
                              "valid regex" % options.barcode_regex2)
     else:

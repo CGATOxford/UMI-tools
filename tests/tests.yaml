@@ -31,6 +31,13 @@ extract_indrop:
       references: [indrop_extract.fastq]
       options: extract --read2-in=<DIR>/indrop.fastq.2.gz --barcode-regex="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq
 
+extract_indrop_fuzzy:
+      skip_python:
+      stdin: indrop.fastq.1.gz
+      outputs: [indrop_extract_fuzzy.fastq]
+      references: [indrop_extract_fuzzy.fastq]
+      options: extract --read2-in=<DIR>/indrop.fastq.2.gz --barcode-regex="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq
+
 ## python 2 tests ##
 
 dedup_single_ignore:
