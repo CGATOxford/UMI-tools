@@ -366,7 +366,7 @@ def getCellWhitelist(cell_barcode_counts,
 
     # we need to define cell whitelist using method.
     # line below is placeholder.
-    cell_whitelist = list(cell_barcode_counts.keys())
+    cell_whitelist = set(list(cell_barcode_counts.keys()))
     error_correct_mapping = {}
 
     # error_correct_mapping is a dict mapping barcodes not in the
@@ -399,14 +399,14 @@ def getUserDefinedWhitelist(whitelist_tsv):
     with U.openFile(whitelist_tsv, "r") as inf:
         for line in inf:
             cell_whitelist.append(line.strip())
-    return cell_whitelist
+    return set(cell_whitelist)
 
 
 def get_below_threshold(umi_quals, quality_encoding,  quality_filter_threshold):
     '''test whether the umi_quals are below the threshold'''
     umi_quals = [x - RANGES[quality_encoding][0] for x in map(ord, umi_quals)]
     below_threshold = [x < quality_filter_threshold for x in umi_quals]
-    return (below_threshold)
+    return below_threshold
 
 
 def umi_below_threshold(umi_quals, quality_encoding,  quality_filter_threshold):
@@ -543,6 +543,61 @@ class ExtractFilterAndUpdate:
 
         return cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2
 
+    def _getCellBarcodeString(self, read1, read2=None):
+
+        if self.pattern:
+            bc1, sequence1 = self.extract(read1.seq)
+            cell = "".join([bc1[x] for x in self.cell_bases])
+        else:
+            cell = ""
+
+        if self.pattern2:
+            bc2, sequence2 = self.extract(read2.seq)
+            cell2 = "".join([bc2[x] for x in self.cell_bases2])
+
+            cell += cell2
+
+        return cell
+
+    def _getCellBarcodeRegex(self, read1, read2=None):
+
+        if read2 is None:
+            match = self.pattern.match(read1.seq)
+            if match:
+                cell_barcode = ExtractBarcodes(
+                    read1, match, extract_cell=True, extract_umi=False)[0]
+                return cell_barcode
+            else:
+                return None
+
+        else:
+
+            match1, match2 = None, None
+
+            if self.pattern:
+                match1 = self.pattern.match(read1.seq)
+
+            if self.pattern2:
+                match2 = self.pattern2.match(read2.seq)
+
+            # check matches have been made
+            if not ((self.pattern and not match1) or
+                    (self.pattern2 and not match2)):
+                cell_barcode1, cell_barcode2 = "", ""
+
+                if self.pattern:
+                    cell_barcode1 = ExtractBarcodes(
+                        read1, match1, extract_cell=True, extract_umi=False)[0]
+                if self.pattern2:
+                    cell_barcode2 = ExtractBarcodes(
+                        read2, match2, extract_cell=True, extract_umi=False)[0]
+
+                cell_barcode = cell_barcode1 + cell_barcode2
+
+                return cell_barcode
+            else:
+                return None
+
     def filterQuality(self, umi_quals):
         if umi_below_threshold(
                 umi_quals, self.quality_encoding,
@@ -593,9 +648,7 @@ class ExtractFilterAndUpdate:
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
                  filter_cell_barcode=False,
-                 error_correct_cell=False,
-                 cell_whitelist=None,
-                 error_correct_mapping=None):
+                 error_correct_cell=False):
 
         self.read_counts = collections.Counter()
         self.method = method
@@ -607,8 +660,8 @@ class ExtractFilterAndUpdate:
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
         self.error_correct_cell = error_correct_cell
-        self.cell_whitelist = cell_whitelist
-        self.error_correct_mapping = error_correct_mapping
+        self.cell_whitelist = None
+        self.error_correct_mapping = None
 
         # If the pattern is a string we can identify the position of
         # the cell and umi bases at instantiation
@@ -635,9 +688,11 @@ class ExtractFilterAndUpdate:
                 self.cell_bases2 = [x for x in range(len(pattern2))
                                     if pattern2[x] is "C"]
 
+            self.getCellBarcode = self._getCellBarcodeString
             self.getBarcodes = self._getBarcodesString
 
         elif method == "regex":
+            self.getCellBarcode = self._getCellBarcodeRegex
             self.getBarcodes = self._getBarcodesRegex
 
     def getReadCounts(self):
@@ -689,46 +744,6 @@ class ExtractFilterAndUpdate:
 
     def getReadCounts(self):
         return self.read_counts
-
-
-def getCellBarcode(read1, read2=None, pattern=None, pattern2=None):
-
-    if read2 is None:
-        match = pattern.match(read1.seq)
-        if match:
-            cell_barcode = ExtractBarcodes(
-                read1, match, extract_cell=True, extract_umi=False)[0]
-            return cell_barcode
-        else:
-            return None
-
-    else:
-
-        match1, match2 = None, None
-
-        if pattern:
-            match1 = pattern.match(read1.seq)
-
-        if pattern2:
-            match2 = pattern2.match(read2.seq)
-
-        # check matches have been made
-        if not ((pattern and not match1) or
-                (pattern2 and not match2)):
-            cell_barcode1, cell_barcode2 = "", ""
-
-            if pattern:
-                cell_barcode1 = ExtractBarcodes(
-                    read1, match1, extract_cell=True, extract_umi=False)[0]
-            if pattern2:
-                cell_barcode2 = ExtractBarcodes(
-                    read2, match2, extract_cell=True, extract_umi=False)[0]
-
-            cell_barcode = cell_barcode1 + cell_barcode2
-
-            return cell_barcode
-        else:
-            return None
 
 
 def main(argv=None):
@@ -902,21 +917,32 @@ def main(argv=None):
     else:
         read1s = fastqIterate(U.openFile(options.stdin.name))
 
+    # set up read extractor
+    ReadExtractor = ExtractFilterAndUpdate(
+        options.extract_method,
+        options.pattern,
+        options.pattern2,
+        options.prime3,
+        extract_cell,
+        options.quality_encoding,
+        options.quality_filter_threshold,
+        options.quality_filter_mask,
+        options.filter_cell_barcode,
+        options.error_correct_cell)
+
     if options.filter_cell_barcode:
         if not options.whitelist_tsv:
             cell_barcode_counts = collections.Counter()
 
             if not options.read2_in:
                 for read1 in read1s:
-                    cell_barcode = getCellBarcode(
-                        read1, pattern=pattern)
+                    cell_barcode = ReadExtractor.getCellBarcode(read1)
                     if cell_barcode:
                         cell_barcode_counts[cell_barcode] += 1
             else:
                 read2s = fastqIterate(U.openFile(options.read2_in))
                 for read1, read2 in izip(read1s, read2s):
-                    cell_barcode = getCellBarcode(
-                        read1, read2, options.pattern, options.pattern2)
+                    cell_barcode = ReadExtractor.getCellBarcode(read1, read2)
                     if cell_barcode:
                         cell_barcode_counts[cell_barcode] += 1
 
@@ -933,23 +959,9 @@ def main(argv=None):
         else:
             cell_whitelist = getUserDefinedWhitelist(options.whitelist_tsv)
             error_correct_mapping = None
-    else:
-        cell_whitelist, error_correct_mapping = None, None
 
-    # set up read extractor
-    ReadExtractor = ExtractFilterAndUpdate(
-        options.extract_method,
-        options.pattern,
-        options.pattern2,
-        options.prime3,
-        extract_cell,
-        options.quality_encoding,
-        options.quality_filter_threshold,
-        options.quality_filter_mask,
-        options.filter_cell_barcode,
-        options.error_correct_cell,
-        cell_whitelist,
-        error_correct_mapping)
+        ReadExtractor.cell_whitelist = cell_whitelist
+        ReadExtractor.error_correct_mapping = error_correct_mapping
 
     if options.read2_in is None:
         for read in read1s:
@@ -979,6 +991,9 @@ def main(argv=None):
 
             if options.read2_out:
                 read2_out.write(str(new_read2) + "\n")
+
+    if options.read2_out:
+        read2_out.close()
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))
