@@ -1,42 +1,55 @@
+extract_single_string:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_single.fastq]
+      options: extract  --extract-method=string --bc-pattern=NNNXXXXNN --log=test.log
+
 extract_single:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [processed_single.fastq]
-      options: extract  --barcode-regex="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --log=test.log
+      options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --log=test.log
 
 extract_3prime:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [processed_3prime.fastq]
-      options: extract  --barcode-regex=".*(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})$" --log=test.log
+      options: extract  --extract-method=regex --bc-pattern=".*(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})$" --log=test.log
 
 extract_quality:
       skip_python:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [extract_quality.fastq]
-      options: extract  --barcode-regex="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
+      options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
 
 extract_scrb_seq:
       skip_python:
       stdin: scrb_seq_fastq.1.gz
       outputs: [scrb_extract.fastq]
       references: [scrb_extract.fastq]
-      options: extract  --read2-in=<DIR>/scrb_seq_fastq.2.gz --barcode-regex="(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist-tsv=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist-tsv=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+
+extract_scrb_seq_string:
+      skip_python:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [scrb_extract.fastq]
+      references: [scrb_extract.fastq]
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-out-only  -L test.log --whitelist-tsv=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
 
 extract_indrop:
       skip_python:
       stdin: indrop.fastq.1.gz
       outputs: [indrop_extract.fastq]
       references: [indrop_extract.fastq]
-      options: extract --read2-in=<DIR>/indrop.fastq.2.gz --barcode-regex="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq
 
 extract_indrop_fuzzy:
       skip_python:
       stdin: indrop.fastq.1.gz
       outputs: [indrop_extract_fuzzy.fastq]
       references: [indrop_extract_fuzzy.fastq]
-      options: extract --read2-in=<DIR>/indrop.fastq.2.gz --barcode-regex="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq
 
 ## python 2 tests ##
 
