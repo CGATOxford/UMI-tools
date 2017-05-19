@@ -6,3 +6,5 @@ pysam>=0.8.4
 future
 six
 regex
+scipy
+matplotlib
