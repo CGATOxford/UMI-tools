@@ -13,7 +13,7 @@ python:
 before_install:
   - pip install cython
   - pip install pandas==0.19
-
+  - pip install scipy
 install:
   - python setup.py install
 
