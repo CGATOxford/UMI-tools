@@ -89,18 +89,30 @@ the --extract-method option
        processing with dedup, group or count commands
 
 
-Filtering cell barcodes
------------------------
+Filtering and correcting cell barcodes
+--------------------------------------
 
-umi_tools extract can also be used to optionally filter cell barcodes
-by including the --filter-cell-barcode option. This can either be done
-against a user-supplied whitelist (--whitelist-tsv) or the whitelist
-can be generated using the cell barcode counts by the 'knee' method or
+umi_tools extract can optionally filter cell barcodes
+(--filter-cell-barcode). This can either be done against a
+user-supplied whitelist (--whitelist-tsv) or the whitelist can be
+generated using the cell barcode counts by the 'knee' method or
 'network' method (--whitelist-method). The 'knee' method uses the
 distribution of counts per UMI to identify the cut-off for 'true' UMIs
-(the 'knee'). The 'network' method utilises........ FILL IN DETAILS
+(the 'knee'). The 'network' method uses the 'directional' network
+method. This is the same method used in dedup with UMI barcodes
+and is explained more fully in the documentation for the dedup
+command. A note of caution, the 'network' method assumes all false
+barcodes are the result of errors. For droplet-based single cell
+RNA-Sequencing, this assumption does not hold true and the 'network'
+method will therefore identify far too many 'true' cell barcodes. We
+recommend using the 'knee' method unless you are absolutely certain
+all 'false' barcodes have been generated through errors from the
+'true' barcodes. See this blog post for a more detailed explanation:
 
-NOTE: AUTOMATIC GENERATION OF WHITELISTS IS NOT CURRENTLY SUPPORTED
+https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
+
+If you are using the 'knee' method, you can supply the --plot-prefix
+option to visualise the threshold set for true cell barcodes.
 
 Cell barcodes which do not match the whitelist (user-generated or
 automatically generated) can also be optionally corrected using the
@@ -111,7 +123,6 @@ which do not match the whitelist but are within
 --error-correct-threshold (default 1) of a single whitelisted UMI will
 be "corrected" to this UMI.
 
-NOTE: AUTOMATIC GENERATION OF WHITELISTS IS NOT CURRENTLY SUPPORTED
 
 Options
 -------
@@ -162,7 +173,10 @@ import re
 import regex
 import collections
 from six import iteritems
-
+from scipy.stats import gaussian_kde
+from scipy.signal import argrelextrema
+import matplotlib.pyplot as plt
+import numpy as np
 import pyximport
 pyximport.install(build_in_temp=False)
 
@@ -180,9 +194,15 @@ except ImportError:
     import Utilities as U
 
 try:
+    import umi_tools.network as network
+except ImportError:
+    import network
+
+try:
     from umi_tools._dedup_umi import edit_distance
 except:
     from _dedup_umi import edit_distance
+
 
 ###############################################################################
 # The code for Record and fastqIterate are taken from CGAT.Fastq:
@@ -247,15 +267,15 @@ def fastqIterate(infile):
         if not line1:
             break
         if not line1.startswith('@'):
-            raise ValueError("parsing error: expected '@' in line %s" % line1)
+            U.error("parsing error: expected '@' in line %s" % line1)
         line2 = convert2string(infile.readline())
         line3 = convert2string(infile.readline())
         if not line3.startswith('+'):
-            raise ValueError("parsing error: expected '+' in line %s" % line3)
+            U.error("parsing error: expected '+' in line %s" % line3)
         line4 = convert2string(infile.readline())
         # incomplete entry
         if not line4:
-            raise ValueError("incomplete entry for %s" % line1)
+            U.error("incomplete entry for %s" % line1)
 
         yield Record(line1[1:-1], line2[:-1], line4[:-1])
 
@@ -334,7 +354,7 @@ def ExtractBarcodes(read, match,
     cell_barcode, umi, cell_barcode_quals, umi_quals, new_seq, new_quals = ("",)*6
 
     if not extract_cell and not extract_umi:
-        raise ValueError("must set either extract_cell and/or extract_umi to true")
+        U.error("must set either extract_cell and/or extract_umi to true")
 
     groupdict = match.groupdict()
     cell_bases = set()
@@ -359,42 +379,180 @@ def ExtractBarcodes(read, match,
             new_seq, new_quals)
 
 
+def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
+    ''' estimate the number of "true" cell barcodes
+    input:
+         cell_barcode_counts = dict(key = barcode, value = count)
+         plotfile_prefix = (optional) prefix for plots
+
+    returns:
+         List of true barcodes
+    '''
+
+    # very low abundance cell barcodes are filtered out (< 0.0001 *
+    # the most abundant)
+    threshold = 0.0001 * cell_barcode_counts.most_common(1)[0][1]
+
+    counts = sorted(cell_barcode_counts.values(), reverse=True)
+    counts_thresh = [x for x in counts if x > threshold]
+    log_counts = np.log10(counts_thresh)
+
+    # guassian density with default optimal bw estimation
+    density = gaussian_kde(log_counts)
+
+    xx_values = 1000  # how many x values for density plot
+    xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
+
+    local_mins = argrelextrema(density(xx), np.less)[0]
+    local_min = None
+    for poss_local_min in local_mins:
+        if poss_local_min >= 0.2 * xx_values:
+            local_min = poss_local_min
+            break
+    if local_min is None:
+        return None
+
+    threshold = np.power(10, xx[local_min])
+    final_barcodes = set([
+        x for x, y in cell_barcode_counts.items() if y > threshold])
+
+    if plotfile_prefix:
+
+        # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
+        CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                          '#f781bf', '#a65628', '#984ea3',
+                          '#999999', '#e41a1c', '#dede00']
+
+        # make density plot
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        fig1.plot(xx, density(xx), 'k')
+        fig1.set_xlabel("Reads (log10)")
+        fig1.set_ylabel("Density")
+
+        for pos in xx[local_mins]:
+            if pos == xx[local_min]:  # selected local minima
+                fig1.axvline(x=xx[local_min], color=CB_color_cycle[0],
+                             label="selected local minima")
+            else:
+                fig1.axvline(x=pos, color=CB_color_cycle[3],
+                             label="other local minima")
+
+        fig1.legend(loc=0)
+
+        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix)
+
+        # make knee plot
+        fig = plt.figure()
+        fig2 = fig.add_subplot(111)
+        fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
+        xmax = min(local_min * 5, len(counts))  # reasonable maximum x-axis value
+        fig2.set_xlim((0 - 0.01 * xmax, xmax))
+        fig2.set_xlabel("Rank")
+        fig2.set_ylabel("Cumulative sum of reads")
+
+        for pos in xx[local_mins]:
+            threshold = np.power(10, pos)
+            passing_threshold = sum([y > threshold
+                                     for x, y in cell_barcode_counts.items()])
+
+            if passing_threshold == len(final_barcodes):  # selected local minima
+                fig2.axvline(x=passing_threshold, color=CB_color_cycle[0],
+                             label="selected local minima")
+            else:
+                fig2.axvline(x=passing_threshold, color=CB_color_cycle[3],
+                             label="other local minima")
+
+        fig2.legend(loc=0)
+        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix)
+
+    return final_barcodes
+
+
+def getErrorCorrectMappings(cell_barcodes, whitelist, threshold=1):
+    ''' Find the mappings between true and false cell barcodes based
+    on an edit distance threshold '''
+
+    false_to_true = {}
+    true_to_false = collections.defaultdict(set)
+
+    whitelist = set([bytes(x, encoding="utf-8") for x in whitelist])
+
+    for cell_barcode in cell_barcodes:
+        match = None
+        barcode_in_bytes = bytes(cell_barcode, encoding="utf-8")
+        for white_cell in whitelist:
+
+            if barcode_in_bytes in whitelist:  # don't check if whitelisted
+                continue
+
+            if edit_distance(barcode_in_bytes, white_cell) <= threshold:
+                if match is not None:  # already matched one barcode
+                    match = None  # set match back to None
+                    break  # break and don't add to maps
+                else:
+                    match = white_cell.decode("utf-8")
+
+        if match is not None:
+            false_to_true[cell_barcode] = match
+            true_to_false[match].add(cell_barcode)
+
+    return false_to_true, true_to_false
+
+
+def getNetworkEstimate(cell_barcode_counts):
+    ''' Use the directional network method to identify the true cell
+    barcodes '''
+
+    clusterer = network.UMIClusterer("directional")
+    barcode_groups = clusterer(
+        [bytes(x, encoding="utf-8") for x in cell_barcode_counts.keys()],
+        {bytes(x, encoding="utf-8"): y for x, y in cell_barcode_counts.items()},
+        1)
+
+    false_to_true = {}
+    true_to_false = collections.defaultdict(set)
+
+    true_barcodes = []
+    for group in barcode_groups:
+        true_barcode = group[0].decode("utf-8")
+        true_barcodes.append(true_barcode)
+        if len(group) > 1:
+            error_barcodes = group[1:]
+            for error_barcode in error_barcodes:
+                error_barcode = error_barcode.decode("utf-8")
+                false_to_true[error_barcode] = true_barcode
+                true_to_false[true_barcode].add(error_barcode)
+
+    return true_barcodes, (false_to_true, true_to_false)
+
+
 def getCellWhitelist(cell_barcode_counts,
                      method,
-                     error_correct_cell=False,
-                     hamming_threshold=1):
+                     error_correct_threshold=0,
+                     plotfile_prefix=None):
 
-    # we need to define cell whitelist using method.
-    # line below is placeholder.
-    cell_whitelist = set(list(cell_barcode_counts.keys()))
-    error_correct_mapping = {}
+    if method == 'knee':
+        cell_whitelist = getKneeEstimate(
+            cell_barcode_counts, plotfile_prefix=plotfile_prefix)
+        if error_correct_threshold > 0:
+            error_correct_mappings = getErrorCorrectMappings(
+                cell_barcode_counts.keys(), cell_whitelist,
+                error_correct_threshold)
+        else:
+            error_correct_mappings = None
 
-    # error_correct_mapping is a dict mapping barcodes not in the
-    # final whitelist to cell barcodes in the whitelist. For 'knee'
-    # method we use a Hamming distance threshold. For network-based
-    # methods, we use the networks to derive this
+    elif method == 'network':
+        cell_whitelist, error_correct_mappings = getNetworkEstimate(
+            cell_barcode_counts)
 
-    # # This should work to create the error_correct_mapping post-knee method
-    # if error_correct_cell:
-    #     error_correct_mapping = {}
-    #     for cell_barcode in cell_barcode_counts.keys():
-    #         if cell_barcode not in cell_whitelist:
-    #             near_matches = []
-    #             for w_cell in cell_whitelist:
-    #                 if edit_distance(cell_barcode.encode('utf-8'),
-    #                                  w_cell.encode('utf-8')) < hamming_threshold:
-    #                     near_matches.append(w_cell)
-    #                     if len(near_matches) > 1:
-    #                         break
-    #             if len(near_matches) == 1:
-    #                 error_correct_mapping[cell_barcode] = near_matches[0]
-    # else:
-    #     error_correct_mapping = {}
+    else:
+        raise ValueError("%s is not a recognised method" % method)
 
-    return cell_whitelist, error_correct_mapping
+    return cell_whitelist, error_correct_mappings
 
 
-def getUserDefinedWhitelist(whitelist_tsv):
+def getUserDefinedBarcodes(whitelist_tsv):
     cell_whitelist = []
     with U.openFile(whitelist_tsv, "r") as inf:
         for line in inf:
@@ -623,19 +781,17 @@ class ExtractFilterAndUpdate:
         optional cell barcode error correction'''
 
         if cell not in self.cell_whitelist:
-            if self.error_correct_cell:
-                if self.error_correct_mapping:
-                    if cell in self.error_correct_mapping:
-                        cell = self.error_correct_mapping[cell]
-                        self.read_counts['False cell barcode. Error-corrected'] += 1
-                    else:
-                        self.read_counts['Filtered cell barcode. Not correctable'] += 1
-                        return None
+            if self.false_to_true_map:
+                if cell in self.false_to_true_map:
+                    cell = self.false_to_true_map[cell]
+                    self.read_counts['False cell barcode. Error-corrected'] += 1
                 else:
-                    pass  # need to implement error correction on the fly
+                    self.read_counts['Filtered cell barcode. Not correctable'] += 1
+                    return None
             else:
                 self.read_counts['Filtered cell barcode'] += 1
                 return None
+
         return cell
 
     def __init__(self,
@@ -647,8 +803,7 @@ class ExtractFilterAndUpdate:
                  quality_encoding=None,
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
-                 filter_cell_barcode=False,
-                 error_correct_cell=False):
+                 filter_cell_barcode=False):
 
         self.read_counts = collections.Counter()
         self.method = method
@@ -659,9 +814,8 @@ class ExtractFilterAndUpdate:
         self.quality_filter_threshold = quality_filter_threshold
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
-        self.error_correct_cell = error_correct_cell
-        self.cell_whitelist = None
-        self.error_correct_mapping = None
+        self.cell_whitelist = None  # These will be updated if required
+        self.false_to_true_map = None  # These will be updated if required
 
         # If the pattern is a string we can identify the position of
         # the cell and umi bases at instantiation
@@ -797,34 +951,46 @@ def main(argv=None):
     parser.add_option("--error-correct-cell",
                       dest="error_correct_cell",
                       action="store_true",
-                      help="Error correct the cell barcode")
+                      help=("Correct errors in the cell barcode"))
     parser.add_option("--error-correct-threshold",
                       dest="error_correct_threshold",
                       type="int",
-                      help=("Hamming distance allowed for correction "
-                            " - NOT CURRENTLY SUPPORTED"))
+                      help=("Hamming distance allowed for correction"))
     parser.add_option("--whitelist-method",
                       dest="whitelist_method", type="choice",
-                      choices=["knee", "directional", "adjacency", "cluster"],
+                      choices=["knee", "network"],
                       help=("What method to use to derive the cell barcode "
-                            "whitelist - NOT CURRENTLY SUPPORTED"))
+                            "whitelist"))
+    parser.add_option("--plot-prefix",
+                      dest="plot_prefix", type="string",
+                      help=("Prefix for plots to visualise the automated "
+                            "detection of the number of 'true' cell barcodes"))
+    parser.add_option("--output-whitelist",
+                      dest="output_whitelist", type="string",
+                      help=("Write out the automatically generated whitelist"))
     parser.add_option("--whitelist-tsv",
                       dest="whitelist_tsv", type="string",
                       help=("A whitelist of accepted cell barcodes"))
+    parser.add_option("--blacklist-tsv",
+                      dest="blacklist_tsv", type="string",
+                      help=("A blacklist of accepted cell barcodes"))
 
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
-                        whitelist_method="directional",
+                        whitelist_method="knee",
                         whitelist_tsv=None,
+                        blacklist_tsv=None,
                         error_correct_cell=False,
-                        error_correct_threshold=1,
+                        error_correct_threshold=0,
                         pattern=None,
                         pattern2=None,
                         read2_in=None,
                         read2_out=False,
                         read2_out_only=False,
                         quality_filter_threshold=None,
-                        quality_encoding=None)
+                        quality_encoding=None,
+                        plot_prefix=None,
+                        output_whitelist=None)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -832,21 +998,28 @@ def main(argv=None):
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
-            raise ValueError("must provide a quality encoding (--quality-"
-                             "encoding) to filter UMIs by quality (--quality"
-                             "-filter-threshold) or mask low quality bases "
-                             "with (--quality-filter-mask)")
+            U.error("must provide a quality encoding (--quality-"
+                    "encoding) to filter UMIs by quality (--quality"
+                    "-filter-threshold) or mask low quality bases "
+                    "with (--quality-filter-mask)")
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
-            raise ValueError("Must supply --bc-pattern for single-end")
+            U.error("Must supply --bc-pattern for single-end")
         else:
-            raise ValueError("Must supply --bc-pattern and/or --bc-pattern "
-                             "if paired-end ")
+            U.error("Must supply --bc-pattern and/or --bc-pattern "
+                    "if paired-end ")
+
+    if (options.whitelist_method == "network" and
+        options.error_correct_threshold > 0):
+        U.info("The --error-correct-threshold does not change which barcodes "
+               "are error corrected when using the 'network' whitelist method "
+               "and --error-correct-cell. All barcodes in the same network as "
+               "the true barcode are corrected to the true barcode")
 
     if options.pattern2:
         if not options.read2_in:
-            raise ValueError("must specify a paired fastq ``--read2-in``")
+            U.error("must specify a paired fastq ``--read2-in``")
 
         if not options.pattern2:
             options.pattern2 = options.pattern
@@ -861,15 +1034,15 @@ def main(argv=None):
             try:
                 options.pattern = regex.compile(options.pattern)
             except regex.error:
-                raise ValueError("barcode_regex '%s' is not a "
-                                 "valid regex" % options.pattern)
+                U.error("barcode_regex '%s' is not a "
+                        "valid regex" % options.pattern)
 
         if options.pattern2:
             try:
                 options.pattern2 = regex.compile(options.barcode_regex2)
             except regex.Error:
-                raise ValueError("barcode_regex2 '%s' is not a "
-                                 "valid regex" % options.barcode_regex2)
+                U.error("barcode_regex2 '%s' is not a "
+                        "valid regex" % options.barcode_regex2)
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
@@ -899,20 +1072,32 @@ def main(argv=None):
             if "N" in options.pattern2:
                 extract_umi = True
 
+    if options.output_whitelist or options.plot_prefix:
+        if not options.filter_cell_barcode or options.whitelist_tsv:
+            U.error(
+                "To output the automatically generated cell barcode "
+                "(--output-whitelist) or plot this whitelist (--plot-prefix), "
+                "you must supply the --filter-cell-barcode option and cannot "
+                "supply you own whitelist with --whitelist_tsv")
+
+    if options.whitelist_tsv:
+        if options.blacklist_tsv:
+            U.error("Do not supply a blacklist and a whitelist. Just "
+                    "remove the blacklist barcodes from the whitelist!")
+
     if not extract_umi:
         if options.extract_method == "string":
-            raise ValueError("barcode pattern(s) do not include any umi bases "
-                             "(marked with 'Ns') %s, %s" % (
-                                 options.pattern, options.pattern2))
+            U.error("barcode pattern(s) do not include any umi bases "
+                    "(marked with 'Ns') %s, %s" % (
+                        options.pattern, options.pattern2))
         elif options.extract_method == "regex":
-            raise ValueError("barcode regex(es) do not include any umi groups "
-                             "(starting with 'umi_') %s, %s" (
-                                 options.pattern, options.pattern2))
+            U.error("barcode regex(es) do not include any umi groups "
+                    "(starting with 'umi_') %s, %s" (
+                        options.pattern, options.pattern2))
 
     if options.stdin == sys.stdin:
         if not options.whitelist_tsv and options.filter_cell_barcode:
-            raise ValueError("cannot support reading from stdin if correcting "
-                             "cell barcode without providing a whitelist")
+            U.error("cannot support reading from stdin if correcting cell barcode")
         read1s = fastqIterate(U.openFile(options.stdin))
     else:
         read1s = fastqIterate(U.openFile(options.stdin.name))
@@ -927,11 +1112,10 @@ def main(argv=None):
         options.quality_encoding,
         options.quality_filter_threshold,
         options.quality_filter_mask,
-        options.filter_cell_barcode,
-        options.error_correct_cell)
+        options.filter_cell_barcode)
 
     if options.filter_cell_barcode:
-        if not options.whitelist_tsv:
+        if (not options.whitelist_tsv) or options.error_correct_cell:
             cell_barcode_counts = collections.Counter()
 
             if not options.read2_in:
@@ -946,22 +1130,61 @@ def main(argv=None):
                     if cell_barcode:
                         cell_barcode_counts[cell_barcode] += 1
 
-            # getCellWhitelist has not been properly defined yet!
-            cell_whitelist, error_correct_mapping = getCellWhitelist(
-                cell_barcode_counts,
-                options.whitelist_method,
-                options.error_correct_cell,
-                options.error_correct_threshold)
+            if options.blacklist_tsv:
+                cell_blacklist = getUserDefinedBarcodes(options.blacklist_tsv)
+                for cell in cell_blacklist:
+                    del cell_barcode_counts[cell]
+
+            if options.whitelist_tsv:
+                cell_whitelist = getUserDefinedBarcodes(options.whitelist_tsv)
+                error_correct_mappings = getErrorCorrectMappings(
+                    cell_barcode_counts.keys(), cell_whitelist,
+                    options.error_correct_threshold)
+            else:
+                # getCellWhitelist has not been properly defined yet!
+                cell_whitelist, error_correct_mappings = getCellWhitelist(
+                    cell_barcode_counts,
+                    options.whitelist_method,
+                    options.error_correct_threshold,
+                    options.plot_prefix)
 
             # re-make the reads1s iterator
             read1s = fastqIterate(U.openFile(options.stdin.name))
 
         else:
-            cell_whitelist = getUserDefinedWhitelist(options.whitelist_tsv)
-            error_correct_mapping = None
+            cell_whitelist = getUserDefinedBarcodes(options.whitelist_tsv)
+            error_correct_mappings = None
+
+        if options.error_correct_cell:
+            false_to_true_map, true_to_false_map = error_correct_mappings
+        else:
+            false_to_true_map, true_to_false_map = None, None
+
+        if options.output_whitelist:
+
+            with U.openFile(options.output_whitelist, "w") as outf:
+
+                columns = ["barcode", "count", "corrected_barcodes",
+                           "corrected_barcode_counts"]
+                outf.write("\t".join(columns) + "\n")
+
+                for barcode in sorted(list(cell_whitelist)):
+
+                    if true_to_false_map:
+                        corrected_barcodes = ",".join(true_to_false_map[barcode])
+                        corrected_barcode_counts = ",".join(
+                            map(str, [cell_barcode_counts[x] for x
+                                      in true_to_false_map[barcode]]))
+
+                    else:
+                        corrected_barcodes, corrected_barcode_counts = "", ""
+
+                    outf.write("%s\t%s\t%s\t%s\n" % (
+                        barcode, cell_barcode_counts[barcode],
+                        corrected_barcodes, corrected_barcode_counts))
 
         ReadExtractor.cell_whitelist = cell_whitelist
-        ReadExtractor.error_correct_mapping = error_correct_mapping
+        ReadExtractor.false_to_true_map = false_to_true_map
 
     if options.read2_in is None:
         for read in read1s:

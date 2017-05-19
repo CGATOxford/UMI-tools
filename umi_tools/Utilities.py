@@ -880,6 +880,7 @@ def debug(message):
 def error(message):
     '''log error message, see the :mod:`logging` module'''
     logging.error(message)
+    raise ValueError("UMI-tools failed with an error. Check the log file")
 
 
 def critical(message):

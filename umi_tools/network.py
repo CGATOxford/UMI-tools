@@ -75,6 +75,9 @@ def remove_umis(adj_list, cluster, nodes):
     return cluster - nodes_to_remove
 
 
+# TS: 19 MAY 17
+# Should really replace all instances of "umi" with "barcode" for this
+# class, inc. class name. Now being used for cell barcodes too.
 class UMIClusterer:
     '''A functor that clusters a dictionary of UMIs and their counts.
     The primary return value is either a list of representative UMIs
@@ -181,7 +184,6 @@ class UMIClusterer:
                 component = breadth_first_search(node, graph)
                 found.update(component)
                 components.append(component)
-
         return components
 
     def _get_connected_components_null(self, umis, adj_list, counts):
@@ -204,7 +206,6 @@ class UMIClusterer:
 
         observed = set()
         groups = []
-
         for cluster in clusters:
             if len(cluster) == 1:
                 groups.append(list(cluster))
@@ -291,7 +292,7 @@ class UMIClusterer:
             # percentile method incompatible with defining UMI groups
             self.get_groups = self._group_percentile
 
-        if cluster_method == "unique":
+        elif cluster_method == "unique":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
             self.get_groups = self._group_unique
@@ -307,10 +308,12 @@ class UMIClusterer:
         adj_list = self.get_adj_list(umis, counts, threshold)
 
         clusters = self.get_connected_components(umis, adj_list, counts)
+        #print(counts)
 
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
-
+        #print("final umis:")
+        #print(final_umis)
         return final_umis
 
 
