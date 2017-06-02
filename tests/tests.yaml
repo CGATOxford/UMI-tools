@@ -42,14 +42,7 @@ extract_scrb_seq_automatic_knee:
       stdin: scrb_seq_fastq.1.gz
       outputs: [scrb_extract_auto_knee.fastq, scrb_extract_auto_knee.tsv]
       references: [scrb_extract_auto_knee.fastq, scrb_extract_auto_knee.tsv]
-      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --read2-out=scrb_extract_auto_knee.fastq --whitelist-method=knee --output-whitelist=scrb_extract_auto_knee.tsv --error-correct-cell --error-correct-threshold=1 --blacklist-tsv=<DIR>/scrb_seq_blacklist
-
-extract_scrb_seq_automatic_network:
-      skip_python:
-      stdin: scrb_seq_fastq.1.gz
-      outputs: [scrb_extract_auto_network.fastq, scrb_extract_auto_network.tsv]
-      references: [scrb_extract_auto_network.fastq, scrb_extract_auto_network.tsv]
-      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --read2-out=scrb_extract_auto_network.fastq --whitelist-method=network --output-whitelist=scrb_extract_auto_network.tsv --error-correct-cell --error-correct-threshold=1 --blacklist-tsv=<DIR>/scrb_seq_blacklist
+      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --read2-out=scrb_extract_auto_knee.fastq  --output-whitelist=scrb_extract_auto_knee.tsv --error-correct-cell --error-correct-threshold=1 --blacklist-tsv=<DIR>/scrb_seq_blacklist
 
 
 extract_indrop_automatic_knee:
@@ -57,14 +50,14 @@ extract_indrop_automatic_knee:
       stdin: indrop.fastq.1.gz
       outputs: [indrop_extract.fastq, indrop_extract_auto_knee.tsv]
       references: [indrop_extract.fastq, indrop_extract_auto_knee.tsv]
-      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq --whitelist-method=knee --output-whitelist=indrop_extract_auto_knee.tsv --error-correct-cell --error-correct-threshold=1
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract.fastq --output-whitelist=indrop_extract_auto_knee.tsv --error-correct-cell --error-correct-threshold=1
 
 extract_indrop_fuzzy:
       skip_python:
       stdin: indrop.fastq.1.gz
       outputs: [indrop_extract_fuzzy.fastq, indrop_extract_auto_knee_fuzzy.tsv]
       references: [indrop_extract_fuzzy.fastq, indrop_extract_auto_knee_fuzzy.tsv]
-      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq  --whitelist-method=knee --output-whitelist=indrop_extract_auto_knee_fuzzy.tsv --error-correct-cell --error-correct-threshold=1
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --filter-cell-barcode -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq --output-whitelist=indrop_extract_auto_knee_fuzzy.tsv --error-correct-cell --error-correct-threshold=1
 
 # ## python 2 tests ##
 
