@@ -456,7 +456,7 @@ def main(argv=None):
             gene_tag = metatag
 
         else:
-            inreads = infile.fetch()
+            inreads = infile.fetch(until_eof=options.output_unmapped)
             gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
