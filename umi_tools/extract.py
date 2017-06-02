@@ -94,35 +94,24 @@ Filtering and correcting cell barcodes
 
 umi_tools extract can optionally filter cell barcodes
 (--filter-cell-barcode). This can either be done against a
-user-supplied whitelist (--whitelist-tsv) or the whitelist can be
-generated using the cell barcode counts by the 'knee' method or
-'network' method (--whitelist-method). The 'knee' method uses the
-distribution of counts per UMI to identify the cut-off for 'true' UMIs
-(the 'knee'). The 'network' method uses the 'directional' network
-method. This is the same method used in dedup with UMI barcodes
-and is explained more fully in the documentation for the dedup
-command. A note of caution, the 'network' method assumes all false
-barcodes are the result of errors. For droplet-based single cell
-RNA-Sequencing, this assumption does not hold true and the 'network'
-method will therefore identify far too many 'true' cell barcodes. We
-recommend using the 'knee' method unless you are absolutely certain
-all 'false' barcodes have been generated through errors from the
-'true' barcodes. See this blog post for a more detailed explanation:
+user-supplied whitelist (--whitelist-tsv). If a whitelist is not
+supplied, the whitelist will be generated computationally via the
+'knee' method. This method uses the distribution of counts per UMI to
+identify the cut-off for 'true' UMIs (the 'knee'). See this blog post
+for a more detailed explanation:
 
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
-If you are using the 'knee' method, you can supply the --plot-prefix
-option to visualise the threshold set for true cell barcodes.
+You can supply the --plot-prefix option to visualise the threshold set
+for true cell barcodes.
 
 Cell barcodes which do not match the whitelist (user-generated or
 automatically generated) can also be optionally corrected using the
---error-correct-cell option. If using the 'network' method, all cell
-barcodes in the same network will be "corrected" to the most abundant
-UMI. If using the 'knee' method or a user-supplied whitelist, all UMIs
-which do not match the whitelist but are within
---error-correct-threshold (default 1) of a single whitelisted UMI will
-be "corrected" to this UMI.
+--error-correct-cell option. All UMIs which do not match the whitelist
+but are within --error-correct-threshold (default 1) of a single
+whitelisted UMI will be "corrected" to this UMI.
 
+MORE DETAILS HERE ON FILTERING, ERROR CORRECTION OPTIONS ETC
 
 Options
 -------
@@ -528,26 +517,17 @@ def getNetworkEstimate(cell_barcode_counts):
 
 
 def getCellWhitelist(cell_barcode_counts,
-                     method,
                      error_correct_threshold=0,
                      plotfile_prefix=None):
 
-    if method == 'knee':
-        cell_whitelist = getKneeEstimate(
-            cell_barcode_counts, plotfile_prefix=plotfile_prefix)
-        if error_correct_threshold > 0:
-            error_correct_mappings = getErrorCorrectMappings(
-                cell_barcode_counts.keys(), cell_whitelist,
-                error_correct_threshold)
-        else:
-            error_correct_mappings = None
-
-    elif method == 'network':
-        cell_whitelist, error_correct_mappings = getNetworkEstimate(
-            cell_barcode_counts)
-
+    cell_whitelist = getKneeEstimate(
+        cell_barcode_counts, plotfile_prefix=plotfile_prefix)
+    if error_correct_threshold > 0:
+        error_correct_mappings = getErrorCorrectMappings(
+            cell_barcode_counts.keys(), cell_whitelist,
+            error_correct_threshold)
     else:
-        raise ValueError("%s is not a recognised method" % method)
+        error_correct_mappings = None
 
     return cell_whitelist, error_correct_mappings
 
@@ -641,7 +621,7 @@ class ExtractFilterAndUpdate:
 
             umi2 = "".join([bc2[x] for x in self.umi_bases2])
             cell2 = "".join([bc2[x] for x in self.cell_bases2])
-            sample2 = "".join([bc2[x] for x in self.bc_bases2])
+            sample2 = "".join([bc2[x] for x in self.bc_sbases2])
             sample_qual2 = "".join([bc_qual2[x] for x in self.bc_bases2])
             new_seq2 = self.joiner(sequence2, sample2)
             new_quals2 = self.joiner(seq_qual2, sample_qual2)
@@ -956,11 +936,6 @@ def main(argv=None):
                       dest="error_correct_threshold",
                       type="int",
                       help=("Hamming distance allowed for correction"))
-    parser.add_option("--whitelist-method",
-                      dest="whitelist_method", type="choice",
-                      choices=["knee", "network"],
-                      help=("What method to use to derive the cell barcode "
-                            "whitelist"))
     parser.add_option("--plot-prefix",
                       dest="plot_prefix", type="string",
                       help=("Prefix for plots to visualise the automated "
@@ -974,10 +949,18 @@ def main(argv=None):
     parser.add_option("--blacklist-tsv",
                       dest="blacklist_tsv", type="string",
                       help=("A blacklist of accepted cell barcodes"))
-
+    parser.add_option("--cell-barcode-subset",
+                      dest="cell_barcode_subset", type="int",
+                      help=("Use only the first N reads to automatically "
+                            "identify the true cell barcodes. If N is greater "
+                            "than the number of reads, all reads will be used"))
+    parser.add_option("--reads-subset",
+                      dest="reads_subset", type="int",
+                      help=("Only extract from the first N reads. If N is "
+                            "greater than the number of reads, all reads will "
+                            "be used"))
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
-                        whitelist_method="knee",
                         whitelist_tsv=None,
                         blacklist_tsv=None,
                         error_correct_cell=False,
@@ -990,7 +973,8 @@ def main(argv=None):
                         quality_filter_threshold=None,
                         quality_encoding=None,
                         plot_prefix=None,
-                        output_whitelist=None)
+                        output_whitelist=None,
+                        cell_barcode_subset=50000000)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -1009,13 +993,6 @@ def main(argv=None):
         else:
             U.error("Must supply --bc-pattern and/or --bc-pattern "
                     "if paired-end ")
-
-    if (options.whitelist_method == "network" and
-        options.error_correct_threshold > 0):
-        U.info("The --error-correct-threshold does not change which barcodes "
-               "are error corrected when using the 'network' whitelist method "
-               "and --error-correct-cell. All barcodes in the same network as "
-               "the true barcode are corrected to the true barcode")
 
     if options.pattern2:
         if not options.read2_in:
@@ -1070,15 +1047,7 @@ def main(argv=None):
             if "C" in options.pattern2:
                 extract_cell = True
             if "N" in options.pattern2:
-                extract_umi = True
-
-    if options.output_whitelist or options.plot_prefix:
-        if not options.filter_cell_barcode or options.whitelist_tsv:
-            U.error(
-                "To output the automatically generated cell barcode "
-                "(--output-whitelist) or plot this whitelist (--plot-prefix), "
-                "you must supply the --filter-cell-barcode option and cannot "
-                "supply you own whitelist with --whitelist_tsv")
+                extract_umi = Tru
 
     if options.whitelist_tsv:
         if options.blacklist_tsv:
@@ -1118,17 +1087,26 @@ def main(argv=None):
         if (not options.whitelist_tsv) or options.error_correct_cell:
             cell_barcode_counts = collections.Counter()
 
+            n_reads = 0
             if not options.read2_in:
                 for read1 in read1s:
+                    n_reads += 1
                     cell_barcode = ReadExtractor.getCellBarcode(read1)
                     if cell_barcode:
                         cell_barcode_counts[cell_barcode] += 1
+                    if options.cell_barcode_subset:
+                        if (n_reads > options.cell_barcode_subset):
+                            break
             else:
                 read2s = fastqIterate(U.openFile(options.read2_in))
                 for read1, read2 in izip(read1s, read2s):
+                    n_reads += 1
                     cell_barcode = ReadExtractor.getCellBarcode(read1, read2)
                     if cell_barcode:
                         cell_barcode_counts[cell_barcode] += 1
+                    if options.cell_barcode_subset:
+                        if (n_reads > options.cell_barcode_subset):
+                            break
 
             if options.blacklist_tsv:
                 cell_blacklist = getUserDefinedBarcodes(options.blacklist_tsv)
@@ -1144,7 +1122,6 @@ def main(argv=None):
                 # getCellWhitelist has not been properly defined yet!
                 cell_whitelist, error_correct_mappings = getCellWhitelist(
                     cell_barcode_counts,
-                    options.whitelist_method,
                     options.error_correct_threshold,
                     options.plot_prefix)
 
@@ -1190,6 +1167,11 @@ def main(argv=None):
         for read in read1s:
             new_read = ReadExtractor(read)
 
+            if options.reads_subset:
+                if (ReadExtractor.read_counts['Input Reads'] >
+                    options.reads_subset):
+                    break
+
             if not new_read:
                 continue
 
@@ -1203,6 +1185,11 @@ def main(argv=None):
 
         for read1, read2 in izip(read1s, read2s):
             reads = ReadExtractor(read1, read2)
+
+            if options.reads_subset:
+                if (ReadExtractor.read_counts['Input Reads'] >
+                    options.reads_subset):
+                    break
 
             if not reads:
                 continue
