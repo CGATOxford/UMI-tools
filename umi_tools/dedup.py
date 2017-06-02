@@ -515,6 +515,7 @@ def main(argv=None):
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
+        gene_tag = options.gene_tag
     else:
         if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
