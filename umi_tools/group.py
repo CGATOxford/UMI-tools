@@ -447,12 +447,16 @@ def main(argv=None):
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
-        if options.per_gene:
+        if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
-                options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+                infile, options.gene_transcript_map)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
         else:
-            inreads = infile.fetch(until_eof=options.output_unmapped)
+            inreads = infile.fetch()
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -463,6 +467,7 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
+            gene_tag=gene_tag,
             read_length=options.read_length,
             umi_getter=umi_getter,
             all_reads=True,
