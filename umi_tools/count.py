@@ -131,6 +131,7 @@ Usage
 import sys
 import collections
 import re
+import os
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -269,6 +270,10 @@ def main(argv=None):
 
     infile = pysam.Samfile(in_name, in_mode)
 
+    # write out to tempfile and then sort to stdout
+    tmpfilename = U.getTempFilename()
+    tmpfile = U.openFile(tmpfilename, mode="w")
+
     nInput, nOutput = 0, 0
 
     # set the method with which to extract umis from reads
@@ -309,18 +314,6 @@ def main(argv=None):
             inreads = infile.fetch()
             gene_tag = options.gene_tag
 
-    if options.wide_format_cell_counts:
-        tmp_out_name = U.getTempFilename()
-        outfile = U.openFile(tmp_out_name, "w")
-        final_out_name = options.stdout.name
-    else:
-        outfile = options.stdout
-
-    if options.per_cell:
-        outfile.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
-    else:
-        outfile.write("%s\t%s\n" % ("gene", "count"))
-
     for gene, cell, bundle, read_events in umi_methods.get_gene_count(
             inreads,
             subset=options.subset,
@@ -349,16 +342,42 @@ def main(argv=None):
         gene_count = len(groups)
 
         if options.per_cell:
-            outfile.write("%s\t%s\t%i\n" % (gene, cell.decode(), gene_count))
+            tmpfile.write("%s\n" % ":".join((gene, cell.decode(), str(gene_count))))
         else:
-            outfile.write("%s\t%i\n" % (gene, gene_count))
+            tmpfile.write("%s\n" % ":".join((gene, str(gene_count))))
         nOutput += gene_count
 
-    # pivot the counts table and write out
-    if options.wide_format_cell_counts:
-        counts_df = pd.read_table(tmp_out_name)
-        print(counts_df)
-        os.unlink(tmp_out_name) # delete the tempfile
+    tmpfile.close()
+
+    gene_counts_dict = collections.Counter()
+
+    if options.per_cell:
+        # pivot the counts table and write out
+        if options.wide_format_cell_counts:
+            counts_df = pd.read_table(tmpfilename, sep=":", header=None)
+            counts_df.columns = ["gene", "cell", "count"]
+            counts_df = counts_df.pivot(
+                index="gene", columns="cell", values="count")  # pivot table
+            counts_df = counts_df.fillna(0).astype(int)  # replace NA with 0
+            counts_df.to_csv(options.stdout, index=True, sep="\t")
+        else:
+            options.stdout.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
+            with U.openFile(tmpfilename, mode="r") as inf:
+                for line in inf:
+                    options.stdout.write(line.replace(":", "\t"))
+    else:
+        options.stdout.write("%s\t%s\n" % ("gene", "count"))
+
+        with U.openFile(tmpfilename, mode="r") as inf:
+
+            for line in inf:
+                gene, gene_count = line.strip().split(":")
+                gene_counts_dict[gene] = gene_count
+            for gene in sorted(list(gene_counts_dict.keys())):
+                gene_count = gene_counts_dict[gene]
+                options.stdout.write("%s\t%s\n" % (gene, gene_count))
+
+    os.unlink(tmpfilename)
 
     # output reads events and benchmark information.
     for event in read_events.most_common():
