@@ -30,10 +30,13 @@ with the --umi-tag option. For example, if your UMIs are encoded in
 the 'UM' tag, provide the following options:
 "--extract-umi-method=tag --umi-tag=UM"
 
+Finally, if you have used umis to extract the UMI +/- cell barcode,
+you can specify --extract-umi-method=umis
+
 By default, reads are considered identical (and therefore only counted
-once) if they have the same start coordinate, are on the same strand,
-and have the same UMI. Optionally, splicing status can be considered
-(see below).
+once) if they are assigned to the same gene. Additionally, if you have
+multiple cells in a single input, you can specify the --per-cell
+option to count per cell
 
 The start postion of a read is considered to be the start of its alignment
 minus any soft clipped bases. A read aligned at position 500 with
@@ -81,38 +84,20 @@ count for the gene.
 Options
 -------
 --extract-umi-method (choice)
-      How are the UMIs encoded in the read?
+      How are the barcodes encoded in the read?
 
       Options are:
 
       - "read_id" (default)
-            UMIs contained at the end of the read separated as
+            Barcodes are contained at the end of the read separated as
             specified with --umi-separator option
 
       - "tag"
-            UMIs contained in a tag, see --umi-tag option
+            Barcodes contained in a tag(s), see --umi-tag/--cell-tag
+            options
 
---umi-separator (string)
-      Separator between read id and UMI. See --extract-umi-method above
-
---umi-tag (string)
-      Tag which contains UMI. See --extract-umi-method above
-
---method (string, choice)
-      Method used to identify PCR duplicates within reads. All methods
-      start by identifying the reads with the same mapping position
-
-      Options are:
-
-      - "unique"
-
-      - "percentile"
-
-      - "cluster"
-
-      - "adjacency"
-
-      - "directional" (default)
+      - "umis"
+            Barcodes were extracted using umis (https://github.com/vals/umis)
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -120,34 +105,7 @@ Options
        increased. The default value of 1 works best unless the UMI is
 very long (>14bp)
 
---paired
-       BAM is paired end - output both read pairs. This will also
-       force the Use of the template length to determine reads with
-       the same mapping coordinates.
-
---spliced-is-unique
-       Causes two reads that start in the same position on the same
-       strand and having the same UMI to be considered unique if one is spliced
-       and the other is not. (Uses the 'N' cigar operation to test for
-       splicing)
-
---soft-clip-threshold (int)
-       Mappers that soft clip, will sometimes do so rather than mapping a
-       spliced read if there is only a small overhang over the exon
-       junction. By setting this option, you can treat reads with at least
-       this many bases soft-clipped at the 3' end as spliced.
-
---read-length
-      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
-
---subset (float, [0-1])
-      Only consider a fraction of the reads, chosen at random. This is useful
-      for doing saturation analyses.
-
---chrom (string)
-      Only consider a single chromosome. This is useful for debugging purposes
-
---per-contig (string)
+--per-contig
       Count per contig (field 3 in BAM; RNAME).
       All reads with the same contig will be
       considered to have the same alignment position. This is useful
@@ -155,39 +113,12 @@ very long (>14bp)
       alignment positions such as CEL-Seq. In this case, you could
       align to a reference transcriptome with one transcript per gene
 
---per-gene (string)
-      Count per gene. As above except with this option you can
-      align to a reference transcriptome with more than one transcript
-      per gene. You need to also provide --gene-transcript-map option
-
 --gene-transcript-map (string)
       File mapping genes to transripts (tab separated), e.g:
 
       gene1   transcript1
       gene1   transcript2
       gene2   transcript3
-
---gene-tag (string)
-      Count per gene. As per --per-gene except here the gene
-      information is encoded in the bam read tag specified so you do
-      not need to supply the --gene-transcript-map
-
---skip-tags-regex (string)
-      Used in conjunction with the --gene-tag option. Skip any reads
-      where the gene tag matches this regex.
-      Defualt matches anything which starts with "__" or "Unassigned":
-      ("^[__|Unassigned]")
-
--i, --in-sam
-      By default, inputs are assumed to be in BAM format.
-      Use this option to specify the use of SAM format.
-
--I    (string, filename) input file name
-      The input file must be sorted and indexed.
-
--S    (string, filename) output file name
-
--L    (string, filename) log file name
 
 
 Usage
@@ -249,17 +180,21 @@ def main(argv=None):
     parser.add_option("--umi-tag", dest="umi_tag",
                       type="string", help="tag containing umi",
                       default='RX')
+    parser.add_option("--cell-tag", dest="cell_tag",
+                      type="string", help="tag containing cell",
+                      default=None)
     parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
-                      choices=("read_id", "tag"), default="read_id",
-                      help="where is the read UMI encoded? [default=%default]")
+                      choices=("read_id", "tag", "umis"), default="read_id",
+                      help=("how is the read UMI +/ cell barcode encoded? "
+                            "[default=%default]"))
     parser.add_option("--subset", dest="subset", type="float",
                       help="Use only a fraction of reads, specified by subset",
                       default=None)
     parser.add_option("--edit-distance-threshold", dest="threshold",
                       type="int",
                       default=1,
-                      help="Edit distance theshold at which to join two UMIs"
-                           "when clustering. [default=%default]")
+                      help="Edit distance theshold at which to join two UMIs "
+                           "when grouping UMIs. [default=%default]")
     parser.add_option("--chrom", dest="chrom", type="string",
                       help="Restrict to one chromosome",
                       default=None)
@@ -280,12 +215,17 @@ def main(argv=None):
                       default=False,
                       help=("dedup per contig (field 3 in BAM; RNAME),"
                             " e.g for transcriptome where contig = gene"))
-    parser.add_option("--per-gene", dest="per_gene", action="store_true",
+    parser.add_option("--per-cell", dest="per_cell", action="store_true",
                       default=False,
-                      help=("Deduplicate per gene,"
+                      help=("Deduplicate per cell,"
                             "e.g for transcriptome where contig = transcript"
                             "must also provide a transript to gene map with"
                             "--gene-transcript-map [default=%default]"))
+    parser.add_option("--wide-format-cell-counts", dest="wide_format_cell_counts",
+                      action="store_true",
+                      default=False,
+                      help=("output the cell counts in a wide format "
+                            "(rows=genes, columns=cells)"))
     parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
                       type="string",
                       help="file mapping transcripts to genes (tab separated)",
@@ -318,10 +258,9 @@ def main(argv=None):
     else:
         in_mode = "rb"
 
-    if options.per_gene:
-        if not options.gene_transcript_map and not options.gene_tag:
-            raise ValueError("--per-gene option requires --gene-transcript-map "
-                             "or --gene-tag")
+    if not options.gene_transcript_map and not options.gene_tag:
+        raise ValueError("need to use either --gene-transcript-map "
+                         "or --gene-tag")
     try:
         re.compile(options.skip_regex)
     except re.error:
@@ -334,18 +273,32 @@ def main(argv=None):
 
     # set the method with which to extract umis from reads
     if options.get_umi_method == "read_id":
-        umi_getter = partial(
-            umi_methods.get_umi_read_id, sep=options.umi_sep)
+        barcode_getter = partial(
+            umi_methods.get_barcode_read_id,
+            cell_barcode=options.per_cell,
+            sep=options.umi_sep)
+
     elif options.get_umi_method == "tag":
-        umi_getter = partial(
-            umi_methods.get_umi_tag, tag=options.umi_tag)
+        if options.per_cell and options.cell_tag is None:
+            raise ValueError("Need to supply the --cell-tag option")
+        barcode_getter = partial(
+            umi_methods.get_barcode_tag,
+            umi_tag=options.umi_tag,
+            cell_barcode=options.per_cell,
+            cell_tag=options.cell_tag)
+
+    elif options.get_umi_method == "umis":
+        barcode_getter = partial(
+            umi_methods.get_barcode_umis,
+            cell_barcode=options.per_cell)
+
     else:
-        raise ValueError("Unknown umi extraction method")
+        raise ValueError("Unknown UMI extraction method")
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
-        if options.per_gene and options.gene_transcript_map:
+        if options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
@@ -356,8 +309,19 @@ def main(argv=None):
             inreads = infile.fetch()
             gene_tag = options.gene_tag
 
-    options.stdout.write("%s\t%s\n" % ("gene", "count"))
-    for gene, bundle, read_events in umi_methods.get_gene_count(
+    if options.wide_format_cell_counts:
+        tmp_out_name = U.getTempFilename()
+        outfile = U.openFile(tmp_out_name, "w")
+        final_out_name = options.stdout.name
+    else:
+        outfile = options.stdout
+
+    if options.per_cell:
+        outfile.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
+    else:
+        outfile.write("%s\t%s\n" % ("gene", "count"))
+
+    for gene, cell, bundle, read_events in umi_methods.get_gene_count(
             inreads,
             subset=options.subset,
             quality_threshold=options.mapping_quality,
@@ -365,7 +329,7 @@ def main(argv=None):
             per_contig=options.per_contig,
             gene_tag=options.gene_tag,
             skip_regex=options.skip_regex,
-            umi_getter=umi_getter):
+            barcode_getter=barcode_getter):
 
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
@@ -383,8 +347,18 @@ def main(argv=None):
             threshold=options.threshold)
 
         gene_count = len(groups)
-        options.stdout.write("%s\t%i\n" % (gene, gene_count))
+
+        if options.per_cell:
+            outfile.write("%s\t%s\t%i\n" % (gene, cell.decode(), gene_count))
+        else:
+            outfile.write("%s\t%i\n" % (gene, gene_count))
         nOutput += gene_count
+
+    # pivot the counts table and write out
+    if options.wide_format_cell_counts:
+        counts_df = pd.read_table(tmp_out_name)
+        print(counts_df)
+        os.unlink(tmp_out_name) # delete the tempfile
 
     # output reads events and benchmark information.
     for event in read_events.most_common():

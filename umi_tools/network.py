@@ -402,9 +402,7 @@ class UMIClusterer:
                 min(len_umis), max(len_umis)))
 
         adj_list = self.get_adj_list(umis, counts, threshold)
-
         clusters = self.get_connected_components(umis, adj_list, counts)
-
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
 

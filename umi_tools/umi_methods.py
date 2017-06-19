@@ -292,28 +292,66 @@ def getUserDefinedBarcodes(whitelist_tsv):
     return set(cell_whitelist)
 
 
-def get_umi_read_id(read, sep="_"):
-    ''' extract the umi from the read id using the specified separator '''
+def get_barcode_read_id(read, cell_barcode=False, sep="_"):
+    ''' extract the umi +/- cell barcode from the read id using the
+    specified separator '''
 
     try:
-        return read.qname.split(sep)[-1].encode('utf-8')
-    except IndexError:
+        if cell_barcode:
+            umi = read.qname.split(sep)[-1].encode('utf-8')
+            cell = read.qname.split(sep)[-2].encode('utf-8')
+        else:
+            umi = read.qname.split(sep)[-1].encode('utf-8')
+            cell = None
+
+        return umi, cell
+
+    except:
         raise ValueError(
-            "Could not extract UMI from the read ID, please"
-            "check UMI is encoded in the read name")
+            "Could not extract UMI +/- cell barcode from the read"
+            "ID, please check UMI is encoded in the read name")
 
 
-def get_umi_tag(read, tag='RX'):
-    ''' extract the umi from the specified tag '''
+def get_barcode_tag(read, cell_barcode=False, umi_tag='RX', cell_tag=None):
+    ''' extract the umi +/- cell barcode from the specified tag '''
 
     try:
         # 10X pipelines append a 'GEM' tag to the UMI, e.g
         # AGAGSGATAGATA-1
-        return read.get_tag(tag).split("-")[0].encode('utf-8')
+        if cell_barcode:
+            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
+            cell = read.get_tag(cell_tag).split("-")[0].encode('utf-8')
+        else:
+            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
+            cell = None
+        return umi, cell
+
     except IndexError:
-        raise ValueError(
-            "Could not extract UMI from the read tags, please"
-            "check UMI is encoded in the read tag: %s" % tag)
+        raise ValueError("Could not extract UMI +/- cell barcode from the "
+                         "read tag")
+
+
+def get_barcode_umis(read, cell_barcode=False):
+    ''' extract the umi +/- cell barcode from the read name where the barcodes
+    were extracted using umis'''
+
+    umi, cell = None, None
+    try:
+        read_name_elements = read.qname.split(":")
+        for element in read_name_elements:
+            if element.startswith("UMI_"):
+                umi = element[4:].encode('utf-8')
+            elif element.startswith("CELL_") and cell_barcode:
+                cell = element[5:].encode('utf-8')
+
+        if umi is None:
+            raise ValueError()
+
+        return umi, cell
+
+    except:
+        raise ValueError("Could not extract UMI +/- cell barcode from the "
+                         "read tag")
 
 
 def get_average_umi_distance(umis):
@@ -909,7 +947,7 @@ def get_bundles(inreads,
                 whole_contig=False,
                 read_length=False,
                 detection_method=False,
-                umi_getter=None,
+                barcode_getter=None,
                 all_reads=False,
                 return_read2=False,
                 return_unmapped=False):
@@ -950,7 +988,7 @@ def get_bundles(inreads,
     reads. options are NH", "X0", "XT". defaults to False (just select
     the 'best' read by MAPQ)
 
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    barcode_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
 
     all_reads: if true, return all reads in the dictionary. Else,
     return the 'best' read (using MAPQ +/- multimapping) for each key
@@ -1077,7 +1115,7 @@ def get_bundles(inreads,
         if ignore_umi:
             umi = ""
         else:
-            umi = umi_getter(read)
+            umi, cell = barcode_getter(read)  # cell is always None here
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
@@ -1145,7 +1183,7 @@ def get_gene_count(inreads,
                    per_contig=False,
                    gene_tag=None,
                    skip_regex=None,
-                   umi_getter=None):
+                   barcode_getter=None):
 
     ''' Yields the counts per umi for each gene
 
@@ -1166,7 +1204,7 @@ def get_gene_count(inreads,
                 unassigned reads where the 'gene' is a descriptive tag
                 such as "Unassigned"
 
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    barcode_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
     '''
 
     last_chr = ""
@@ -1174,7 +1212,8 @@ def get_gene_count(inreads,
 
     # make an empty counts_dict counter
     counts_dict = collections.defaultdict(
-        lambda: collections.defaultdict(dict))
+        lambda: collections.defaultdict(
+            lambda: collections.defaultdict(dict)))
 
     read_events = collections.Counter()
 
@@ -1215,30 +1254,34 @@ def get_gene_count(inreads,
         if read.tid != last_chr:
 
             for gene in counts_dict:
-                yield gene, counts_dict[gene], read_events
+                count = counts_dict[gene][cell]
+                yield gene, cell, count, read_events
 
             last_chr = read.tid
 
             # make a new empty counts_dict counter
             counts_dict = collections.defaultdict(
-                lambda: collections.defaultdict(dict))
+                lambda: collections.defaultdict(
+                    lambda: collections.defaultdict(dict)))
 
-        umi = umi_getter(read)
+        umi, cell = barcode_getter(read)
         try:
-            counts_dict[gene][umi]["count"] += 1
+            counts_dict[gene][cell][umi]["count"] += 1
         except KeyError:
-            counts_dict[gene][umi]["count"] = 1
+            counts_dict[gene][cell][umi]["count"] = 1
 
     # yield remaining genes
     for gene in counts_dict:
-        yield gene, counts_dict[gene], read_events
+        for cell in counts_dict[gene]:
+            count = counts_dict[gene][cell]
+            yield gene, cell, count, read_events
 
 
 class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile, chrom, umi_getter):
+    def __init__(self, bamfile, chrom, barcode_getter):
         inbam = pysam.Samfile(bamfile)
 
         if chrom:
@@ -1247,7 +1290,7 @@ class random_read_generator:
             self.inbam = inbam.fetch()
 
         self.umis = collections.defaultdict(int)
-        self.umi_getter = umi_getter
+        self.barcode_getter = barcode_getter
         self.fill()
 
     def fill(self):
@@ -1262,7 +1305,7 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[self.umi_getter(read)] += 1
+            self.umis[self.barcode_getter(read)[0]] += 1
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())

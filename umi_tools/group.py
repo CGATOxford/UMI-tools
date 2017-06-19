@@ -444,11 +444,11 @@ def main(argv=None):
 
     # set the method with which to extract umis from reads
     if options.get_umi_method == "read_id":
-        umi_getter = partial(
-            umi_methods.get_umi_read_id, sep=options.umi_sep)
+        barcode_getter = partial(
+            umi_methods.get_barcode_read_id, sep=options.umi_sep)
     elif options.get_umi_method == "tag":
-        umi_getter = partial(
-            umi_methods.get_umi_tag, tag=options.umi_tag)
+        barcode_getter = partial(
+            umi_methods.get_barcode_tag, umi_tag=options.umi_tag)
     else:
         raise ValueError("Unknown umi extraction method")
 
@@ -481,7 +481,7 @@ def main(argv=None):
             gene_tag=gene_tag,
             skip_regex=options.skip_regex,
             read_length=options.read_length,
-            umi_getter=umi_getter,
+            barcode_getter=barcode_getter,
             all_reads=True,
             return_read2=True,
             return_unmapped=options.output_unmapped):

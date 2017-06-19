@@ -492,11 +492,11 @@ def main(argv=None):
 
     # set the method with which to extract umis from reads
     if options.get_umi_method == "read_id":
-        umi_getter = partial(
-            umi_methods.get_umi_read_id, sep=options.umi_sep)
+        barcode_getter = partial(
+            umi_methods.get_barcode_read_id, sep=options.umi_sep)
     elif options.get_umi_method == "tag":
-        umi_getter = partial(
-            umi_methods.get_umi_tag, tag=options.umi_tag)
+        barcode_getter = partial(
+            umi_methods.get_barcode_tag, umi_tag=options.umi_tag)
     else:
         raise ValueError("Unknown umi extraction method")
 
@@ -511,7 +511,7 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom, umi_getter=umi_getter)
+            infile.filename, chrom=options.chrom, barcode_getter=barcode_getter)
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
@@ -542,7 +542,7 @@ def main(argv=None):
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
-            umi_getter=umi_getter,
+            barcode_getter=barcode_getter,
             all_reads=False,
             return_read2=False,
             return_unmapped=False):
@@ -592,7 +592,7 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [umi_getter(x) for x in reads]
+                post_cluster_umis = [barcode_getter(x)[0] for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
