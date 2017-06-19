@@ -507,16 +507,10 @@ def main(argv=None):
                 reads = bundle[umi]['read']
                 for read in reads:
                     if outfile:
-                        if options.paired:
-                            # if paired, we need to supply the tags to
-                            # add to the paired read
-                            outfile.write(read, unique_id, top_umi)
-
-                        else:
-                            # Add the 'UG' tag to the read
-                            read.tags += [('UG', unique_id)]
-                            read.tags += [(options.umi_group_tag, top_umi)]
-                            outfile.write(read)
+                        # Add the 'UG' tag to the read
+                        read.tags += [('UG', unique_id)]
+                        read.tags += [(options.umi_group_tag, top_umi)]
+                        outfile.write(read)
 
                     if options.tsv:
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
