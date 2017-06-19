@@ -330,6 +330,10 @@ def main(argv=None):
 
     infile = pysam.Samfile(in_name, in_mode)
 
+    # write out to tempfile and then sort to stdout
+    tmpfilename = U.getTempFilename()
+    tmpfile = U.openFile(tmpfilename, mode="w")
+
     nInput, nOutput = 0, 0
 
     # set the method with which to extract umis from reads
@@ -356,7 +360,6 @@ def main(argv=None):
             inreads = infile.fetch()
             gene_tag = options.gene_tag
 
-    options.stdout.write("%s\t%s\n" % ("gene", "count"))
     for gene, bundle, read_events in umi_methods.get_gene_count(
             inreads,
             subset=options.subset,
@@ -383,8 +386,24 @@ def main(argv=None):
             threshold=options.threshold)
 
         gene_count = len(groups)
-        options.stdout.write("%s\t%i\n" % (gene, gene_count))
+        tmpfile.write("%s:%i\n" % (gene, gene_count))
         nOutput += gene_count
+
+    tmpfile.close()
+
+    options.stdout.write("%s\t%s\n" % ("feature", "count"))
+
+    gene_counts_dict = {}
+
+    with U.openFile(tmpfilename, mode="r") as inf:
+
+        for line in inf:
+            gene, gene_count = line.strip().split(":")
+            gene_counts_dict[gene] = gene_count
+
+        for gene in sorted(list(gene_counts_dict.keys())):
+            gene_count = gene_counts_dict[gene]
+            options.stdout.write("%s\t%s\n" % (gene, gene_count))
 
     # output reads events and benchmark information.
     for event in read_events.most_common():
