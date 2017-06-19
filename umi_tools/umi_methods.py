@@ -214,11 +214,11 @@ def getErrorCorrectMappings(cell_barcodes, whitelist, threshold=1):
     false_to_true = {}
     true_to_false = collections.defaultdict(set)
 
-    whitelist = set([bytes(x, encoding="utf-8") for x in whitelist])
+    whitelist = set([str(x).encode("utf-8") for x in whitelist])
 
     for cell_barcode in cell_barcodes:
         match = None
-        barcode_in_bytes = bytes(cell_barcode, encoding="utf-8")
+        barcode_in_bytes = str(cell_barcode).encode("utf-8")
         for white_cell in whitelist:
 
             if barcode_in_bytes in whitelist:  # don't check if whitelisted

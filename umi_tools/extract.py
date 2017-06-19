@@ -465,11 +465,11 @@ def main(argv=None):
                 for barcode in sorted(list(cell_whitelist)):
 
                     if true_to_false_map:
-                        corrected_barcodes = ",".join(true_to_false_map[barcode])
+                        corrected_barcodes = ",".join(
+                            sorted(true_to_false_map[barcode]))
                         corrected_barcode_counts = ",".join(
                             map(str, [cell_barcode_counts[x] for x
-                                      in true_to_false_map[barcode]]))
-
+                                      in sorted(true_to_false_map[barcode])]))
                     else:
                         corrected_barcodes, corrected_barcode_counts = "", ""
 
