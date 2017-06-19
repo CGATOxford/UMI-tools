@@ -2,7 +2,7 @@
 umi_methods.py - Methods for dealing with UMIs
 =========================================================
 
-:Author: Tom Smith
+:Author: Ian Sudbery, Tom Smith
 :Release: $Id$
 :Date: |today|
 :Tags: Python UMI
@@ -15,6 +15,10 @@ import random
 import numpy as np
 import pysam
 import re
+from scipy.stats import gaussian_kde
+from scipy.signal import argrelextrema
+import matplotlib.pyplot as plt
+import numpy as np
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
@@ -29,6 +33,263 @@ try:
     from umi_tools._dedup_umi import edit_distance
 except:
     from _dedup_umi import edit_distance
+
+RANGES = {
+    'phred33': (33, 77),
+    'solexa': (59, 106),
+    'phred64': (64, 106),
+}
+
+###############################################################################
+# The code for Record and fastqIterate are taken from CGAT.Fastq:
+# https://github.com/CGATOxford/cgat/blob/master/CGAT/Fastq.py
+###############################################################################
+
+
+class Record:
+    """A record representing a :term:`fastq` formatted record.
+
+    Attributes
+    ----------
+    identifier : string
+       Sequence identifier
+    seq : string
+       Sequence
+    quals : string
+       String representation of quality scores.
+    format : string
+       Quality score format. Can be one of ``sanger``,
+       ``phred33``, ``phred64`` or ``solexa``.
+
+    """
+    def __init__(self, identifier, seq, quals, entry_format=None):
+        self.identifier, self.seq, self.quals, entry_format = (
+            identifier, seq, quals, entry_format)
+
+    def guessFormat(self):
+        '''return quality score format -
+        might return several if ambiguous.'''
+
+        c = [ord(x) for x in self.quals]
+        mi, ma = min(c), max(c)
+        r = []
+        for entry_format, v in iteritems(RANGES):
+            m1, m2 = v
+            if mi >= m1 and ma < m2:
+                r.append(entry_format)
+        return r
+
+    def __str__(self):
+        return "@%s\n%s\n+\n%s" % (self.identifier, self.seq, self.quals)
+
+
+def fastqIterate(infile):
+    '''iterate over contents of fastq file.'''
+
+    def convert2string(b):
+        if type(b) == str:
+            return b
+        else:
+            return b.decode("utf-8")
+
+    while 1:
+        line1 = convert2string(infile.readline())
+        if not line1:
+            break
+        if not line1.startswith('@'):
+            U.error("parsing error: expected '@' in line %s" % line1)
+        line2 = convert2string(infile.readline())
+        line3 = convert2string(infile.readline())
+        if not line3.startswith('+'):
+            U.error("parsing error: expected '+' in line %s" % line3)
+        line4 = convert2string(infile.readline())
+        # incomplete entry
+        if not line4:
+            U.error("incomplete entry for %s" % line1)
+
+        yield Record(line1[1:-1], line2[:-1], line4[:-1])
+
+# End of FastqIterate()
+###############################################################################
+###############################################################################
+
+
+def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
+    ''' estimate the number of "true" cell barcodes
+    input:
+         cell_barcode_counts = dict(key = barcode, value = count)
+         plotfile_prefix = (optional) prefix for plots
+
+    returns:
+         List of true barcodes
+    '''
+
+    # very low abundance cell barcodes are filtered out (< 0.0001 *
+    # the most abundant)
+    threshold = 0.0001 * cell_barcode_counts.most_common(1)[0][1]
+
+    counts = sorted(cell_barcode_counts.values(), reverse=True)
+    counts_thresh = [x for x in counts if x > threshold]
+    log_counts = np.log10(counts_thresh)
+
+    # guassian density with default optimal bw estimation
+    density = gaussian_kde(log_counts)
+
+    xx_values = 1000  # how many x values for density plot
+    xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
+
+    local_mins = argrelextrema(density(xx), np.less)[0]
+    local_min = None
+    for poss_local_min in local_mins:
+        if poss_local_min >= 0.2 * xx_values:
+            local_min = poss_local_min
+            break
+    if local_min is None:
+        return None
+
+    threshold = np.power(10, xx[local_min])
+    final_barcodes = set([
+        x for x, y in cell_barcode_counts.items() if y > threshold])
+
+    if plotfile_prefix:
+
+        # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
+        CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                          '#f781bf', '#a65628', '#984ea3',
+                          '#999999', '#e41a1c', '#dede00']
+
+        # make density plot
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        fig1.plot(xx, density(xx), 'k')
+        fig1.set_xlabel("Reads (log10)")
+        fig1.set_ylabel("Density")
+
+        for pos in xx[local_mins]:
+            if pos == xx[local_min]:  # selected local minima
+                fig1.axvline(x=xx[local_min], color=CB_color_cycle[0],
+                             label="selected local minima")
+            else:
+                fig1.axvline(x=pos, color=CB_color_cycle[3],
+                             label="other local minima")
+
+        fig1.legend(loc=0)
+
+        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix)
+
+        # make knee plot
+        fig = plt.figure()
+        fig2 = fig.add_subplot(111)
+        fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
+        xmax = min(local_min * 5, len(counts))  # reasonable maximum x-axis value
+        fig2.set_xlim((0 - 0.01 * xmax, xmax))
+        fig2.set_xlabel("Rank")
+        fig2.set_ylabel("Cumulative sum of reads")
+
+        for pos in xx[local_mins]:
+            threshold = np.power(10, pos)
+            passing_threshold = sum([y > threshold
+                                     for x, y in cell_barcode_counts.items()])
+
+            if passing_threshold == len(final_barcodes):  # selected local minima
+                fig2.axvline(x=passing_threshold, color=CB_color_cycle[0],
+                             label="selected local minima")
+            else:
+                fig2.axvline(x=passing_threshold, color=CB_color_cycle[3],
+                             label="other local minima")
+
+        fig2.legend(loc=0)
+        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix)
+
+    return final_barcodes
+
+
+def getErrorCorrectMappings(cell_barcodes, whitelist, threshold=1):
+    ''' Find the mappings between true and false cell barcodes based
+    on an edit distance threshold.
+
+    Any cell barcode within the threshold to more than one whitelist
+    barcode will be excluded'''
+
+    false_to_true = {}
+    true_to_false = collections.defaultdict(set)
+
+    whitelist = set([str(x).encode("utf-8") for x in whitelist])
+
+    for cell_barcode in cell_barcodes:
+        match = None
+        barcode_in_bytes = str(cell_barcode).encode("utf-8")
+        for white_cell in whitelist:
+
+            if barcode_in_bytes in whitelist:  # don't check if whitelisted
+                continue
+
+            if edit_distance(barcode_in_bytes, white_cell) <= threshold:
+                if match is not None:  # already matched one barcode
+                    match = None  # set match back to None
+                    break  # break and don't add to maps
+                else:
+                    match = white_cell.decode("utf-8")
+
+        if match is not None:
+            false_to_true[cell_barcode] = match
+            true_to_false[match].add(cell_barcode)
+
+    return false_to_true, true_to_false
+
+
+# TS: This is not being used since the network methods are not
+# appropriate to identify cell barcodes as they currently stand
+
+# def getNetworkEstimate(cell_barcode_counts):
+#     ''' Use the directional network method to identify the true cell
+#     barcodes '''
+
+#     clusterer = network.UMIClusterer("directional")
+#     barcode_groups = clusterer(
+#         [bytes(x, encoding="utf-8") for x in cell_barcode_counts.keys()],
+#         {bytes(x, encoding="utf-8"): y for x, y in cell_barcode_counts.items()},
+#         1)
+
+#     false_to_true = {}
+#     true_to_false = collections.defaultdict(set)
+
+#     true_barcodes = []
+#     for group in barcode_groups:
+#         true_barcode = group[0].decode("utf-8")
+#         true_barcodes.append(true_barcode)
+#         if len(group) > 1:
+#             error_barcodes = group[1:]
+#             for error_barcode in error_barcodes:
+#                 error_barcode = error_barcode.decode("utf-8")
+#                 false_to_true[error_barcode] = true_barcode
+#                 true_to_false[true_barcode].add(error_barcode)
+
+#     return true_barcodes, (false_to_true, true_to_false)
+
+
+def getCellWhitelist(cell_barcode_counts,
+                     error_correct_threshold=0,
+                     plotfile_prefix=None):
+
+    cell_whitelist = getKneeEstimate(
+        cell_barcode_counts, plotfile_prefix=plotfile_prefix)
+    if error_correct_threshold > 0:
+        error_correct_mappings = getErrorCorrectMappings(
+            cell_barcode_counts.keys(), cell_whitelist,
+            error_correct_threshold)
+    else:
+        error_correct_mappings = None
+
+    return cell_whitelist, error_correct_mappings
+
+
+def getUserDefinedBarcodes(whitelist_tsv):
+    cell_whitelist = []
+    with U.openFile(whitelist_tsv, "r") as inf:
+        for line in inf:
+            cell_whitelist.append(line.strip())
+    return set(cell_whitelist)
 
 
 def get_umi_read_id(read, sep="_"):
@@ -63,6 +324,441 @@ def get_average_umi_distance(umis):
     dists = [edit_distance(x, y) for
              x, y in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
+
+
+def addBarcodesToIdentifier(read, UMI, cell):
+    '''extract the identifier from a read and append the UMI and
+    cell barcode before the first space'''
+
+    read_id = read.identifier.split(" ")
+
+    if cell == "":
+        read_id[0] = read_id[0] + "_" + UMI
+    else:
+        read_id[0] = read_id[0] + "_" + cell + "_" + UMI
+
+    identifier = " ".join(read_id)
+
+    return identifier
+
+
+def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases):
+    '''Remove selected bases from seq and quals'''
+
+    new_seq = ""
+    new_quals = ""
+    umi_quals = ""
+    cell_quals = ""
+
+    ix = 0
+    for base, qual in zip(seq, quals):
+        if ((ix not in discard_bases) and
+            (ix not in cell_bases) and
+            (ix not in umi_bases)):
+            new_quals += qual
+            new_seq += base
+        elif ix in cell_bases:
+            cell_quals += qual
+        elif ix in umi_bases:
+            umi_quals += qual
+
+        ix += 1
+
+    return new_seq, new_quals, umi_quals, cell_quals
+
+
+def ExtractBarcodes(read, match,
+                    extract_umi=False,
+                    extract_cell=False,
+                    discard=False):
+    '''Extract the cell and umi barcodes using a regex.match object
+
+    inputs:
+
+    - read 1 and read2 = Record objects
+    - match = regex.match object
+    - extract_umi and extract_cell = switches to determine whether these
+                                     barcodes should be extracted
+
+    returns:
+
+        - cell_barcode = Cell barcode string
+        - cell_barcode_quals = Cell barcode quality scores
+        - umi = UMI barcode string.
+        - umi_quals = UMI barcode quality scores
+        - new_seq = Read1 sequence after extraction
+        - new_quals = Read1 qualities after extraction
+
+    Barcodes and qualities default to empty strings where extract_cell
+    or extract_umi are false.
+
+    '''
+    cell_barcode, umi, cell_barcode_quals, umi_quals, new_seq, new_quals = ("",)*6
+
+    if not extract_cell and not extract_umi:
+        U.error("must set either extract_cell and/or extract_umi to true")
+
+    groupdict = match.groupdict()
+    cell_bases = set()
+    umi_bases = set()
+    discard_bases = set()
+    for k in sorted(list(groupdict)):
+        span = match.span(k)
+        if extract_cell and k.startswith("cell_"):
+            cell_barcode += groupdict[k]
+            cell_bases.update(range(span[0], span[1]))
+        elif extract_umi and k.startswith("umi_"):
+            umi += groupdict[k]
+            umi_bases.update(range(span[0], span[1]))
+        elif discard and k.startswith("discard_"):
+            discard_bases.update(range(span[0], span[1]))
+
+    new_seq, new_quals, umi_quals, cell_quals = extractSeqAndQuals(
+        read.seq, read.quals, umi_bases, cell_bases, discard_bases)
+
+    return (cell_barcode, cell_barcode_quals,
+            umi, umi_quals,
+            new_seq, new_quals)
+
+
+def get_below_threshold(umi_quals, quality_encoding,  quality_filter_threshold):
+    '''test whether the umi_quals are below the threshold'''
+    umi_quals = [x - RANGES[quality_encoding][0] for x in map(ord, umi_quals)]
+    below_threshold = [x < quality_filter_threshold for x in umi_quals]
+    return below_threshold
+
+
+def umi_below_threshold(umi_quals, quality_encoding,  quality_filter_threshold):
+    ''' return true if any of the umi quals is below the threshold'''
+    below_threshold = get_below_threshold(
+        umi_quals, quality_encoding, quality_filter_threshold)
+    return any(below_threshold)
+
+
+def mask_umi(umi, umi_quals, quality_encoding,  quality_filter_threshold):
+    ''' Mask all positions where quals < threshold with "N" '''
+    below_threshold = get_below_threshold(
+        umi_quals, quality_encoding, quality_filter_threshold)
+    new_umi = ""
+
+    for base, test in zip(umi, below_threshold):
+        if test:
+            new_umi += "N"
+        else:
+            new_umi += base
+
+    return new_umi
+
+
+class ExtractFilterAndUpdate:
+    ''' A functor which extracts barcodes from a read(s), filters the
+    read(s) and updates the read(s). Keeps track of events in
+    read_counts Counter
+    '''
+
+    def _extract_5prime(self, sequence, read=1):
+        if read == 1:
+            return (sequence[:self.pattern_length],
+                    sequence[self.pattern_length:])
+        elif read == 2:
+            return (sequence[:self.pattern_length2],
+                    sequence[self.pattern_length2:])
+
+    def _extract_3prime(self, sequence, read=1):
+        if read == 1:
+            return (sequence[-self.pattern_length:],
+                    sequence[:-self.pattern_length])
+        if read == 2:
+            return (sequence[-self.pattern_length2:],
+                    sequence[:-self.pattern_length2])
+
+    def _joiner_5prime(self, sequence, sample):
+        return sample + sequence
+
+    def _joiner_3prime(self, sequence, sample):
+        return sequence + sample
+
+    def _getBarcodesString(self, read1, read2=None):
+
+        if self.pattern:
+            bc1, sequence1 = self.extract(read1.seq)
+            bc_qual1, seq_qual1 = self.extract(read1.quals)
+            umi_quals = [bc_qual1[x] for x in self.umi_bases]
+
+            umi = "".join([bc1[x] for x in self.umi_bases])
+            cell = "".join([bc1[x] for x in self.cell_bases])
+            sample1 = "".join([bc1[x] for x in self.bc_bases])
+            sample_qual1 = "".join([bc_qual1[x] for x in self.bc_bases])
+            new_seq = self.joiner(sequence1, sample1)
+            new_quals = self.joiner(seq_qual1, sample_qual1)
+
+        else:
+            cell, umi, umi_quals, new_seq, new_quals = ("",)*5
+
+        if self.pattern2:
+            bc2, sequence2 = self.extract(read2.seq)
+            bc_qual2, seq_qual2 = self.extract(read2.quals)
+            umi_quals2 = [bc_qual2[x] for x in self.umi_bases2]
+
+            umi2 = "".join([bc2[x] for x in self.umi_bases2])
+            cell2 = "".join([bc2[x] for x in self.cell_bases2])
+            sample2 = "".join([bc2[x] for x in self.bc_bases2])
+            sample_qual2 = "".join([bc_qual2[x] for x in self.bc_bases2])
+            new_seq2 = self.joiner(sequence2, sample2)
+            new_quals2 = self.joiner(seq_qual2, sample_qual2)
+
+            cell += cell2
+            umi += umi2
+            umi_quals += umi_quals2
+        else:
+            new_seq2, new_quals2 = "", ""
+
+        return cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2
+
+    def _getBarcodesRegex(self, read1, read2=None):
+        ''' '''
+
+        # first check both regexes for paired end samples to avoid uneccessarily
+        # extracting barcodes from read1 where regex2 doesn't match read2
+        if self.pattern:
+            match = self.pattern.match(read1.seq)
+            if not match:
+                self.read_counts['regex does not match read1'] += 1
+                return None
+            else:
+                self.read_counts['regex matches read1'] += 1
+
+        if read2 and self.pattern2:
+            match2 = self.pattern2.match(read2.seq)
+            if not match2:
+                self.read_counts['regex does not match read1'] += 1
+                return None
+            else:
+                self.read_counts['regex matches read2'] += 1
+
+        # now extract barcodes
+        if self.pattern:
+            (cell, cell_quals,
+             umi, umi_quals,
+             new_seq, new_quals) = ExtractBarcodes(
+                 read1, match, extract_cell=self.extract_cell,
+                 extract_umi=True, discard=True)
+        else:
+            cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
+
+        if read2 and self.pattern2:
+            (cell2, cell_quals2,
+             umi2, umi_quals2,
+             new_seq2, new_quals2) = ExtractBarcodes(
+                 read2, match2, extract_cell=self.extract_cell,
+                 extract_umi=True, discard=True)
+
+            cell += cell2
+            cell_quals += cell_quals2
+            umi += umi2
+            umi_quals += umi_quals2
+        else:
+            new_seq2, new_quals2 = "", ""
+
+        return cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2
+
+    def _getCellBarcodeString(self, read1, read2=None):
+
+        if self.pattern:
+            bc1, sequence1 = self.extract(read1.seq)
+            cell = "".join([bc1[x] for x in self.cell_bases])
+        else:
+            cell = ""
+
+        if self.pattern2:
+            bc2, sequence2 = self.extract(read2.seq)
+            cell2 = "".join([bc2[x] for x in self.cell_bases2])
+
+            cell += cell2
+
+        return cell
+
+    def _getCellBarcodeRegex(self, read1, read2=None):
+
+        if read2 is None:
+            match = self.pattern.match(read1.seq)
+            if match:
+                cell_barcode = ExtractBarcodes(
+                    read1, match, extract_cell=True, extract_umi=False)[0]
+                return cell_barcode
+            else:
+                return None
+
+        else:
+
+            match1, match2 = None, None
+
+            if self.pattern:
+                match1 = self.pattern.match(read1.seq)
+
+            if self.pattern2:
+                match2 = self.pattern2.match(read2.seq)
+
+            # check matches have been made
+            if not ((self.pattern and not match1) or
+                    (self.pattern2 and not match2)):
+                cell_barcode1, cell_barcode2 = "", ""
+
+                if self.pattern:
+                    cell_barcode1 = ExtractBarcodes(
+                        read1, match1, extract_cell=True, extract_umi=False)[0]
+                if self.pattern2:
+                    cell_barcode2 = ExtractBarcodes(
+                        read2, match2, extract_cell=True, extract_umi=False)[0]
+
+                cell_barcode = cell_barcode1 + cell_barcode2
+
+                return cell_barcode
+            else:
+                return None
+
+    def filterQuality(self, umi_quals):
+        if umi_below_threshold(
+                umi_quals, self.quality_encoding,
+                self.quality_filter_threshold):
+            self.read_counts['filtered: umi quality'] += 1
+            return True
+        else:
+            return False
+
+    def maskQuality(self, umi, umi_quals):
+        '''mask low quality bases and return masked umi'''
+        masked_umi = mask_umi(umi, umi_quals,
+                              self.quality_encoding,
+                              self.quality_filter_mask)
+        if masked_umi != umi:
+            self.read_counts['UMI masked'] += 1
+            return masked_umi
+        else:
+            return umi
+
+    def filterCellBarcode(self, cell):
+        '''Filter out cell barcodes not in the whitelist, with
+        optional cell barcode error correction'''
+
+        if cell not in self.cell_whitelist:
+            if self.false_to_true_map:
+                if cell in self.false_to_true_map:
+                    cell = self.false_to_true_map[cell]
+                    self.read_counts['False cell barcode. Error-corrected'] += 1
+                else:
+                    self.read_counts['Filtered cell barcode. Not correctable'] += 1
+                    return None
+            else:
+                self.read_counts['Filtered cell barcode'] += 1
+                return None
+
+        return cell
+
+    def __init__(self,
+                 method="string",
+                 pattern=None,
+                 pattern2=None,
+                 prime3=False,
+                 extract_cell=False,
+                 quality_encoding=None,
+                 quality_filter_threshold=False,
+                 quality_filter_mask=False,
+                 filter_cell_barcode=False):
+
+        self.read_counts = collections.Counter()
+        self.method = method
+        self.pattern = pattern
+        self.pattern2 = pattern2
+        self.extract_cell = extract_cell
+        self.quality_encoding = quality_encoding
+        self.quality_filter_threshold = quality_filter_threshold
+        self.quality_filter_mask = quality_filter_mask
+        self.filter_cell_barcodes = filter_cell_barcode
+        self.cell_whitelist = None  # These will be updated if required
+        self.false_to_true_map = None  # These will be updated if required
+
+        # If the pattern is a string we can identify the position of
+        # the cell and umi bases at instantiation
+        if method == "string":
+            if prime3:
+                self.extract = self._extract_3prime
+                self.joiner = self._joiner_3prime
+            else:
+                self.extract = self._extract_5prime
+                self.joiner = self._joiner_5prime
+
+            if pattern:
+                self.pattern_length = len(pattern)
+                self.umi_bases = [x for x in range(len(pattern)) if pattern[x] is "N"]
+                self.bc_bases = [x for x in range(len(pattern)) if pattern[x] is "X"]
+                self.cell_bases = [x for x in range(len(pattern)) if pattern[x] is "C"]
+
+            if pattern2:
+                self.pattern_length2 = len(pattern2)
+                self.umi_bases2 = [x for x in range(len(pattern2))
+                                   if pattern2[x] is "N"]
+                self.bc_bases2 = [x for x in range(len(pattern2))
+                                  if pattern2[x] is "X"]
+                self.cell_bases2 = [x for x in range(len(pattern2))
+                                    if pattern2[x] is "C"]
+
+            self.getCellBarcode = self._getCellBarcodeString
+            self.getBarcodes = self._getBarcodesString
+
+        elif method == "regex":
+            self.getCellBarcode = self._getCellBarcodeRegex
+            self.getBarcodes = self._getBarcodesRegex
+
+    def getReadCounts(self):
+        return self.read_counts
+
+    def __call__(self, read1, read2=None):
+
+        self.read_counts['Input Reads'] += 1
+
+        umi_values = self.getBarcodes(read1, read2)
+        if umi_values is None:
+            return None
+        else:
+            cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2 = umi_values
+
+        if self.quality_filter_threshold:
+            if self.filterQuality(umi_quals):
+                return None
+
+        if self.quality_filter_mask:
+            umi = self.maskQuality(umi, umi_quals)
+
+        if self.filter_cell_barcodes:
+            cell = self.filterCellBarcode(cell)
+            if cell is None:
+                return None
+
+        self.read_counts['Reads output'] += 1
+
+        new_identifier = addBarcodesToIdentifier(
+            read1, umi, cell)
+        read1.identifier = new_identifier
+        if self.pattern:  # seq and quals need to be updated
+            read1.seq = new_seq
+            read1.quals = new_quals
+
+        if read2:
+            new_identifier2 = addBarcodesToIdentifier(
+                read2, umi, cell)
+            read2.identifier = new_identifier2
+            if self.pattern2:   # seq and quals need to be updated
+                read2.seq = new_seq2
+                read2.quals = new_quals2
+
+        if read2 is None:
+            return read1
+        else:
+            return read1, read2
+
+    def getReadCounts(self):
+        return self.read_counts
 
 
 class TwoPassPairWriter:
