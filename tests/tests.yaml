@@ -117,6 +117,13 @@ count_single_gene_tag:
       references: [single_gene_tag.tsv]
       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
+group_gene_tag:
+      skip_python: 3
+      stdin: chr19_gene_tags.bam
+      outputs: [group_dir_per_gene.tsv, stdout]
+      references: [group_dir_per_gene.tsv, group_dir_per_gene.sam]
+      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene.tsv --output-bam --out-sam
+
 group_unique:
       skip_python: 3
       stdin: chr19.bam
@@ -273,41 +280,48 @@ count_single_gene_tag:
       references: [single_gene_tag_py3.tsv]
       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
+group_gene_tag:
+      skip_python: 2
+      stdin: chr19_gene_tags.bam
+      outputs: [group_dir_per_gene_py3.tsv, stdout]
+      references: [group_dir_per_gene_py3.tsv, group_dir_per_gene_py3.sam]
+      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene_py3.tsv --output-bam --out-sam
+
 group_unique_py3:
       skip_python: 2
       stdin: chr19.bam
-      outputs: [stdout, group_uniq.tsv]
+      outputs: [stdout, group_uniq_py3.tsv]
       references: [group_uniq_py3.sam, group_uniq_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq_py3.tsv
 
 group_cluster_py3:
       skip_python: 2
       stdin: chr19.bam
-      outputs: [stdout, group_cluster.tsv]
+      outputs: [stdout, group_cluster_py3.tsv]
       references: [group_cluster_py3.sam, group_cluster_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv
 
 group_adjacency_py3:
       skip_python: 2
       stdin: chr19.bam
       outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv 
 
 group_directional_py3:
       skip_python: 2
       stdin: chr19.bam
-      outputs: [stdout, group_dir.tsv]
+      outputs: [stdout, group_dir_py3.tsv]
       references: [group_dir_py3.sam, group_dir_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_py3.tsv
 
 
 group_directional_subset_py3:
       skip_python: 2
       stdin: chr19.bam
-      outputs: [stdout, group_dir_subset.tsv]
+      outputs: [stdout, group_dir_subset_py3.tsv]
       references: [group_dir_subset_py3.sam, group_dir_subset_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset.tsv --subset=0.1
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset_py3.tsv --subset=0.1
 
 
 group_directional_unmapped_py3:
