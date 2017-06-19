@@ -111,6 +111,10 @@ relate to the group.
     position of the read in the BAM file but the start of the read
     taking into account the read strand and cigar
 
+  - gene
+    The gene assignment for the read. Note, this will be NA unless the
+    --per-gene option is specified
+
   - umi
     The read UMI
 
@@ -401,6 +405,11 @@ def main(argv=None):
                       default=False,
                       help=("output a bam file with read groups tagged using the UG tag"
                             "[default=%default]"))
+    parser.add_option("--skip-tags-regex", dest="skip_regex",
+                      type="string",
+                      help=("Used with --gene-tag. "
+                            "Ignore reads where the gene-tag matches this regex"),
+                      default="^[__|Unassigned]")
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -456,8 +465,9 @@ def main(argv=None):
 
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
-        mapping_outfile.write(
-            "read_id\tcontig\tposition\tumi\tumi_count\tfinal_umi\tfinal_umi_count\tunique_id\n")
+        mapping_outfile.write("%s\n" % "\t".join(
+            ["read_id", "contig", "position", "gene", "umi", "umi_count",
+             "final_umi", "final_umi_count", "unique_id"]))
 
     # set the method with which to extract umis from reads
     if options.get_umi_method == "read_id":
@@ -473,13 +483,18 @@ def main(argv=None):
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
+        gene_tag = options.gene_tag
     else:
-        if options.per_gene:
+        if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
-                options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+                infile, options.gene_transcript_map)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
         else:
             inreads = infile.fetch(until_eof=options.output_unmapped)
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -490,6 +505,8 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
+            gene_tag=gene_tag,
+            skip_regex=options.skip_regex,
             read_length=options.read_length,
             umi_getter=umi_getter,
             all_reads=True,
@@ -534,21 +551,20 @@ def main(argv=None):
                 reads = bundle[umi]['read']
                 for read in reads:
                     if outfile:
-                        if options.paired:
-                            # if paired, we need to supply the tags to
-                            # add to the paired read
-                            outfile.write(read, unique_id, top_umi)
-
-                        else:
-                            # Add the 'UG' tag to the read
-                            read.tags += [('UG', unique_id)]
-                            read.tags += [(options.umi_group_tag, top_umi)]
-                            outfile.write(read)
+                        # Add the 'UG' tag to the read
+                        read.tags += [('UG', unique_id)]
+                        read.tags += [(options.umi_group_tag, top_umi)]
+                        outfile.write(read)
 
                     if options.tsv:
+                        if options.per_gene:
+                            gene = read.get_tag(gene_tag)
+                        else:
+                            gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
+                            gene,
                             umi.decode(),
                             counts[umi],
                             top_umi.decode(),

@@ -319,7 +319,7 @@ def main(argv=None):
         in_mode = "rb"
 
     if options.per_gene:
-        if not options.gene_transcript_map and not options.gene_map:
+        if not options.gene_transcript_map and not options.gene_tag:
             raise ValueError("--per-gene option requires --gene-transcript-map "
                              "or --gene-tag")
     try:
