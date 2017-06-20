@@ -51,7 +51,7 @@ UMI. The network-based methods, "cluster", "adjacency" and
 UMIs with an edit distance <= threshold (usually 1). The groups of
 reads are then defined from the network in a method-specific manner.
 
-Note that the "percentile" method used with the dedup command is not
+Note that the "percentile" method used with the group command is not
 available with group. This is because this method does not group
 similar UMIs as per the network methods. Instead it applies a
 threshold for inclusion of the UMI in the output and excluded UMIs are
@@ -206,7 +206,17 @@ Options
        with the highest mapping quality will be selected
 
 --read-length
-      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
+      Use the read length as as a criteria when grouping, for e.g sRNA-Seq
+
+--whole-contig (string)
+      forces group to parse an entire contig before yielding any reads
+      for grouping. This is the only way to absolutely guarantee
+      that all reads with the same start position are grouped together
+      for grouping since group uses the start position of the
+      read, not the alignment coordinate on which the reads are
+      sorted. However, by default, group reads for another 1000bp
+      before outputting read groups which will avoid any reads being
+      missed with short read sequencing (<1000bp)
 
 --subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
@@ -216,7 +226,7 @@ Options
       Only consider a single chromosome. This is useful for debugging purposes
 
 --per-contig (string)
-      Deduplicate per contig (field 3 in BAM; RNAME).
+      Group per contig (field 3 in BAM; RNAME).
       All reads with the same contig will be
       considered to have the same alignment position. This is useful
       if your library prep generates PCR duplicates with non identical
@@ -224,7 +234,7 @@ Options
       align to a reference transcriptome with one transcript per gene
 
 --per-gene (string)
-      Deduplicate per gene. As above except with this option you can
+      Group per gene. As above except with this option you can
       align to a reference transcriptome with more than one transcript
       per gene. You need to also provide --gene-transcript-map option.
       This will also add a metacontig ('MC') tag to the reads if used
@@ -238,7 +248,7 @@ Options
       gene2   transcript3
 
 --gene-tag (string)
-      Deduplicate per gene. As per --per-gene except here the gene
+      Group per gene. As per --per-gene except here the gene
       information is encoded in the bam read tag specified so you do
       not need to supply --gene-transcript-map
 
@@ -259,13 +269,6 @@ Options
 -S    (string, filename) output file name
 
 -L    (string, filename) log file name
-
-
-
-Usage
------
-
-    python group -I infile.bam --output-bam -S grouped.bam -L group.log
 
 
 .. note::
@@ -363,17 +366,17 @@ def main(argv=None):
                       choices=("adjacency", "directional",
                                "unique", "cluster"),
                       default="directional",
-                      help="method to use for umi deduping [default=%default]")
+                      help="method to use for umi grouping [default=%default]")
     parser.add_option("--no-sort-output", dest="no_sort_output",
                       action="store_true", default=False,
                       help="Sort the output")
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
                       default=False,
-                      help=("dedup per contig (field 3 in BAM; RNAME),"
+                      help=("group per contig (field 3 in BAM; RNAME),"
                             " e.g for transcriptome where contig = gene"))
     parser.add_option("--per-gene", dest="per_gene", action="store_true",
                       default=False,
-                      help=("Deduplicate per gene,"
+                      help=("Group per gene,"
                             "e.g for transcriptome where contig = transcript"
                             "must also provide a transript to gene map with"
                             "--gene-transcript-map [default=%default]"))
@@ -383,13 +386,26 @@ def main(argv=None):
                       default=None)
     parser.add_option("--gene-tag", dest="gene_tag",
                       type="string",
-                      help=("Deduplicate per gene where gene is"
+                      help=("Group per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"
                             "to identify possible duplicates [default=%default]"))
+    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
+                      default=False,
+                      help="Read whole contig before outputting bundles: guarantees that no reads"
+                           "are missed, but increases memory usage")
+    parser.add_option("--multimapping-detection-method",
+                      dest="detection_method", type="choice",
+                      choices=("NH", "X0", "XT"),
+                      default=None,
+                      help=("Some aligners identify multimapping using bam "
+                            "tags. Setting this option to NH, X0 or XT will "
+                            "use these tags when selecting the best read "
+                            "amongst reads with the same position and umi "
+                            "[default=%default]"))
     parser.add_option("--mapping-quality", dest="mapping_quality",
                       type="int",
                       help="Minimum mapping quality for a read to be retained"
@@ -481,6 +497,22 @@ def main(argv=None):
 
     nInput, nOutput, unique_id = 0, 0, 0
 
+    if options.detection_method:
+        bam_features = detect_bam_features(infile.filename)
+
+        if not bam_features[options.detection_method]:
+            if sum(bam_features.values()) == 0:
+                raise ValueError(
+                    "There are no bam tags available to detect multimapping. "
+                    "Do not set --multimapping-detection-method")
+            else:
+                raise ValueError(
+                    "The chosen method of detection for multimapping (%s) "
+                    "will not work with this bam. Multimapping can be detected"
+                    " for this bam using any of the following: %s" % (
+                        options.detection_method, ",".join(
+                            [x for x in bam_features if bam_features[x]])))
+
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
         gene_tag = options.gene_tag
@@ -507,7 +539,9 @@ def main(argv=None):
             per_contig=options.per_contig,
             gene_tag=gene_tag,
             skip_regex=options.skip_regex,
+            whole_contig=options.whole_contig,
             read_length=options.read_length,
+            detection_method=options.detection_method,
             barcode_getter=barcode_getter,
             all_reads=True,
             return_read2=True,

@@ -169,8 +169,14 @@ Options
       Use the read length as as a criteria when deduping, for e.g sRNA-Seq
 
 --whole-contig (string)
-      Consider all alignments to a single contig together. This is useful if
-      you have aligned to a transcriptome multi-fasta
+      forces dedup to parse an entire contig before yielding any reads
+      for deduplication. This is the only way to absolutely guarantee
+      that all reads with the same start position are grouped together
+      for deduplication since dedup uses the start position of the
+      read, not the alignment coordinate on which the reads are
+      sorted. However, by default, dedup reads for another 1000bp
+      before outputting read groups which will avoid any reads being
+      missed with short read sequencing (<1000bp)
 
 --output-stats (string, filename_prefix)
        Output edit distance statistics and UMI usage statistics
@@ -240,12 +246,6 @@ Options
 -S    (string, filename) output file name
 
 -L    (string, filename) log file name
-
-
-Usage
------
-
-    python dedup -I infile.bam -S deduped.bam -L dedup.log
 
 
 .. note::

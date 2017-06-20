@@ -119,15 +119,8 @@ very long (>14bp)
       gene1   transcript1
       gene1   transcript2
       gene2   transcript3
-
-
-Usage
------
-
-    python count -I infile.bam -S gene_counts.tsv -L dedup.log
-
-
 '''
+
 import sys
 import collections
 import re
@@ -206,7 +199,7 @@ def main(argv=None):
                       choices=("adjacency", "directional",
                                "percentile", "unique", "cluster"),
                       default="directional",
-                      help="method to use for umi deduping [default=%default]")
+                      help="method to use for umi counting [default=%default]")
     parser.add_option("--mapping-quality", dest="mapping_quality",
                       type="int",
                       help="Minimum mapping quality for a read to be retained"
@@ -214,11 +207,11 @@ def main(argv=None):
                       default=0)
     parser.add_option("--per-contig", dest="per_contig", action="store_true",
                       default=False,
-                      help=("dedup per contig (field 3 in BAM; RNAME),"
+                      help=("count per contig (field 3 in BAM; RNAME),"
                             " e.g for transcriptome where contig = gene"))
     parser.add_option("--per-cell", dest="per_cell", action="store_true",
                       default=False,
-                      help=("Deduplicate per cell,"
+                      help=("Count per cell,"
                             "e.g for transcriptome where contig = transcript"
                             "must also provide a transript to gene map with"
                             "--gene-transcript-map [default=%default]"))
@@ -233,7 +226,7 @@ def main(argv=None):
                       default=None)
     parser.add_option("--gene-tag", dest="gene_tag",
                       type="string",
-                      help=("Deduplicate per gene where gene is"
+                      help=("Count per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
     parser.add_option("--skip-tags-regex", dest="skip_regex",
