@@ -199,12 +199,6 @@ Options
        junction. By setting this option, you can treat reads with at least
        this many bases soft-clipped at the 3' end as spliced.
 
---multimapping-detection-method (string, choice)
-       If the sam/bam contains tags to identify multimapping reads, you can
-       specify for use when selecting the best read at a given loci.
-       Supported tags are "NH", "X0" and "XT". If not specified, the read
-       with the highest mapping quality will be selected
-
 --read-length
       Use the read length as as a criteria when grouping, for e.g sRNA-Seq
 
@@ -397,15 +391,6 @@ def main(argv=None):
                       default=False,
                       help="Read whole contig before outputting bundles: guarantees that no reads"
                            "are missed, but increases memory usage")
-    parser.add_option("--multimapping-detection-method",
-                      dest="detection_method", type="choice",
-                      choices=("NH", "X0", "XT"),
-                      default=None,
-                      help=("Some aligners identify multimapping using bam "
-                            "tags. Setting this option to NH, X0 or XT will "
-                            "use these tags when selecting the best read "
-                            "amongst reads with the same position and umi "
-                            "[default=%default]"))
     parser.add_option("--mapping-quality", dest="mapping_quality",
                       type="int",
                       help="Minimum mapping quality for a read to be retained"
@@ -497,22 +482,6 @@ def main(argv=None):
 
     nInput, nOutput, unique_id = 0, 0, 0
 
-    if options.detection_method:
-        bam_features = detect_bam_features(infile.filename)
-
-        if not bam_features[options.detection_method]:
-            if sum(bam_features.values()) == 0:
-                raise ValueError(
-                    "There are no bam tags available to detect multimapping. "
-                    "Do not set --multimapping-detection-method")
-            else:
-                raise ValueError(
-                    "The chosen method of detection for multimapping (%s) "
-                    "will not work with this bam. Multimapping can be detected"
-                    " for this bam using any of the following: %s" % (
-                        options.detection_method, ",".join(
-                            [x for x in bam_features if bam_features[x]])))
-
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
         gene_tag = options.gene_tag
@@ -541,7 +510,6 @@ def main(argv=None):
             skip_regex=options.skip_regex,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
-            detection_method=options.detection_method,
             barcode_getter=barcode_getter,
             all_reads=True,
             return_read2=True,
