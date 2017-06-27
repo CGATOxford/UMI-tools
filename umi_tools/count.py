@@ -293,6 +293,8 @@ def main(argv=None):
     else:
         raise ValueError("Unknown UMI extraction method")
 
+    gene_tag = options.gene_tag
+
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
@@ -302,10 +304,8 @@ def main(argv=None):
             metatag = "MC"
             inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
-
         else:
             inreads = infile.fetch()
-            gene_tag = options.gene_tag
 
     for gene, cell, bundle, read_events in umi_methods.get_gene_count(
             inreads,
@@ -313,7 +313,7 @@ def main(argv=None):
             quality_threshold=options.mapping_quality,
             paired=options.paired,
             per_contig=options.per_contig,
-            gene_tag=options.gene_tag,
+            gene_tag=gene_tag,
             skip_regex=options.skip_regex,
             barcode_getter=barcode_getter):
 
