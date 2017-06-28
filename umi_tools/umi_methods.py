@@ -1253,9 +1253,11 @@ def get_gene_count(inreads,
         # overlapping genes
         if read.tid != last_chr:
 
+            # yield gene counts
             for gene in counts_dict:
-                count = counts_dict[gene][cell]
-                yield gene, cell, count, read_events
+                for cell in counts_dict[gene]:
+                    count = counts_dict[gene][cell]
+                    yield gene, cell, count, read_events
 
             last_chr = read.tid
 
