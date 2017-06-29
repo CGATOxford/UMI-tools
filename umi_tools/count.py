@@ -294,6 +294,7 @@ def main(argv=None):
         raise ValueError("Unknown UMI extraction method")
 
     gene_tag = options.gene_tag
+    metacontig2contig = None
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
@@ -314,6 +315,7 @@ def main(argv=None):
             paired=options.paired,
             per_contig=options.per_contig,
             gene_tag=gene_tag,
+            metacontig2contig=metacontig2contig,
             skip_regex=options.skip_regex,
             barcode_getter=barcode_getter):
 
@@ -324,6 +326,7 @@ def main(argv=None):
 
         # set up UMIClusterer functor with methods specific to
         # specified options.method
+
         processor = network.UMIClusterer(options.method)
 
         # group the umis
@@ -349,8 +352,8 @@ def main(argv=None):
         if options.wide_format_cell_counts:
             counts_df = pd.read_table(tmpfilename, sep=":", header=None)
             counts_df.columns = ["gene", "cell", "count"]
-            counts_df = counts_df.pivot(
-                index="gene", columns="cell", values="count")  # pivot table
+            counts_df = pd.pivot_table(counts_df, values='count',
+                                       index='gene', columns='cell')  # pivot
             counts_df = counts_df.fillna(0).astype(int)  # replace NA with 0
             counts_df.to_csv(options.stdout, index=True, sep="\t")
         else:

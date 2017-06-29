@@ -1182,6 +1182,7 @@ def get_gene_count(inreads,
                    paired=False,
                    per_contig=False,
                    gene_tag=None,
+                   metacontig2contig=None,
                    skip_regex=None,
                    barcode_getter=None):
 
@@ -1207,7 +1208,8 @@ def get_gene_count(inreads,
     barcode_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
     '''
 
-    last_chr = ""
+    previous_chr = None
+    previous_gene = None
     gene = ""
 
     # make an empty counts_dict counter
@@ -1216,6 +1218,9 @@ def get_gene_count(inreads,
             lambda: collections.defaultdict(dict)))
 
     read_events = collections.Counter()
+
+    if metacontig2contig:
+        observed_contigs = collections.defaultdict(set)
 
     for read in inreads:
 
@@ -1243,34 +1248,59 @@ def get_gene_count(inreads,
 
         if per_contig:
             gene = read.tid
+
         elif gene_tag:
             gene = read.get_tag(gene_tag)
+
+            if metacontig2contig:
+                # keep track of observed contigs for each gene
+                observed_contigs[gene].add(read.reference_name)
+
             if re.search(skip_regex, gene):
                 read_events['Skipped - matches --skip-tags-regex'] += 1
                 continue
 
-        # only output when the contig changes to avoid problems with
+        # TS: We can safely yield when the contig changes to keep the
+        # size of the count_dict smaller and avoid problems with
         # overlapping genes
-        if read.tid != last_chr:
 
-            # yield gene counts
-            for gene in counts_dict:
-                for cell in counts_dict[gene]:
-                    count = counts_dict[gene][cell]
-                    yield gene, cell, count, read_events
+        if read.reference_name != previous_chr and previous_chr:
 
-            last_chr = read.tid
+            # TS: However, when the BAM contains reads aligned to
+            # transcripts (i.e no gene_transcript_map), we also need
+            # to check all the transcripts for a gene have been
+            # observed, otherwise we may yield for a gene more than once
+            if metacontig2contig:
 
-            # make a new empty counts_dict counter
-            counts_dict = collections.defaultdict(
-                lambda: collections.defaultdict(
-                    lambda: collections.defaultdict(dict)))
+                if observed_contigs[previous_gene] == metacontig2contig[previous_gene]:
+                    # yield only the counts for this gene
+                    for cell in counts_dict[previous_gene]:
+                        count = counts_dict[previous_gene][cell]
+                        yield previous_gene, cell, count, read_events
+
+                    del counts_dict[previous_gene]
+
+            else:
+
+                # yield all gene counts
+                for gene in counts_dict:
+                    for cell in counts_dict[gene]:
+                        count = counts_dict[gene][cell]
+                        yield gene, cell, count, read_events
+
+                # make a new empty counts_dict counter
+                counts_dict = collections.defaultdict(
+                    lambda: collections.defaultdict(
+                        lambda: collections.defaultdict(dict)))
 
         umi, cell = barcode_getter(read)
         try:
             counts_dict[gene][cell][umi]["count"] += 1
         except KeyError:
             counts_dict[gene][cell][umi]["count"] = 1
+
+        previous_chr = read.reference_name
+        previous_gene = gene
 
     # yield gene counts
     for gene in counts_dict:
