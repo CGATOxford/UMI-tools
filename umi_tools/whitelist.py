@@ -1,8 +1,8 @@
 '''
-extract.py - Extract UMI from fastq
+whitelist.py - Identify the true cell barcodes
 ====================================================
 
-:Author: Ian Sudbery, Tom Smith
+:Author: Tom Smith, Ian Sudbery
 :Release: $Id$
 :Date: |today|
 :Tags: Python UMI
@@ -10,12 +10,8 @@ extract.py - Extract UMI from fastq
 Purpose
 -------
 
-Extract UMI barcode from a read and add it to the read name, leaving
-any sample barcode in place. Can deal with paired end reads and UMIs
-split across the paired ends. Can also optionally extract cell
-barcodes and append these to the read name also. See the section below
-for an explanation for how to encode the barcode pattern(s) to
-specficy the position of the UMI +/- cell barcode.
+Extract cell barcodes and identify the most likely true barcodes using
+the 'knee' method
 
 
 Barcode extraction
@@ -91,35 +87,17 @@ the --extract-method option
        processing with dedup, group or count commands
 
 
-Filtering and correcting cell barcodes
---------------------------------------
+Identifying the true cell barcodes
+----------------------------------
 
-umi_tools extract can optionally filter cell barcodes
-(--filter-cell-barcode) against a user-supplied whitelist
-(--whitelist). If a whitelist is not available for your data, e.g
-if you have performed droplet-based scRNA-Seq, you can use the
-whitelist tool.
+We use the distribution of counts per UMI to identify the
+cut-off for 'true' UMIs (the 'knee'). See this blog post for a more
+detailed explanation:
 
-Cell barcodes which do not match the whitelist (user-generated or
-automatically generated) can also be optionally corrected using the
---error-correct-cell option.
+https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
-The whitelist should be in the following format (tab-separated):
-
-    AAAAAA	AGAAAA
-    AAAATC
-    AAACAT
-    AAACTA	AAACTN,GAACTA
-    AAATAC
-    AAATCA	GAATCA
-    AAATGT	AAAGGT,CAATGT
-
-Where column 1 is the whitelisted cell barcodes and column 2 is
-the list (comma-separated) of other cell barcodes which should be
-corrected to the barcode in column 1. If the --error-correct-cell
-option is not used, this column will be ignored. Any additional columns
-in the whitelist input, such as the counts columns from the output of
-umi_tools whitelist, will be ignored.
+You can supply the --plot-prefix option to visualise the threshold set
+for true cell barcodes.
 
 Options
 -------
@@ -138,24 +116,44 @@ Usage:
 ------
 
 For single ended reads:
-        umi_tools extract --extract-method=string
-        --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
+        umi_tools whitelist --bc-pattern=[PATTERN] -L extract.log
+        [OPTIONS]
 
 reads from stdin and outputs to stdout.
 
-For paired end reads:
-        umi_tools extract --extract-method=string
-        --bc-pattern=[PATTERN] --bc-pattern2=[PATTERN]
-        --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
+For paired end reads where the cell barcodes is split across the read pairs:
+        umi_tools whitelist --bc-pattern=[PATTERN]
+        --bc-pattern2=[PATTERN] --read2-in=[FASTQIN] -L extract.log
+        [OPTIONS]
 
-reads end one from stdin and end two from FASTQIN and outputs end one to stdin
-and end two to FASTQOUT.
+reads end one from stdin and end two from FASTQIN and outputs to stdin
 
 
-Using regex and filtering against a whitelist of cell barcodes:
-        umi_tools extract --extract-method=regex --filter-cell-barcode
-        --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
-        -L extract.log [OPTIONS]
+Output:
+-------
+
+The whitlist is outputted as 4 tab-separated columns:
+
+    1. whitelisted cell barcode
+    2. Other cell barcode(s) (comma-separated) to correct to the
+       whitelisted barcode
+    3. Count for whitelisted cell barcodes
+    4. Count(s) for the other cell barcode(s) (comma-separated)
+
+example output:
+
+    AAAAAA      AGAAAA          146	1
+    AAAATC		        22
+    AAACAT		        21
+    AAACTA	AAACTN,GAACTA	27	1,1
+    AAATAC		        72
+    AAATCA	GAATCA	        37	3
+    AAATGT	AAAGGT,CAATGT	41	1,1
+    AAATTG	CAATTG	        36	1
+    AACAAT		        18
+    AACATA		        24
+
+If --error-correct-threshold is set to 0, columns 2 and 4 will be empty.
 
 Command line options
 --------------------
@@ -217,71 +215,39 @@ def main(argv=None):
                       help="barcode is on 3' end of read.")
     parser.add_option("--read2-in", dest="read2_in", type="string",
                       help="file name for read pairs")
-    parser.add_option("--read2-out", dest="read2_out", type="string",
-                      help="file to output processed paired read to")
-    parser.add_option("--read2-out-only", dest="read2_out_only",
-                      action="store_true",
-                      help="Paired reads, only output the second read in the pair")
-    parser.add_option("--quality-filter-threshold",
-                      dest="quality_filter_threshold", type="int",
-                      help=("Remove reads where any UMI base quality score "
-                            "falls below this threshold"))
-    parser.add_option("--quality-filter-mask",
-                      dest="quality_filter_mask", type="int",
-                      help=("If a UMI base has a quality below this threshold, "
-                            "replace the base with 'N'"))
-    parser.add_option("--quality-encoding",
-                      dest="quality_encoding", type="choice",
-                      choices=["phred33", "phred64", "solexa"],
-                      help=("Quality score encoding. Choose from 'phred33'"
-                            "[33-77] 'phred64' [64-106] or 'solexa' [59-106]"))
     parser.add_option("--extract-method",
                       dest="extract_method", type="choice",
                       choices=["string", "regex"],
                       help=("How to extract the umi +/- cell barcodes, Choose "
                             "from 'string' or 'regex'"))
-    parser.add_option("--filter-cell-barcode",
-                      dest="filter_cell_barcode",
-                      action="store_true",
-                      help="Filter the cell barcodes")
-    parser.add_option("--error-correct-cell",
-                      dest="error_correct_cell",
-                      action="store_true",
-                      help=("Correct errors in the cell barcode"))
-    parser.add_option("--whitelist",
-                      dest="whitelist", type="string",
-                      help=("A whitelist of accepted cell barcodes"))
-    parser.add_option("--blacklist",
-                      dest="blacklist", type="string",
-                      help=("A blacklist of accepted cell barcodes"))
-    parser.add_option("--reads-subset",
-                      dest="reads_subset", type="int",
-                      help=("Only extract from the first N reads. If N is "
-                            "greater than the number of reads, all reads will "
-                            "be used"))
+    parser.add_option("--plot-prefix",
+                      dest="plot_prefix", type="string",
+                      help=("Prefix for plots to visualise the automated "
+                            "detection of the number of 'true' cell barcodes"))
+    parser.add_option("--subset-reads",
+                      dest="subset_reads", type="int",
+                      help=("Use only the first N reads to automatically "
+                            "identify the true cell barcodes. If N is greater "
+                            "than the number of reads, all reads will be used"))
+    parser.add_option("--error-correct-threshold",
+                      dest="error_correct_threshold",
+                      type="int",
+                      help=("Hamming distance for correction of "
+                            "barcodes to whitelist barcodes"))
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
-                        whitelist=None,
-                        blacklist=None,
-                        error_correct_cell=False,
+                        whitelist_tsv=None,
+                        blacklist_tsv=None,
+                        error_correct_threshold=1,
                         pattern=None,
                         pattern2=None,
                         read2_in=None,
-                        read2_out=False,
-                        read2_out_only=False,
-                        quality_filter_threshold=None,
-                        quality_encoding=None)
+                        plot_prefix=None,
+                        subset_reads=100000000)
 
     # add common options (-h/--help, ...) and parse command line
 
     (options, args) = U.Start(parser, argv=argv)
-
-    if options.quality_filter_threshold or options.quality_filter_mask:
-        if not options.quality_encoding:
-            U.error("must provide a quality encoding (--quality-"
-                    "encoding) to filter UMIs by quality (--quality"
-                    "-filter-threshold) or mask low quality bases "
-                    "with (--quality-filter-mask)")
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
@@ -354,92 +320,75 @@ def main(argv=None):
             U.error("barcode regex(es) do not include any umi groups "
                     "(starting with 'umi_') %s, %s" (
                         options.pattern, options.pattern2))
-
-    if options.filter_cell_barcodes:
-        if not extract_cell:
-            if options.extract_method == "string":
-                U.error("barcode pattern(s) do not include any cell bases "
-                        "(marked with 'Cs') %s, %s" % (
-                            options.pattern, options.pattern2))
-            elif options.extract_method == "regex":
-                U.error("barcode regex(es) do not include any cell groups "
-                        "(starting with 'cell_') %s, %s" (
-                            options.pattern, options.pattern2))
+    if not extract_cell:
+        if options.extract_method == "string":
+            U.error("barcode pattern(s) do not include any cell bases "
+                    "(marked with 'Cs') %s, %s" % (
+                        options.pattern, options.pattern2))
+        elif options.extract_method == "regex":
+            U.error("barcode regex(es) do not include any cell groups "
+                    "(starting with 'cell_') %s, %s" (
+                        options.pattern, options.pattern2))
 
     if options.stdin == sys.stdin:
-        if not options.whitelist and options.filter_cell_barcode:
-            U.error("cannot support reading from stdin if correcting cell barcode")
         read1s = umi_methods.fastqIterate(U.openFile(options.stdin))
     else:
         read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))
 
     # set up read extractor
     ReadExtractor = umi_methods.ExtractFilterAndUpdate(
-        options.extract_method,
-        options.pattern,
-        options.pattern2,
-        options.prime3,
-        extract_cell,
-        options.quality_encoding,
-        options.quality_filter_threshold,
-        options.quality_filter_mask,
-        options.filter_cell_barcode)
+        method=options.extract_method,
+        pattern=options.pattern,
+        pattern2=options.pattern2,
+        prime3=options.prime3,
+        extract_cell=extract_cell)
 
-    if options.filter_cell_barcode:
-        cell_whitelist, false_to_true_map = umi_methods.getUserDefinedBarcodes(
-            options.whitelist, options.error_correct_cell)
+    cell_barcode_counts = collections.Counter()
 
-        ReadExtractor.cell_whitelist = cell_whitelist
-        ReadExtractor.false_to_true_map = false_to_true_map
+    n_reads = 0
 
-    if options.blacklist:
-        blacklist = set()
-        with U.openFile(options.blacklist, "r") as inf:
-            for line in inf:
-                blacklist.add(line.strip().split("\t")[0])
-        ReadExtractor.cell_blacklist = blacklist
-
-    if options.read2_in is None:
-        for read in read1s:
-            new_read = ReadExtractor(read)
-
-            if options.reads_subset:
-                if (ReadExtractor.read_counts['Input Reads'] >
-                    options.reads_subset):
+    if not options.read2_in:
+        for read1 in read1s:
+            n_reads += 1
+            cell_barcode = ReadExtractor.getCellBarcode(read1)
+            if cell_barcode:
+                cell_barcode_counts[cell_barcode] += 1
+            if options.subset_reads:
+                if n_reads > options.subset_reads:
                     break
-
-            if not new_read:
-                continue
-
-            options.stdout.write(str(new_read) + "\n")
-
     else:
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
-
-        if options.read2_out:
-            read2_out = U.openFile(options.read2_out, "w")
-
         for read1, read2 in izip(read1s, read2s):
-            reads = ReadExtractor(read1, read2)
-
-            if options.reads_subset:
-                if (ReadExtractor.read_counts['Input Reads'] >
-                    options.reads_subset):
+            n_reads += 1
+            cell_barcode = ReadExtractor.getCellBarcode(read1, read2)
+            if cell_barcode:
+                cell_barcode_counts[cell_barcode] += 1
+            if options.subset_reads:
+                if n_reads > options.subset_reads:
                     break
 
-            if not reads:
-                continue
-            else:
-                new_read1, new_read2 = reads
+    cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
+        cell_barcode_counts,
+        options.error_correct_threshold,
+        options.plot_prefix)
 
-            if not options.read2_out_only:
-                options.stdout.write(str(new_read1) + "\n")
+    # re-make the reads1s iterator
+    read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))
 
-            if options.read2_out:
-                read2_out.write(str(new_read2) + "\n")
+    for barcode in sorted(list(cell_whitelist)):
 
-    if options.read2_out:
-        read2_out.close()
+        if true_to_false_map:
+            corrected_barcodes = ",".join(
+                sorted(true_to_false_map[barcode]))
+            corrected_barcode_counts = ",".join(
+                map(str, [cell_barcode_counts[x] for x
+                          in sorted(true_to_false_map[barcode])]))
+        else:
+            corrected_barcodes, corrected_barcode_counts = "", ""
+
+        options.stdout.write("%s\t%s\t%s\t%s\n" % (
+            barcode, corrected_barcodes, cell_barcode_counts[barcode],
+            corrected_barcode_counts))
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))
