@@ -131,7 +131,7 @@ Options
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
        increased. The default value of 1 works best unless the UMI is
-very long (>14bp)
+       very long (>14bp)
 
 --paired
        BAM is paired end - output both read pairs. This will also
@@ -181,22 +181,6 @@ very long (>14bp)
            single UMI are reported seperately. Pre- and post-deduplication and
            inluding null expectations from random sampling of UMIs from the
            UMIs observed across all positions.
-
---further-stats (string, filename_prefix)
-       Output additional statistics on the toplogies of the UMI
-       clusters. Note: each position may contain multiple clusters of
-       connected UMIs(nodes). Further stats are only possible when
-       using "adjacency" or "cluster" methods
-
-       Output files use the same prefix as above:
-
-       "[prefix]_stats_topologies.tsv"
-           The number of clusters with a single node, a single "hub"
-           node connected to all other nodes or a more "complex"
-           topology
-
-       "[prefix]_stats_nodes.tsv"
-           Hisogram of the number of nodes per cluster
 
 --subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
@@ -392,9 +376,6 @@ def main(argv=None):
     parser.add_option("--output-stats", dest="stats", type="string",
                       default=False,
                       help="Specify location to output stats")
-    parser.add_option("--further-stats", dest="further_stats",
-                      action="store_true", default=False,
-                      help="Output further stats")
     parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
                       default=False,
                       help="Read whole contig before outputting bundles: guarantees that no reads"
@@ -475,16 +456,8 @@ def main(argv=None):
             raise ValueError("'--output-stats' and '--ignore-umi' options"
                              " cannot be used together")
 
-    if options.further_stats:
-        if not options.stats:
-            raise ValueError("'--further-stats' options requires "
-                             "'--output-stats' option")
-        if options.method not in ["cluster", "adjacency"]:
-            raise ValueError("'--further-stats' only enabled with 'cluster' "
-                             "and 'adjacency' methods")
-
     if options.per_gene:
-        if not options.gene_transcript_map and not options.gene_map:
+        if not options.gene_transcript_map and not options.gene_tag:
             raise ValueError("--per-gene option requires --gene-transcript-map "
                              "or --gene-tag")
     try:
@@ -542,13 +515,18 @@ def main(argv=None):
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
+        gene_tag = options.gene_tag
     else:
         if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
         else:
             inreads = infile.fetch()
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -559,14 +537,14 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
-            per_gene=options.per_gene,
-            gene_tag=options.gene_tag,
+            gene_tag=gene_tag,
             skip_regex=options.skip_regex,
             whole_contig=options.whole_contig,
             read_length=options.read_length,
             detection_method=options.detection_method,
             umi_getter=umi_getter,
             all_reads=False,
+            return_read2=False,
             return_unmapped=False):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
@@ -595,14 +573,12 @@ def main(argv=None):
 
             # set up ReadCluster functor with methods specific to
             # specified options.method
-            processor = network.ReadClusterer(options.method)
+            processor = network.ReadDeduplicator(options.method)
 
             # dedup using umis and write out deduped bam
-            reads, umis, umi_counts, topologies, nodes = processor(
+            reads, umis, umi_counts = processor(
                 bundle=bundle,
-                threshold=options.threshold,
-                stats=options.stats,
-                further_stats=options.further_stats)
+                threshold=options.threshold)
 
             for read in reads:
                 outfile.write(read)
@@ -627,12 +603,6 @@ def main(argv=None):
                 random_umis = read_gn.getUmis(cluster_size)
                 average_distance_null = umi_methods.get_average_umi_distance(random_umis)
                 post_cluster_stats_null.append(average_distance_null)
-
-                if options.further_stats:
-                    for c_type, count in topologies.most_common():
-                        topology_counts[c_type] += count
-                    for c_type, count in nodes.most_common():
-                        node_counts[c_type] += count
 
     outfile.close()
 
@@ -706,17 +676,6 @@ def main(argv=None):
 
         edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
                                 index=False, sep="\t")
-
-        if options.further_stats:
-            with U.openFile(options.stats + "_topologies.tsv", "w") as outf:
-                outf.write(
-                    "\n".join(["\t".join((x, str(y)))
-                               for x, y in topology_counts.most_common()]) + "\n")
-
-            with U.openFile(options.stats + "_nodes.tsv", "w") as outf:
-                outf.write(
-                    "\n".join(["\t".join(map(str, (x, y))) for
-                               x, y in node_counts.most_common()]) + "\n")
 
     # write footer and output benchmark information.
 

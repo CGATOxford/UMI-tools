@@ -64,6 +64,13 @@ not assigned to a "true" UMI.
       Identify clusters of connected UMIs (based on hamming distance
       threshold). Each network is a read group
 
+  "adjacency"
+      Cluster UMIs as above. For each cluster, select the node(UMI)
+      with the highest counts. Visit all nodes one edge away. If all
+      nodes have been visted, stop. Otherise, repeat with remaining
+      nodes until all nodes have been visted. Each step
+      defines a read group.
+
   "directional"
       Identify clusters of connected UMIs (based on hamming distance
       threshold) and umi A counts >= (2* umi B counts) - 1. Each
@@ -103,6 +110,10 @@ relate to the group.
     Alignment position. Note that this position is not the start
     position of the read in the BAM file but the start of the read
     taking into account the read strand and cigar
+
+  - gene
+    The gene assignment for the read. Note, this will be NA unless the
+    --per-gene option is specified
 
   - umi
     The read UMI
@@ -149,19 +160,12 @@ Options
       Options are:
 
       - "unique"
-      Reads group share the exact same UMI
 
       - "cluster"
-      Identify clusters of connected UMIs (based on edit distance
-      threshold). Each network is a read group
 
-      - "directional"
-      Identify clusters of connected UMIs (based on edit distance
-      threshold) and umi A counts >= (2* umi B counts) - 1. Each
-      network is a read group.
+      - "adjacency"
 
-
-      - "directional"
+      - "directional" (default)
 
 --edit-distance-threshold (int)
        For the adjacency and cluster methods the threshold for the
@@ -195,10 +199,6 @@ Options
 --read-length
       Use the read length as as a criteria when deduping, for e.g sRNA-Seq
 
---whole-contig
-      Consider all alignments to a single contig together. This is useful if
-      you have aligned to a transcriptome multi-fasta
-
 --subset (float, [0-1])
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
@@ -211,7 +211,7 @@ Options
       All reads with the same contig will be
       considered to have the same alignment position. This is useful
       if your library prep generates PCR duplicates with non identical
-      alignment positions such as CEL-Seq. In this case, you would
+      alignment positions such as CEL-Seq. In this case, you could
       align to a reference transcriptome with one transcript per gene
 
 --per-gene (string)
@@ -373,11 +373,6 @@ def main(argv=None):
                       help=("Deduplicate per gene where gene is"
                             "defined by this bam tag [default=%default]"),
                       default=None)
-    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
-                      default=False,
-                      help="Read whole contig before outputting"
-                           "bundles: guarantees that no reads are"
-                           "missed, but increases memory usage")
     parser.add_option("--read-length", dest="read_length", action="store_true",
                       default=False,
                       help=("use read length in addition to position and UMI"
@@ -397,6 +392,11 @@ def main(argv=None):
                       default=False,
                       help=("output a bam file with read groups tagged using the UG tag"
                             "[default=%default]"))
+    parser.add_option("--skip-tags-regex", dest="skip_regex",
+                      type="string",
+                      help=("Used with --gene-tag. "
+                            "Ignore reads where the gene-tag matches this regex"),
+                      default="^[__|Unassigned]")
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -433,15 +433,14 @@ def main(argv=None):
 
     if options.output_bam:
         outfile = pysam.Samfile(out_name, out_mode, template=infile)
-        if options.paired:
-            outfile = umi_methods.TwoPassPairWriter(infile, outfile, tags=True)
     else:
         outfile = None
 
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
-        mapping_outfile.write(
-            "read_id\tcontig\tposition\tumi\tumi_count\tfinal_umi\tfinal_umi_count\tunique_id\n")
+        mapping_outfile.write("%s\n" % "\t".join(
+            ["read_id", "contig", "position", "gene", "umi", "umi_count",
+             "final_umi", "final_umi_count", "unique_id"]))
 
     # set the method with which to extract umis from reads
     if options.get_umi_method == "read_id":
@@ -457,13 +456,18 @@ def main(argv=None):
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
+        gene_tag = options.gene_tag
     else:
-        if options.per_gene:
+        if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
-                options.gene_transcript_map)
-            inreads = umi_methods.metafetcher(infile, metacontig2contig)
+                infile, options.gene_transcript_map)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
         else:
             inreads = infile.fetch(until_eof=options.output_unmapped)
+            gene_tag = options.gene_tag
 
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
@@ -474,20 +478,26 @@ def main(argv=None):
             spliced=options.spliced,
             soft_clip_threshold=options.soft,
             per_contig=options.per_contig,
-            whole_contig=options.whole_contig,
+            gene_tag=gene_tag,
+            skip_regex=options.skip_regex,
             read_length=options.read_length,
             umi_getter=umi_getter,
             all_reads=True,
+            return_read2=True,
             return_unmapped=options.output_unmapped):
 
-        if status == 'unmapped' and options.output_unmapped:
+        # write out read2s and unmapped if option set
+        if status == 'single_read':
             # bundle is just a single read here
             outfile.write(bundle)
             nInput += 1
             nOutput += 1
             continue
 
-        nInput += sum([bundle[umi]["count"] for umi in bundle])
+        umis = bundle.keys()
+        counts = {umi: bundle[umi]["count"] for umi in umis}
+
+        nInput += sum(counts.values())
 
         if nOutput % 10000 == 0:
             U.debug("Outputted %i" % nOutput)
@@ -495,15 +505,15 @@ def main(argv=None):
         if nInput % 1000000 == 0:
             U.debug("Read %i input reads" % nInput)
 
-        # set up ReadCluster functor with methods specific to
+        # set up UMIClusterer functor with methods specific to
         # specified options.method
-        processor = network.ReadClusterer(options.method)
+        processor = network.UMIClusterer(options.method)
 
-        bundle, groups, counts = processor(
-            bundle=bundle,
-            threshold=options.threshold,
-            stats=True,
-            deduplicate=False)
+        # group the umis
+        groups = processor(
+            umis,
+            counts,
+            threshold=options.threshold)
 
         for umi_group in groups:
             top_umi = umi_group[0]
@@ -514,21 +524,20 @@ def main(argv=None):
                 reads = bundle[umi]['read']
                 for read in reads:
                     if outfile:
-                        if options.paired:
-                            # if paired, we need to supply the tags to
-                            # add to the paired read
-                            outfile.write(read, unique_id, top_umi)
-
-                        else:
-                            # Add the 'UG' tag to the read
-                            read.tags += [('UG', unique_id)]
-                            read.tags += [(options.umi_group_tag, top_umi)]
-                            outfile.write(read)
+                        # Add the 'UG' tag to the read
+                        read.tags += [('UG', unique_id)]
+                        read.tags += [(options.umi_group_tag, top_umi)]
+                        outfile.write(read)
 
                     if options.tsv:
+                        if options.per_gene:
+                            gene = read.get_tag(gene_tag)
+                        else:
+                            gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
                             umi_methods.get_read_position(read, options.soft)[1],
+                            gene,
                             umi.decode(),
                             counts[umi],
                             top_umi.decode(),
