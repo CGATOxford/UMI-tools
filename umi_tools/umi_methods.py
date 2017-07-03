@@ -1229,7 +1229,7 @@ def get_gene_count(inreads,
         except KeyError:
             counts_dict[gene][umi]["count"] = 1
 
-    # yield remaining genes
+    # yield gene counts
     for gene in counts_dict:
         yield gene, counts_dict[gene], read_events
 
