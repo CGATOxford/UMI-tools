@@ -194,9 +194,9 @@ class ReadClusterer:
     def _get_adj_list_adjacency(self, umis, counts, threshold):
         ''' identify all umis within hamming distance threshold'''
         umi_length = len(umis[0])
-        substr_idx = build_substr_idx(umis, umi_length, threshold)
         adj_list = {umi: [] for umi in umis}
         if len(umis) > 25:
+            substr_idx = build_substr_idx(umis, umi_length, threshold)
             iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
         else:
             iter_umi_pairs = itertools.combinations(umis, 2)
@@ -211,9 +211,9 @@ class ReadClusterer:
         ''' identify all umis within the hamming distance threshold
         and where the counts of the first umi is > (2 * second umi counts)-1'''
         umi_length = len(umis[0])
-        substr_idx = build_substr_idx(umis, umi_length, threshold)
         adj_list = {umi: [] for umi in umis}
         if len(umis) > 25:
+            substr_idx = build_substr_idx(umis, umi_length, threshold)
             iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
         else:
             iter_umi_pairs = itertools.combinations(umis, 2)
