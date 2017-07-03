@@ -233,7 +233,7 @@ class UMIClusterer:
         ''' identify all umis within hamming distance threshold'''
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        for umi1, umi2 in itertools.combinations(counts.keys(), 2):
             if edit_distance(umi1, umi2) <= threshold:
                 adj_list[umi1].append(umi2)
                 adj_list[umi2].append(umi1)
@@ -245,7 +245,7 @@ class UMIClusterer:
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        for umi1, umi2 in itertools.combinations(counts.keys(), 2):
             if edit_distance(umi1, umi2) <= threshold:
                 if counts[umi1] >= (counts[umi2]*2)-1:
                     adj_list[umi1].append(umi2)
