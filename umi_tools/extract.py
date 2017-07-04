@@ -276,8 +276,8 @@ def main(argv=None):
                       help=("Only extract from the first N reads. If N is "
                             "greater than the number of reads, all reads will "
                             "be used"))
-    parser.add_option("--reconsile-pairs",
-                      dest="reconsile", action="store_true",
+    parser.add_option("--reconcile-pairs",
+                      dest="reconcile", action="store_true",
                       help=("Allow the presences of reads in read2 input that are"
                             "not present in read1 input. This allows cell barcode"
                             "filtering of read1s without considering read2s"))
@@ -297,7 +297,7 @@ def main(argv=None):
                         plot_prefix=None,
                         output_whitelist=None,
                         cell_barcode_subset=50000000,
-                        reconsile=False)
+                        reconcile=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -506,7 +506,7 @@ def main(argv=None):
         if options.read2_out:
             read2_out = U.openFile(options.read2_out, "w")
 
-        if options.reconsile:
+        if options.reconcile:
             strict = False
         else:
             strict = True
