@@ -140,10 +140,16 @@ def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
 
     local_mins = argrelextrema(density(xx), np.less)[0]
     local_min = None
-    for poss_local_min in local_mins:
-        if poss_local_min >= 0.2 * xx_values:
+
+    # TS: Set of heuristic thresholds to decide which local minimum to select
+    # This is very unlikely to be the best way to achieve this!
+    for poss_local_min in local_mins[::-1]:
+        if (poss_local_min >= 0.2 * xx_values and
+            (log_counts.max() - xx[poss_local_min] > 1 or
+             xx[poss_local_min] < log_counts.max()/2)):
             local_min = poss_local_min
             break
+
     if local_min is None:
         return None
 
