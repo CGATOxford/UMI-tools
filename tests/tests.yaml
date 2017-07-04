@@ -44,7 +44,13 @@ extract_scrb_seq_automatic_knee:
       references: [scrb_extract_auto_knee.fastq, scrb_extract_auto_knee.tsv]
       options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --read2-out=scrb_extract_auto_knee.fastq  --output-whitelist=scrb_extract_auto_knee.tsv --error-correct-cell --error-correct-threshold=1 --blacklist-tsv=<DIR>/scrb_seq_blacklist
 
-
+extract_scrb_seq_prefiltered:
+      skip_python:
+      stdin: scrb_filtered_fastq.1.gz
+      outputs: [scrb_extract_prefiltered_test.fastq]
+      references: [scrb_extract.fastq]
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-out-only  -L test.log  --read2-out=scrb_extract_prefiltered_test.fastq --reconsile-pairs
+      
 extract_indrop_automatic_knee:
       skip_python:
       stdin: indrop.fastq.1.gz
