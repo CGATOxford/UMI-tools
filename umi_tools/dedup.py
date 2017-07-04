@@ -555,6 +555,10 @@ def main(argv=None):
             inreads = infile.fetch()
             gene_tag = options.gene_tag
 
+    # set up ReadCluster functor with methods specific to
+    # specified options.method
+    processor = network.ReadDeduplicator(options.method)
+
     for bundle, read_events, status in umi_methods.get_bundles(
             inreads,
             ignore_umi=options.ignore_umi,
@@ -597,10 +601,6 @@ def main(argv=None):
                 outfile.write(bundle[umi]["read"])
 
         else:
-
-            # set up ReadCluster functor with methods specific to
-            # specified options.method
-            processor = network.ReadDeduplicator(options.method)
 
             # dedup using umis and write out deduped bam
             reads, umis, umi_counts = processor(
@@ -710,10 +710,19 @@ def main(argv=None):
                                 index=False, sep="\t")
 
     # write footer and output benchmark information.
-
     U.info("%s" % ", ".join(
         ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+
     U.info("Number of reads out: %i" % nOutput)
+
+    if not options.ignore_umi:  # otherwise processor has not been used
+        U.info("Total number of positions deduplicated: %i" %
+               processor.UMIClusterer.positions)
+        U.info("Mean number of unique UMIs per position: %.2f" %
+               (float(processor.UMIClusterer.total_umis_per_position) /
+                processor.UMIClusterer.positions))
+        U.info("Max. number of unique UMIs per position: %i" %
+               processor.UMIClusterer.max_umis_per_position)
 
     U.Stop()
 
