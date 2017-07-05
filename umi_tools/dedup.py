@@ -499,7 +499,7 @@ def main(argv=None):
     if options.paired:
         outfile = umi_methods.TwoPassPairWriter(infile, outfile)
 
-    nInput, nOutput = 0, 0
+    nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
     if options.detection_method:
         bam_features = detect_bam_features(infile.filename)
@@ -559,31 +559,34 @@ def main(argv=None):
     # specified options.method
     processor = network.ReadDeduplicator(options.method)
 
-    for bundle, read_events, status in umi_methods.get_bundles(
-            inreads,
-            ignore_umi=options.ignore_umi,
-            subset=options.subset,
-            quality_threshold=options.mapping_quality,
-            paired=options.paired,
-            spliced=options.spliced,
-            soft_clip_threshold=options.soft,
-            per_contig=options.per_contig,
-            gene_tag=gene_tag,
-            skip_regex=options.skip_regex,
-            whole_contig=options.whole_contig,
-            read_length=options.read_length,
-            detection_method=options.detection_method,
-            barcode_getter=barcode_getter,
-            all_reads=False,
-            return_read2=False,
-            return_unmapped=False):
+    bundle_iterator = umi_methods.get_bundles(
+        ignore_umi=options.ignore_umi,
+        subset=options.subset,
+        quality_threshold=options.mapping_quality,
+        paired=options.paired,
+        spliced=options.spliced,
+        soft_clip_threshold=options.soft,
+        per_contig=options.per_contig,
+        gene_tag=gene_tag,
+        skip_regex=options.skip_regex,
+        whole_contig=options.whole_contig,
+        read_length=options.read_length,
+        detection_method=options.detection_method,
+        barcode_getter=barcode_getter,
+        all_reads=False,
+        return_read2=False,
+        return_unmapped=False)
+
+    for bundle, key, status in bundle_iterator(inreads):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
-        if nOutput % 10000 == 0:
+        while nOutput >= output_reads + 10000:
+            output_reads += 10000
             U.debug("Outputted %i" % nOutput)
 
-        if nInput % 1000000 == 0:
+        while nInput >= output_reads + 1000000:
+            input_reads += 1000000
             U.debug("Read %i input reads" % nInput)
 
         if options.stats:
@@ -710,8 +713,9 @@ def main(argv=None):
                                 index=False, sep="\t")
 
     # write footer and output benchmark information.
-    U.info("%s" % ", ".join(
-        ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+    U.info(
+        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
+                                 bundle_iterator.read_events.most_common()]))
 
     U.info("Number of reads out: %i" % nOutput)
 

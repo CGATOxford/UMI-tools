@@ -308,16 +308,21 @@ def main(argv=None):
         else:
             inreads = infile.fetch()
 
-    for gene, cell, bundle, read_events in umi_methods.get_gene_count(
-            inreads,
-            subset=options.subset,
-            quality_threshold=options.mapping_quality,
-            paired=options.paired,
-            per_contig=options.per_contig,
-            gene_tag=gene_tag,
-            metacontig2contig=metacontig2contig,
-            skip_regex=options.skip_regex,
-            barcode_getter=barcode_getter):
+    bundle_iterator = umi_methods.get_bundles(
+        subset=options.subset,
+        quality_threshold=options.mapping_quality,
+        paired=options.paired,
+        per_contig=options.per_contig,
+        gene_tag=gene_tag,
+        metacontig2contig=metacontig2contig,
+        skip_regex=options.skip_regex,
+        barcode_getter=barcode_getter)
+
+    for bundle, key, status in bundle_iterator(inreads):
+        if status == "single_read":
+            continue
+
+        gene, cell = key
 
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
@@ -376,7 +381,7 @@ def main(argv=None):
     os.unlink(tmpfilename)
 
     # output reads events and benchmark information.
-    for event in read_events.most_common():
+    for event in bundle_iterator.read_events.most_common():
         U.info("%s: %s" % (event[0], event[1]))
 
     U.info("Number of reads counted: %i" % nOutput)

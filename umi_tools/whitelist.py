@@ -346,6 +346,7 @@ def main(argv=None):
     cell_barcode_counts = collections.Counter()
 
     n_reads = 0
+    n_cell_barcodes = 0
 
     if not options.read2_in:
         for read1 in read1s:
@@ -353,8 +354,9 @@ def main(argv=None):
             cell_barcode = ReadExtractor.getCellBarcode(read1)
             if cell_barcode:
                 cell_barcode_counts[cell_barcode] += 1
+                n_cell_barcodes += 1
             if options.subset_reads:
-                if n_reads > options.subset_reads:
+                if n_cell_barcodes > options.subset_reads:
                     break
     else:
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
@@ -390,8 +392,9 @@ def main(argv=None):
             barcode, corrected_barcodes, cell_barcode_counts[barcode],
             corrected_barcode_counts))
 
-    for k, v in ReadExtractor.getReadCounts().most_common():
-        U.info("%s: %s" % (k, v))
+    U.info("Parsed %i reads" % n_reads)
+    U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
+    U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
 
     U.Stop()
 

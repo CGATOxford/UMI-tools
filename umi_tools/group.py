@@ -480,7 +480,7 @@ def main(argv=None):
     else:
         raise ValueError("Unknown umi extraction method")
 
-    nInput, nOutput, unique_id = 0, 0, 0
+    nInput, nOutput, unique_id, input_reads, output_reads = 0, 0, 0, 0, 0
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
@@ -497,23 +497,24 @@ def main(argv=None):
             inreads = infile.fetch(until_eof=options.output_unmapped)
             gene_tag = options.gene_tag
 
-    for bundle, read_events, status in umi_methods.get_bundles(
-            inreads,
-            ignore_umi=False,
-            subset=options.subset,
-            quality_threshold=options.mapping_quality,
-            paired=options.paired,
-            spliced=options.spliced,
-            soft_clip_threshold=options.soft,
-            per_contig=options.per_contig,
-            gene_tag=gene_tag,
-            skip_regex=options.skip_regex,
-            whole_contig=options.whole_contig,
-            read_length=options.read_length,
-            barcode_getter=barcode_getter,
-            all_reads=True,
-            return_read2=True,
-            return_unmapped=options.output_unmapped):
+    bundle_iterator = umi_methods.get_bundles(
+        ignore_umi=False,
+        subset=options.subset,
+        quality_threshold=options.mapping_quality,
+        paired=options.paired,
+        spliced=options.spliced,
+        soft_clip_threshold=options.soft,
+        per_contig=options.per_contig,
+        gene_tag=gene_tag,
+        skip_regex=options.skip_regex,
+        whole_contig=options.whole_contig,
+        read_length=options.read_length,
+        barcode_getter=barcode_getter,
+        all_reads=True,
+        return_read2=True,
+        return_unmapped=options.output_unmapped)
+    
+    for bundle, key, status in bundle_iterator(inreads):
 
         # write out read2s and unmapped if option set
         if status == 'single_read':
@@ -528,10 +529,12 @@ def main(argv=None):
 
         nInput += sum(counts.values())
 
-        if nOutput % 10000 == 0:
+        while nOutput >= output_reads + 10000:
+            output_reads += 10000
             U.debug("Outputted %i" % nOutput)
 
-        if nInput % 1000000 == 0:
+        while nInput >= output_reads + 1000000:
+            input_reads += 1000000
             U.debug("Read %i input reads" % nInput)
 
         # set up UMIClusterer functor with methods specific to
@@ -588,8 +591,9 @@ def main(argv=None):
         mapping_outfile.close()
 
     # write footer and output benchmark information.
-    U.info("Reads: %s" % ", ".join(
-        ["%s: %s" % (x[0], x[1]) for x in read_events.most_common()]))
+    U.info(
+        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
+                                 bundle_iterator.read_events.most_common()]))
     U.info("Number of reads out: %i, Number of groups: %i" %
            (nOutput, unique_id))
     U.Stop()

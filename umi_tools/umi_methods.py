@@ -824,9 +824,6 @@ class ExtractFilterAndUpdate:
         else:
             return read1, read2
 
-    def getReadCounts(self):
-        return self.read_counts
-
 
 class TwoPassPairWriter:
     '''This class makes a note of reads that need their pair outputting
@@ -907,34 +904,6 @@ class TwoPassPairWriter:
         self.outfile.close()
 
 
-def get_read_position(read, soft_clip_threshold):
-    ''' '''
-    is_spliced = False
-
-    if read.is_reverse:
-        pos = read.aend
-        if read.cigar[-1][0] == 4:
-            pos = pos + read.cigar[-1][1]
-        start = read.pos
-
-        if ('N' in read.cigarstring or
-            (read.cigar[0][0] == 4 and
-             read.cigar[0][1] > soft_clip_threshold)):
-            is_spliced = True
-    else:
-        pos = read.pos
-        if read.cigar[0][0] == 4:
-            pos = pos - read.cigar[0][1]
-        start = pos
-
-        if ('N' in read.cigarstring or
-            (read.cigar[-1][0] == 4 and
-             read.cigar[-1][1] > soft_clip_threshold)):
-            is_spliced = True
-
-    return start, pos, is_spliced
-
-
 def getMetaContig2contig(bamfile, gene_transcript_map):
     ''' '''
     references = bamfile.references
@@ -962,30 +931,44 @@ def metafetcher(bamfile, metacontig2contig, metatag):
                 read.tags += [(metatag, metacontig)]
                 yield read
 
+def get_read_position(read, soft_clip_thresholds):
+    ''' get the read position (taking account of clipping) '''
+    is_spliced = False
 
-def get_bundles(inreads,
-                ignore_umi=False,
-                subset=None,
-                quality_threshold=0,
-                paired=False,
-                spliced=False,
-                soft_clip_threshold=0,
-                per_contig=False,
-                gene_tag=None,
-                skip_regex=None,
-                whole_contig=False,
-                read_length=False,
-                detection_method=False,
-                barcode_getter=None,
-                all_reads=False,
-                return_read2=False,
-                return_unmapped=False):
+    if read.is_reverse:
+        pos = read.aend
+        if read.cigar[-1][0] == 4:
+            pos = pos + read.cigar[-1][1]
+        start = read.pos
 
-    ''' Returns a dictionary of dictionaries, representing the unique reads at
-    a position/spliced/strand combination. The key to the top level dictionary
-    is a umi. Each dictionary contains a "read" entry with the best read, and a
-    count entry with the number of reads with that position/spliced/strand/umi
-    combination
+        if ('N' in read.cigarstring or
+            (read.cigar[0][0] == 4 and
+             read.cigar[0][1] > soft_clip_threshold)):
+            is_spliced = True
+    else:
+        pos = read.pos
+        if read.cigar[0][0] == 4:
+            pos = pos - read.cigar[0][1]
+        start = pos
+
+        if ('N' in read.cigarstring or
+            (read.cigar[-1][0] == 4 and
+             read.cigar[-1][1] > soft_clip_threshold)):
+            is_spliced = True
+
+    return start, pos, is_spliced
+
+
+class get_bundles:
+
+    ''' A functor - When called returns a dictionary of dictionaries,
+    representing the unique reads at a position/spliced/strand
+    combination. The key to the top level dictionary is a umi. Each
+    dictionary contains a "read" entry with the best read, and a count
+    entry with the number of reads with that
+    position/spliced/strand/umi combination
+
+    options for initiation:
 
     ignore_umi: don't include the umi in the dict key
 
@@ -1027,315 +1010,263 @@ def get_bundles(inreads,
     return_unmapped: Return unmapped reads immediately as a single read
     '''
 
-    last_pos = 0
-    last_chr = ""
-    reads_dict = collections.defaultdict(
-        lambda: collections.defaultdict(
-            lambda: collections.defaultdict(dict)))
-    read_counts = collections.defaultdict(
-        lambda: collections.defaultdict(dict))
+    def __init__(self,
+                 ignore_umi=False,
+                 subset=None,
+                 quality_threshold=0,
+                 paired=False,
+                 spliced=False,
+                 soft_clip_threshold=0,
+                 per_contig=False,
+                 gene_tag=None,
+                 skip_regex=None,
+                 whole_contig=False,
+                 read_length=False,
+                 detection_method=False,
+                 barcode_getter=None,
+                 all_reads=False,
+                 return_read2=False,
+                 return_unmapped=False,
+                 metacontig2contig=None):
 
-    read_events = collections.Counter()
+        self.ignore_umi = ignore_umi
+        self.subset = subset
+        self.quality_threshold = quality_threshold
+        self.paired = paired
+        self.spliced = spliced
+        self.soft_clip_threshold = soft_clip_threshold
+        self.per_contig = per_contig
+        self.gene_tag = gene_tag
+        self.skip_regex = skip_regex
+        self.whole_contig = whole_contig
+        self.read_length = read_length
+        self.detection_method = detection_method
+        self.barcode_getter = barcode_getter
+        self.all_reads = all_reads
+        self.return_read2 = return_read2
+        self.return_unmapped = return_unmapped
+        self.metacontig2contig = metacontig2contig
 
-    for read in inreads:
+        self.read_events = collections.Counter()
+        self.observed_contigs = collections.defaultdict(set)
 
-        if read.is_read2:
-            if return_read2:
-                if not read.is_unmapped or (read.is_unmapped and return_unmapped):
-                    yield read, read_events, 'single_read'
-            continue
-        else:
-            read_events['Input Reads'] += 1
+        self.last_pos = 0
+        self.last_chr = ""
+        self.start = 0
+        self.current_chr = ""
 
-        if read.is_unmapped:
-            if paired:
-                if read.mate_is_unmapped:
-                    read_events['Both unmapped'] += 1
-                else:
-                    read_events['Read 1 unmapped'] += 1
-            else:
-                read_events['Single end unmapped'] += 1
+        self.reads_dict = collections.defaultdict(
+            lambda: collections.defaultdict(
+                lambda: collections.defaultdict(dict)))
+        self.read_counts = collections.defaultdict(
+            lambda: collections.defaultdict(dict))
 
-            if return_unmapped:
-                read_events['Input Reads'] += 1
-                yield read, read_events, 'single_read'
-            continue
 
-        if read.mate_is_unmapped and paired:
-            if not read.is_unmapped:
-                read_events['Read 2 unmapped'] += 1
-            if return_unmapped:
-                yield read, read_events, 'single_read'
-            continue
-
-        if paired:
-            read_events['Paired Reads'] += 1
-
-        if subset:
-            if random.random() >= subset:
-                read_events['Randomly excluded'] += 1
-                continue
-
-        if quality_threshold:
-            if read.mapq < quality_threshold:
-                read_events['< MAPQ threshold'] += 1
-                continue
-
-        # TS - some methods require deduping on a per contig or per
-        # gene basis. To fit in with current workflow, simply assign
-        # pos and key as contig
-
-        if per_contig or gene_tag:
-
-            if per_contig:
-                pos = read.tid
-                key = pos
-            elif gene_tag:
-                pos = read.get_tag(gene_tag)
-                key = pos
-                if re.search(skip_regex, pos):
-                    continue
-
-            if not pos == last_chr:
-
-                out_keys = list(reads_dict.keys())
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle, read_events, 'mapped'
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_chr = pos
-
-        else:
-
-            start, pos, is_spliced = get_read_position(
-                read, soft_clip_threshold)
-
-            if whole_contig:
-                do_output = not read.tid == last_chr
-            else:
-                do_output = start > (last_pos+1000) or not read.tid == last_chr
-
-            if do_output:
-                if not read.tid == last_chr:
-                    out_keys = list(reads_dict.keys())
-                else:
-                    out_keys = [x for x in reads_dict.keys() if x <= start-1000]
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle, read_events, 'mapped'
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_pos = start
-                last_chr = read.tid
-
-            if read_length:
-                r_length = read.query_length
-            else:
-                r_length = 0
-
-            key = (read.is_reverse, spliced & is_spliced,
-                   paired*read.tlen, r_length)
-
-        if ignore_umi:
-            umi = ""
-        else:
-            umi, cell = barcode_getter(read)  # cell is always None here
+    def update_dicts(self, read, pos, key, umi):
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
 
-        if all_reads:
+        if self.all_reads:
             # retain all reads per key
             try:
-                reads_dict[pos][key][umi]["count"] += 1
+                self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
-                reads_dict[pos][key][umi]["read"] = [read]
-                reads_dict[pos][key][umi]["count"] = 1
-                read_counts[pos][key][umi] = 0
+                self.reads_dict[pos][key][umi]["read"] = [read]
+                self.reads_dict[pos][key][umi]["count"] = 1
+                self.read_counts[pos][key][umi] = 0
             else:
-                reads_dict[pos][key][umi]["read"].append(read)
+                self.reads_dict[pos][key][umi]["read"].append(read)
 
         else:
             # retain just a single read per key
             try:
-                reads_dict[pos][key][umi]["count"] += 1
+                self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
-                reads_dict[pos][key][umi]["read"] = read
-                reads_dict[pos][key][umi]["count"] = 1
-                read_counts[pos][key][umi] = 0
+                self.reads_dict[pos][key][umi]["read"] = read
+                self.reads_dict[pos][key][umi]["count"] = 1
+                self.read_counts[pos][key][umi] = 0
             else:
-                if reads_dict[pos][key][umi]["read"].mapq > read.mapq:
-                    continue
+                if self.reads_dict[pos][key][umi]["read"].mapq > read.mapq:
+                    return
 
-                if reads_dict[pos][key][umi]["read"].mapq < read.mapq:
-                    reads_dict[pos][key][umi]["read"] = read
-                    read_counts[pos][key][umi] = 0
-                    continue
+                if self.reads_dict[pos][key][umi]["read"].mapq < read.mapq:
+                    self.reads_dict[pos][key][umi]["read"] = read
+                    self.read_counts[pos][key][umi] = 0
+                    return
 
                 # TS: implemented different checks for multimapping here
-                if detection_method in ["NH", "X0"]:
-                    tag = detection_method
-                    if reads_dict[pos][key][umi]["read"].opt(tag) < read.opt(tag):
-                        continue
-                    elif reads_dict[pos][key][umi]["read"].opt(tag) > read.opt(tag):
-                        reads_dict[pos][key][umi]["read"] = read
-                        read_counts[pos][key][umi] = 0
+                if self.detection_method in ["NH", "X0"]:
+                    tag = self.detection_method
+                    if (self.reads_dict[pos][key][umi]["read"].opt(tag) <
+                        read.opt(tag)):
+                        return
+                    elif (self.reads_dict[pos][key][umi]["read"].opt(tag) >
+                          read.opt(tag)):
+                        self.reads_dict[pos][key][umi]["read"] = read
+                        self.read_counts[pos][key][umi] = 0
 
-                elif detection_method == "XT":
-                    if reads_dict[pos][key][umi]["read"].opt("XT") == "U":
-                        continue
+                elif self.detection_method == "XT":
+                    if self.reads_dict[pos][key][umi]["read"].opt("XT") == "U":
+                        return
                     elif read.opt("XT") == "U":
-                        reads_dict[pos][key][umi]["read"] = read
-                        read_counts[pos][key][umi] = 0
+                        self.reads_dict[pos][key][umi]["read"] = read
+                        self.read_counts[pos][key][umi] = 0
 
-                read_counts[pos][key][umi] += 1
-                prob = 1.0/read_counts[pos][key][umi]
+                self.read_counts[pos][key][umi] += 1
+                prob = 1.0/self.read_counts[pos][key][umi]
 
                 if random.random() < prob:
-                    reads_dict[pos][key][umi]["read"] = read
-
-    # yield remaining bundles
-    for p in reads_dict:
-        for bundle in reads_dict[p].values():
-            yield bundle, read_events, 'mapped'
+                    self.reads_dict[pos][key][umi]["read"] = read
 
 
-def get_gene_count(inreads,
-                   subset=None,
-                   quality_threshold=0,
-                   paired=False,
-                   per_contig=False,
-                   gene_tag=None,
-                   metacontig2contig=None,
-                   skip_regex=None,
-                   barcode_getter=None):
+    def check_output(self, pos):
 
-    ''' Yields the counts per umi for each gene
+        if self.per_contig or self.gene_tag:
+            do_output = not pos == self.last_chr
+            if self.metacontig2contig:
+                if (self.observed_contigs[self.last_chr] ==
+                    self.metacontig2contig[self.last_chr]):
+                    out_keys = self.last_chr
+            else:
+                out_keys = sorted(self.reads_dict.keys())
 
-    ignore_umi: don't include the umi in the dict key
+        elif self.whole_contig:
+            do_output = not self.current_chr == self.last_chr
+            out_keys = sorted(self.reads_dict.keys())
 
-    subset: randomly exclude 1-subset fraction of reads
-
-    quality_threshold: exclude reads with MAPQ below this
-
-    paired: input is paired
-
-    per_contig: use just the umi and contig as the dict key
-
-    gene_tag: use just the umi and gene as the dict key. Get the gene
-              id from the this tag
-
-    skip_regex: skip genes matching this regex. Useful to ignore
-                unassigned reads where the 'gene' is a descriptive tag
-                such as "Unassigned"
-
-    barcode_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
-    '''
-
-    previous_chr = None
-    previous_gene = None
-    gene = ""
-
-    # make an empty counts_dict counter
-    counts_dict = collections.defaultdict(
-        lambda: collections.defaultdict(
-            lambda: collections.defaultdict(dict)))
-
-    read_events = collections.Counter()
-
-    if metacontig2contig:
-        observed_contigs = collections.defaultdict(set)
-
-    for read in inreads:
-
-        if read.is_read2:
-            continue
         else:
-            read_events['Input Reads'] += 1
+            do_output = (self.start > (self.last_pos+1000) or
+                         not self.current_chr == self.last_chr)
 
-        if read.is_unmapped:
-            read_events['Skipped - Unmapped Reads'] += 1
-            continue
+            out_keys = sorted(self.reads_dict.keys())
 
-        if paired:
-            read_events['Paired Reads'] += 1
+            if self.current_chr != self.last_chr:
+                out_keys = [x for x in out_keys if x <= self.start-1000]
 
-        if subset:
-            if random.random() >= subset:
-                read_events['Skipped - Randomly excluded'] += 1
+
+        return do_output, out_keys
+
+
+    def __call__(self, inreads):
+
+        for read in inreads:
+
+            if read.is_read2:
+                if self.return_read2:
+                    if not read.is_unmapped or (read.is_unmapped and return_unmapped):
+                        yield read, None, "single_read"
+                continue
+            else:
+                self.read_events['Input Reads'] += 1
+
+            if read.is_unmapped:
+                if self.paired:
+                    if read.mate_is_unmapped:
+                        self.read_events['Both unmapped'] += 1
+                    else:
+                        self.read_events['Read 1 unmapped'] += 1
+                else:
+                    self.read_events['Single end unmapped'] += 1
+
+                if self.return_unmapped:
+                    self.read_events['Input Reads'] += 1
+                    yield read, None, "single_read"
                 continue
 
-        if quality_threshold:
-            if read.mapq < quality_threshold:
-                read_events['Skipped - < MAPQ threshold'] += 1
+            if read.mate_is_unmapped and self.paired:
+                if not read.is_unmapped:
+                    self.read_events['Read 2 unmapped'] += 1
+                if self.return_unmapped:
+                    yield read, None, "single_read"
                 continue
 
-        if per_contig:
-            gene = read.tid
+            if self.paired:
+                self.read_events['Paired Reads'] += 1
 
-        elif gene_tag:
-            gene = read.get_tag(gene_tag)
+            if self.subset:
+                if random.random() >= self.subset:
+                    self.read_events['Randomly excluded'] += 1
+                    continue
 
-            if metacontig2contig:
-                # keep track of observed contigs for each gene
-                observed_contigs[gene].add(read.reference_name)
+            if self.quality_threshold:
+                if read.mapq < self.quality_threshold:
+                    self.read_events['< MAPQ threshold'] += 1
+                    continue
 
-            if re.search(skip_regex, gene):
-                read_events['Skipped - matches --skip-tags-regex'] += 1
-                continue
+            if self.per_contig or self.gene_tag:
 
-        # TS: We can safely yield when the contig changes to keep the
-        # size of the count_dict smaller and avoid problems with
-        # overlapping genes
+                if self.per_contig:
+                    pos = read.tid
 
-        if read.reference_name != previous_chr and previous_chr:
+                elif self.gene_tag:
+                    pos = read.get_tag(self.gene_tag)
+                    
+                    if self.metacontig2contig:
+                        # keep track of observed contigs for each gene
+                        self.observed_contigs[pos].add(read.reference_name)
 
-            # TS: However, when the BAM contains reads aligned to
-            # transcripts (i.e no gene_transcript_map), we also need
-            # to check all the transcripts for a gene have been
-            # observed, otherwise we may yield for a gene more than once
-            if metacontig2contig:
+                    if re.search(self.skip_regex, pos):
+                        self.read_events['Gene skipped - matches regex'] += 1
+                        continue
 
-                if observed_contigs[previous_gene] == metacontig2contig[previous_gene]:
-                    # yield only the counts for this gene
-                    for cell in counts_dict[previous_gene]:
-                        count = counts_dict[previous_gene][cell]
-                        yield previous_gene, cell, count, read_events
+                key = pos
+            
+                do_output, out_keys = self.check_output(pos)
 
-                    del counts_dict[previous_gene]
+                if do_output:
+
+                    out_keys = list(self.reads_dict.keys())
+
+                    for p in out_keys:
+                        for k in sorted(self.reads_dict[p].keys()):
+                            yield self.reads_dict[p][k], k, "bundle"
+                        
+                        del self.reads_dict[p]
+                        del self.read_counts[p]
+
+                    self.last_chr = pos
 
             else:
 
-                # yield all gene counts
-                for gene in counts_dict:
-                    for cell in counts_dict[gene]:
-                        count = counts_dict[gene][cell]
-                        yield gene, cell, count, read_events
+                start, pos, is_spliced = get_read_position(
+                    read, self.soft_clip_threshold)
 
-                # make a new empty counts_dict counter
-                counts_dict = collections.defaultdict(
-                    lambda: collections.defaultdict(
-                        lambda: collections.defaultdict(dict)))
+                current_chr = read.tid
+                do_output, out_keys = self.check_output(pos)
 
-        umi, cell = barcode_getter(read)
-        try:
-            counts_dict[gene][cell][umi]["count"] += 1
-        except KeyError:
-            counts_dict[gene][cell][umi]["count"] = 1
+                if do_output:
+                    for p in out_keys:
+                        for k in sorted(self.reads_dict[p].keys()):
+                            yield self.reads_dict[p][k], k, "bundle"
 
-        previous_chr = read.reference_name
-        previous_gene = gene
+                    del self.reads_dict[p]
+                    del self.read_counts[p]
 
-    # yield gene counts
-    for gene in counts_dict:
-        for cell in counts_dict[gene]:
-            count = counts_dict[gene][cell]
-            yield gene, cell, count, read_events
+                    self.last_pos = self.start
+                    self.last_chr = self.current_chr
+
+                if self.read_length:
+                    r_length = read.query_length
+                else:
+                    r_length = 0
+
+                key = (read.is_reverse, self.spliced & is_spliced,
+                       self.paired*read.tlen, r_length)
+
+            # get the umi +/- cell barcode and update dictionaries
+            if self.ignore_umi:
+                umi, cell = "", ""
+            else:
+                umi, cell = self.barcode_getter(read)
+            
+            key = (key, cell)
+            self.update_dicts(read, pos, key, umi)
+
+        # yield remaining bundles
+        for p in out_keys:
+            for k in sorted(self.reads_dict[p].keys()):
+                yield self.reads_dict[p][k], k, "bundle"
 
 
 class random_read_generator:
