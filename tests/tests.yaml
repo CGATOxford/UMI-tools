@@ -86,14 +86,6 @@ count_single_cells_gene_tag:
 
 ## python 2 tests ##
 
-extract_quality:
-      skip_python: 3
-      sort: True
-      stdin: slim.fastq.gz
-      outputs: [stdout]
-      references: [extract_quality.fastq]
-      options: extract  --bc-pattern=NNNXXXXNN --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
-
 dedup_single_ignore:
       skip_python: 3
       sort: True
