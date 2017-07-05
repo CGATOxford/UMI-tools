@@ -63,6 +63,7 @@ extract_indrop_fuzzy:
 
 dedup_single_ignore:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_ignore.sam]
@@ -70,144 +71,163 @@ dedup_single_ignore:
 
 dedup_single_chrom:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_chrom.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
+      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19 
 
 dedup_single_unique:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unique.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique 
 
 dedup_single_perc:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_perc.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile 
 
 dedup_single_cluster:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_cluster.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster 
 
 dedup_single_adj:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_adj.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency 
 
 dedup_single_dir:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional 
 
 dedup_single_stats:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
       references: [single_cluster.sam, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
-      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats
+      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output- stats=single_stats 
 
 dedup_single_dir_edit_dist:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2 
 
 dedup_single_subset:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_subset.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1 
 
 dedup_single_sep:
       skip_python: 3
+      sort: True
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep.sam]
-      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=: " 
 
 dedup_single_tag:
       skip_python: 3
+      sort: True
       stdin: chr19_tag.bam
       outputs: [stdout]
       references: [single_tag.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag 
 
 dedup_single_gene_tag:
       skip_python: 3
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" 
 
 count_single_gene_tag:
       skip_python: 3
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag.tsv]
-      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" 
 
 group_gene_tag:
       skip_python: 3
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [group_dir_per_gene.tsv, stdout]
       references: [group_dir_per_gene.tsv, group_dir_per_gene.sam]
-      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene.tsv --output-bam --out-sam
+      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene.tsv --output-bam --out-sam 
 
 group_unique:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_uniq.tsv]
       references: [group_uniq.sam, group_uniq.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv 
 
 group_cluster:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_cluster.tsv]
       references: [group_cluster.sam, group_cluster.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster.tsv 
 
 group_adjacency:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_adj.tsv]
       references: [group_adj.sam, group_adj.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj.tsv 
 
 group_directional:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir.tsv]
       references: [group_dir.sam, group_dir.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir.tsv 
 
 group_directional_subset:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir_subset.tsv]
       references: [group_dir_subset.sam, group_dir_subset.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset.tsv --subset=0.1
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset.tsv --subset=0.1 
 
 
 group_directional_unmapped:
       skip_python: 3
+      sort: True
       stdin: unmapped.bam
       outputs: [stdout, group_dir_unmapped.tsv]
       references: [group_dir_unmapped.sam, group_dir_unmapped.tsv]
-      options: group --output-unmapped -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped.tsv
+      options: group --output-unmapped -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped.tsv 
 
 
 # ## End of python 2 tests ##
@@ -217,95 +237,107 @@ group_directional_unmapped:
 
 dedup_single_ignore_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_ignore_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
+      options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi 
 
 dedup_single_chrom_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_chrom_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
+      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19 
 
 dedup_single_unique_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unique_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique 
 
 dedup_single_perc_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_perc_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile 
 
 dedup_single_cluster_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_cluster_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster 
 
 dedup_single_adj_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_adj_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency 
 
 dedup_single_dir_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
-
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional 
 
 dedup_single_stats_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
       references: [single_cluster_py3.sam, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
-      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats_py3
+      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats_py3 
 
 dedup_single_dir_edit_dist_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2 
 
 dedup_single_subset_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_subset_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1 
 
 dedup_single_sep_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep_py3.sam]
-      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:  "
 
 dedup_single_tag_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_tag.bam
       outputs: [stdout]
       references: [single_tag_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag 
 
 dedup_single_gene_tag_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" 
 
 
 count_single_gene_tag:
@@ -313,58 +345,65 @@ count_single_gene_tag:
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag_py3.tsv]
-      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" 
 
 group_gene_tag:
       skip_python: 2
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [group_dir_per_gene_py3.tsv, stdout]
       references: [group_dir_per_gene_py3.tsv, group_dir_per_gene_py3.sam]
-      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene_py3.tsv --output-bam --out-sam
+      options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene_py3.tsv --output-bam --out-sam 
 
 group_unique_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_uniq_py3.tsv]
       references: [group_uniq_py3.sam, group_uniq_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq_py3.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq_py3.tsv 
 
 group_cluster_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_cluster_py3.tsv]
       references: [group_cluster_py3.sam, group_cluster_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv 
 
 group_adjacency_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv 
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv  
 
 group_directional_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir_py3.tsv]
       references: [group_dir_py3.sam, group_dir_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_py3.tsv
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_py3.tsv 
 
 
 group_directional_subset_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir_subset_py3.tsv]
       references: [group_dir_subset_py3.sam, group_dir_subset_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset_py3.tsv --subset=0.1
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset_py3.tsv --subset=0.1 
 
 
 group_directional_unmapped_py3:
       skip_python: 2
+      sort: True
       stdin: unmapped.bam
       outputs: [stdout, group_dir_unmapped_py3.tsv]
       references: [group_dir_unmapped_py3.sam, group_dir_unmapped_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv --output-unmapped
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv --output-unmapped 
 
 
 ## End of python 3 tests ##
