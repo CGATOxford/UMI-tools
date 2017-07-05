@@ -513,7 +513,7 @@ def main(argv=None):
         all_reads=True,
         return_read2=True,
         return_unmapped=options.output_unmapped)
-    
+
     for bundle, key, status in bundle_iterator(inreads):
 
         # write out read2s and unmapped if option set

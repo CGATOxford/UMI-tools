@@ -931,7 +931,8 @@ def metafetcher(bamfile, metacontig2contig, metatag):
                 read.tags += [(metatag, metacontig)]
                 yield read
 
-def get_read_position(read, soft_clip_thresholds):
+
+def get_read_position(read, soft_clip_threshold):
     ''' get the read position (taking account of clipping) '''
     is_spliced = False
 
@@ -1061,7 +1062,6 @@ class get_bundles:
         self.read_counts = collections.defaultdict(
             lambda: collections.defaultdict(dict))
 
-
     def update_dicts(self, read, pos, key, umi):
 
         # The content of the reads_dict depends on whether all reads
@@ -1119,7 +1119,6 @@ class get_bundles:
                 if random.random() < prob:
                     self.reads_dict[pos][key][umi]["read"] = read
 
-
     def check_output(self, pos):
 
         if self.per_contig or self.gene_tag:
@@ -1144,9 +1143,7 @@ class get_bundles:
             if self.current_chr != self.last_chr:
                 out_keys = [x for x in out_keys if x <= self.start-1000]
 
-
         return do_output, out_keys
-
 
     def __call__(self, inreads):
 
@@ -1201,7 +1198,7 @@ class get_bundles:
 
                 elif self.gene_tag:
                     pos = read.get_tag(self.gene_tag)
-                    
+
                     if self.metacontig2contig:
                         # keep track of observed contigs for each gene
                         self.observed_contigs[pos].add(read.reference_name)
@@ -1211,7 +1208,7 @@ class get_bundles:
                         continue
 
                 key = pos
-            
+
                 do_output, out_keys = self.check_output(pos)
 
                 if do_output:
@@ -1221,7 +1218,7 @@ class get_bundles:
                     for p in out_keys:
                         for k in sorted(self.reads_dict[p].keys()):
                             yield self.reads_dict[p][k], k, "bundle"
-                        
+
                         del self.reads_dict[p]
                         del self.read_counts[p]
 
@@ -1259,7 +1256,7 @@ class get_bundles:
                 umi, cell = "", ""
             else:
                 umi, cell = self.barcode_getter(read)
-            
+
             key = (key, cell)
             self.update_dicts(read, pos, key, umi)
 

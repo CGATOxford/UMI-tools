@@ -88,6 +88,7 @@ count_single_cells_gene_tag:
 
 extract_quality:
       skip_python: 3
+      sort: True
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [extract_quality.fastq]
@@ -95,6 +96,7 @@ extract_quality:
 
 dedup_single_ignore:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_ignore.sam]
@@ -102,6 +104,7 @@ dedup_single_ignore:
 
 dedup_single_chrom:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_chrom.sam]
@@ -109,6 +112,7 @@ dedup_single_chrom:
 
 dedup_single_unique:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unique.sam]
@@ -116,6 +120,7 @@ dedup_single_unique:
 
 dedup_single_perc:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_perc.sam]
@@ -123,6 +128,7 @@ dedup_single_perc:
 
 dedup_single_cluster:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_cluster.sam]
@@ -130,6 +136,7 @@ dedup_single_cluster:
 
 dedup_single_adj:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_adj.sam]
@@ -137,6 +144,7 @@ dedup_single_adj:
 
 dedup_single_dir:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir.sam]
@@ -144,6 +152,7 @@ dedup_single_dir:
 
 dedup_single_stats:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
       references: [single_cluster.sam, single_stats_per_umi_per_position.tsv, single_stats_per_umi.tsv, single_stats_edit_distance.tsv]
@@ -151,6 +160,7 @@ dedup_single_stats:
 
 dedup_single_dir_edit_dist:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2.sam]
@@ -158,6 +168,7 @@ dedup_single_dir_edit_dist:
 
 dedup_single_subset:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_subset.sam]
@@ -165,6 +176,7 @@ dedup_single_subset:
 
 dedup_single_sep:
       skip_python: 3
+      sort: True
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep.sam]
@@ -172,6 +184,7 @@ dedup_single_sep:
 
 dedup_single_tag:
       skip_python: 3
+      sort: True
       stdin: chr19_tag.bam
       outputs: [stdout]
       references: [single_tag.sam]
@@ -179,6 +192,7 @@ dedup_single_tag:
 
 dedup_unsorted:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unsorted.sam]
@@ -186,6 +200,7 @@ dedup_unsorted:
 
 dedup_single_gene_tag:
       skip_python: 3
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag.sam]
@@ -193,6 +208,7 @@ dedup_single_gene_tag:
 
 group_directional_unmapped:
       skip_python: 3
+      sort: True
       stdin: unmapped.bam
       outputs: [stdout, group_dir_unmapped.tsv]
       references: [group_dir_unmapped.sam, group_dir_unmapped.tsv]
@@ -200,6 +216,7 @@ group_directional_unmapped:
 
 group_unsorted:
       skip_python: 3
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [group_unsorted.sam]
@@ -212,6 +229,7 @@ group_unsorted:
 
 dedup_single_ignore_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_ignore_py3.sam]
@@ -219,6 +237,7 @@ dedup_single_ignore_py3:
 
 dedup_single_chrom_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_chrom_py3.sam]
@@ -226,6 +245,7 @@ dedup_single_chrom_py3:
 
 dedup_single_unique_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_unique_py3.sam]
@@ -233,6 +253,7 @@ dedup_single_unique_py3:
 
 dedup_single_perc_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_perc_py3.sam]
@@ -240,6 +261,7 @@ dedup_single_perc_py3:
 
 dedup_single_cluster_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_cluster_py3.sam]
@@ -247,6 +269,7 @@ dedup_single_cluster_py3:
 
 dedup_single_adj_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_adj_py3.sam]
@@ -254,6 +277,7 @@ dedup_single_adj_py3:
 
 dedup_single_dir_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_py3.sam]
@@ -262,6 +286,7 @@ dedup_single_dir_py3:
 
 dedup_single_stats_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
       references: [single_cluster_py3.sam, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
@@ -269,6 +294,7 @@ dedup_single_stats_py3:
 
 dedup_single_dir_edit_dist_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_dir_2_py3.sam]
@@ -276,6 +302,7 @@ dedup_single_dir_edit_dist_py3:
 
 dedup_single_subset_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [single_subset_py3.sam]
@@ -283,6 +310,7 @@ dedup_single_subset_py3:
 
 dedup_single_sep_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep_py3.sam]
@@ -290,6 +318,7 @@ dedup_single_sep_py3:
 
 dedup_single_tag_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_tag.bam
       outputs: [stdout]
       references: [single_tag_py3.sam]
@@ -297,6 +326,7 @@ dedup_single_tag_py3:
 
 dedup_single_gene_tag_py3:
       skip_python: 2
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag_py3.sam]
@@ -304,6 +334,7 @@ dedup_single_gene_tag_py3:
 
 group_gene_tag:
       skip_python: 2
+      sort: True
       stdin: chr19_gene_tags.bam
       outputs: [group_dir_per_gene_py3.tsv, stdout]
       references: [group_dir_per_gene_py3.tsv, group_dir_per_gene_py3.sam]
@@ -311,6 +342,7 @@ group_gene_tag:
 
 group_unique_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_uniq_py3.tsv]
       references: [group_uniq_py3.sam, group_uniq_py3.tsv]
@@ -318,6 +350,7 @@ group_unique_py3:
 
 group_cluster_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_cluster_py3.tsv]
       references: [group_cluster_py3.sam, group_cluster_py3.tsv]
@@ -325,6 +358,7 @@ group_cluster_py3:
 
 group_adjacency_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]
@@ -332,6 +366,7 @@ group_adjacency_py3:
 
 group_directional_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir_py3.tsv]
       references: [group_dir_py3.sam, group_dir_py3.tsv]
@@ -340,6 +375,7 @@ group_directional_py3:
 
 group_directional_subset_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_dir_subset_py3.tsv]
       references: [group_dir_subset_py3.sam, group_dir_subset_py3.tsv]
@@ -348,6 +384,7 @@ group_directional_subset_py3:
 
 group_directional_unmapped_py3:
       skip_python: 2
+      sort: True
       stdin: unmapped.bam
       outputs: [stdout, group_dir_unmapped_py3.tsv]
       references: [group_dir_unmapped_py3.sam, group_dir_unmapped_py3.tsv]
@@ -355,6 +392,7 @@ group_directional_unmapped_py3:
 
 group_unsorted_py3:
       skip_python: 2
+      sort: True
       stdin: chr19.bam
       outputs: [stdout]
       references: [group_unsorted_py3.sam]
