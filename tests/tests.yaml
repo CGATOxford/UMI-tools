@@ -49,7 +49,7 @@ extract_scrb_seq_prefiltered:
       stdin: scrb_filtered_fastq.1.gz
       outputs: [scrb_extract_prefiltered_test.fastq]
       references: [scrb_extract.fastq]
-      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-out-only  -L test.log  --read2-out=scrb_extract_prefiltered_test.fastq --reconsile-pairs
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-out-only  -L test.log  --read2-out=scrb_extract_prefiltered_test.fastq --reconcile-pairs
       
 extract_indrop_automatic_knee:
       skip_python:
