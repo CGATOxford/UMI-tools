@@ -8,7 +8,6 @@ network.py - Network methods for dealing with UMIs
 :Tags: Python UMI
 
 '''
-import random
 import collections
 import itertools
 import sys
@@ -122,7 +121,7 @@ def iter_nearest_neighbours(umis, substr_idx):
         for nbr in neighbours:
             yield u, nbr
 
-            
+
 class UMIClusterer:
     '''A functor that clusters a dictionary of UMIs and their counts.
     The primary return value is either a list of representative UMIs
@@ -357,7 +356,7 @@ class UMIClusterer:
     def __call__(self, umis, counts, threshold):
         '''Counts is a directionary that maps UMIs to their counts'''
 
-        umis=list(umis)
+        umis = list(umis)
         len_umis = [len(x) for x in umis]
         assert max(len_umis) == min(len_umis), (
             "not all umis are the same length(!):  %d - %d" % (
@@ -407,7 +406,7 @@ class ReadDeduplicator:
 
         return (reads, final_umis, umi_counts)
 
-    
+
 class CellClusterer:
     '''A functor that clusters a dictionary of cell barcodes and their counts.
     The primary return value is either a list of representative UMIs
@@ -504,4 +503,3 @@ class CellClusterer:
                       self.get_groups(clusters, adj_list, counts)]
 
         return final_umis
-
