@@ -1,90 +1,89 @@
+extract_single_string:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_single.fastq]
+      options: extract  --extract-method=string --bc-pattern=NNNXXXXNN --log=test.log
 
-# extract_single_string:
-#       stdin: slim.fastq.gz
-#       outputs: [stdout]
-#       references: [processed_single.fastq]
-#       options: extract  --extract-method=string --bc-pattern=NNNXXXXNN --log=test.log
+extract_single:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_single.fastq]
+      options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --log=test.log
 
-# extract_single:
-#       stdin: slim.fastq.gz
-#       outputs: [stdout]
-#       references: [processed_single.fastq]
-#       options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --log=test.log
+extract_3prime:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [processed_3prime.fastq]
+      options: extract  --extract-method=regex --bc-pattern=".*(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})$" --log=test.log
 
-# extract_3prime:
-#       stdin: slim.fastq.gz
-#       outputs: [stdout]
-#       references: [processed_3prime.fastq]
-#       options: extract  --extract-method=regex --bc-pattern=".*(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})$" --log=test.log
+extract_quality:
+      stdin: slim.fastq.gz
+      outputs: [stdout]
+      references: [extract_quality.fastq]
+      options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
 
-# extract_quality:
-#       stdin: slim.fastq.gz
-#       outputs: [stdout]
-#       references: [extract_quality.fastq]
-#       options: extract  --extract-method=regex --bc-pattern="^(?P<umi_1>.{3}).{4}(?P<umi_2>.{2})" --quality-filter-threshold=30 --quality-encoding=phred33 --log=test.log
+extract_scrb_seq:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [scrb_extract.fastq]
+      references: [scrb_extract.fastq]
+      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
 
-# extract_scrb_seq:
-#       stdin: scrb_seq_fastq.1.gz
-#       outputs: [scrb_extract.fastq]
-#       references: [scrb_extract.fastq]
-#       options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+extract_scrb_seq_string:
+      skip_python:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [scrb_extract.fastq]
+      references: [scrb_extract.fastq]
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
 
-# extract_scrb_seq_string:
-#       skip_python:
-#       stdin: scrb_seq_fastq.1.gz
-#       outputs: [scrb_extract.fastq]
-#       references: [scrb_extract.fastq]
-#       options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+extract_indrop_fuzzy:
+      stdin: indrop.fastq.1.gz
+      outputs: [indrop_extract_fuzzy.fastq]
+      references: [indrop_extract_fuzzy.fastq]
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv
 
-# extract_indrop_fuzzy:
-#       stdin: indrop.fastq.1.gz
-#       outputs: [indrop_extract_fuzzy.fastq]
-#       references: [indrop_extract_fuzzy.fastq]
-#       options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv
+extract_indrop_blacklist:
+      stdin: indrop.fastq.1.gz
+      outputs: [indrop_extract_blacklist.fastq]
+      references: [indrop_extract_blacklist.fastq]
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_blacklist.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv --blacklist=<DIR>/indrop_blacklist.tsv
 
-# extract_indrop_blacklist:
-#       stdin: indrop.fastq.1.gz
-#       outputs: [indrop_extract_blacklist.fastq]
-#       references: [indrop_extract_blacklist.fastq]
-#       options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_blacklist.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv --blacklist=<DIR>/indrop_blacklist.tsv
+cell_barcode_scrb_seq:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [stdout]
+      references: [scrb_whitelist.tsv]
+      options: whitelist --bc-pattern=CCCCCCNNNNNNNNNN  -L test.log --stdin=scrb_seq_fastq.1.gz
 
-# cell_barcode_scrb_seq:
-#       stdin: scrb_seq_fastq.1.gz
-#       outputs: [stdout]
-#       references: [scrb_whitelist.tsv]
-#       options: whitelist --bc-pattern=CCCCCCNNNNNNNNNN  -L test.log --stdin=scrb_seq_fastq.1.gz
+cell_barcode_indrop:
+      stdin: indrop.fastq.1.gz
+      outputs: [stdout]
+      references: [indrop_whitelist.tsv]
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
 
-# cell_barcode_indrop:
-#       stdin: indrop.fastq.1.gz
-#       outputs: [stdout]
-#       references: [indrop_whitelist.tsv]
-#       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
+cell_barcode_indrop_fuzzy:
+      stdin: indrop.fastq.1.gz
+      outputs: [stdout]
+      references: [indrop_fuzzy_whitelist.tsv]
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
 
-# cell_barcode_indrop_fuzzy:
-#       stdin: indrop.fastq.1.gz
-#       outputs: [stdout]
-#       references: [indrop_fuzzy_whitelist.tsv]
-#       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
+count_single_gene_tag:
+      stdin: chr19_gene_tags.bam
+      outputs: [stdout]
+      references: [count_single_gene_tag.tsv]
+      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --extract-umi-method=umis
 
-# count_single_gene_tag:
-#       stdin: chr19_gene_tags.bam
-#       outputs: [stdout]
-#       references: [count_single_gene_tag.tsv]
-#       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --extract-umi-method=umis
+count_single_cells_gene_tag:
+      stdin: chr19_gene_tags.bam
+      outputs: [stdout]
+      references: [count_single_cells_gene_tag.tsv]
+      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --per-cell --extract-umi-method=umis
 
-# count_single_cells_gene_tag:
-#       stdin: chr19_gene_tags.bam
-#       outputs: [stdout]
-#       references: [count_single_cells_gene_tag.tsv]
-#       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --per-cell --extract-umi-method=umis
+count_single_cells_wide_gene_tag:
+      stdin: chr19_gene_tags.bam
+      outputs: [stdout]
+      references: [count_single_cells_gene_tag_wide.tsv]
+      options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --per-cell --extract-umi-method=umis --wide-format-cell-counts
 
-# count_single_cells_wide_gene_tag:
-#       stdin: chr19_gene_tags.bam
-#       outputs: [stdout]
-#       references: [count_single_cells_gene_tag_wide.tsv]
-#       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --per-cell --extract-umi-method=umis --wide-format-cell-counts
-
-## python 2 tests ##
+# # python 2 tests ##
 
 dedup_single_ignore:
       skip_python: 3
@@ -196,7 +195,7 @@ dedup_single_gene_tag:
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --per-gene --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
 group_directional_unmapped:
       skip_python: 3
@@ -215,65 +214,65 @@ group_unsorted:
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output  --output-bam
 
 
-# # ## End of python 2 tests ##
+# End of python 2 tests ##
 
-# # ## python 3 tests ##
+# python 3 tests ##
 
-# dedup_single_ignore_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_ignore_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
+dedup_single_ignore_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_ignore_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --ignore-umi
 
-# dedup_single_chrom_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_chrom_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
+dedup_single_chrom_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_chrom_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --chrom=chr19
 
-# dedup_single_unique_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_unique_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
+dedup_single_unique_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_unique_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=unique
 
-# dedup_single_perc_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_perc_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
+dedup_single_perc_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_perc_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=percentile
 
-# dedup_single_cluster_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_cluster_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
+dedup_single_cluster_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_cluster_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=cluster
 
-# dedup_single_adj_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_adj_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
+dedup_single_adj_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_adj_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=adjacency
 
-# dedup_single_dir_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_dir_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
+dedup_single_dir_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional
 
 
 dedup_single_stats_py3:
@@ -284,37 +283,37 @@ dedup_single_stats_py3:
       references: [single_cluster_py3.sam, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
       options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats_py3
 
-# dedup_single_dir_edit_dist_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_dir_2_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
+dedup_single_dir_edit_dist_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_dir_2_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --edit-distance-threshold=2
 
-# dedup_single_subset_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [single_subset_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
+dedup_single_subset_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [single_subset_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --subset=0.1
 
-# dedup_single_sep_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19_sep.bam
-#       outputs: [stdout]
-#       references: [single_sep_py3.sam]
-#       options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+dedup_single_sep_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19_sep.bam
+      outputs: [stdout]
+      references: [single_sep_py3.sam]
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
 
-# dedup_single_tag_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19_tag.bam
-#       outputs: [stdout]
-#       references: [single_tag_py3.sam]
-#       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
+dedup_single_tag_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19_tag.bam
+      outputs: [stdout]
+      references: [single_tag_py3.sam]
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
 
 dedup_single_gene_tag_py3:
       skip_python: 2
@@ -322,73 +321,73 @@ dedup_single_gene_tag_py3:
       stdin: chr19_gene_tags.bam
       outputs: [stdout]
       references: [single_gene_tag_py3.sam]
-      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
+      options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --per-gene --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
-# group_gene_tag:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19_gene_tags.bam
-#       outputs: [group_dir_per_gene_py3.tsv, stdout]
-#       references: [group_dir_per_gene_py3.tsv, group_dir_per_gene_py3.sam]
-#       options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene_py3.tsv --output-bam --out-sam
+group_gene_tag:
+      skip_python: 2
+      sort: True
+      stdin: chr19_gene_tags.bam
+      outputs: [group_dir_per_gene_py3.tsv, stdout]
+      references: [group_dir_per_gene_py3.tsv, group_dir_per_gene_py3.sam]
+      options: group -L test.log  --random-seed=123456789 --method=directional --per-gene --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene_py3.tsv --output-bam --out-sam
 
-# group_unique_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout, group_uniq_py3.tsv]
-#       references: [group_uniq_py3.sam, group_uniq_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq_py3.tsv
+group_unique_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout, group_uniq_py3.tsv]
+      references: [group_uniq_py3.sam, group_uniq_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq_py3.tsv
 
-# group_cluster_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout, group_cluster_py3.tsv]
-#       references: [group_cluster_py3.sam, group_cluster_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv
+group_cluster_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout, group_cluster_py3.tsv]
+      references: [group_cluster_py3.sam, group_cluster_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv
 
-# group_adjacency_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout, group_adj_py3.tsv]
-#       references: [group_adj_py3.sam, group_adj_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv 
+group_adjacency_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout, group_adj_py3.tsv]
+      references: [group_adj_py3.sam, group_adj_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv 
 
-# group_directional_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout, group_dir_py3.tsv]
-#       references: [group_dir_py3.sam, group_dir_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_py3.tsv
-
-
-# group_directional_subset_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout, group_dir_subset_py3.tsv]
-#       references: [group_dir_subset_py3.sam, group_dir_subset_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset_py3.tsv --subset=0.1
+group_directional_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout, group_dir_py3.tsv]
+      references: [group_dir_py3.sam, group_dir_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_py3.tsv
 
 
-# group_directional_unmapped_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: unmapped.bam
-#       outputs: [stdout, group_dir_unmapped_py3.tsv]
-#       references: [group_dir_unmapped_py3.sam, group_dir_unmapped_py3.tsv]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv --output-unmapped
+group_directional_subset_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout, group_dir_subset_py3.tsv]
+      references: [group_dir_subset_py3.sam, group_dir_subset_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_subset_py3.tsv --subset=0.1
 
-# group_unsorted_py3:
-#       skip_python: 2
-#       sort: True
-#       stdin: chr19.bam
-#       outputs: [stdout]
-#       references: [group_unsorted_py3.sam]
-#       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam
+
+group_directional_unmapped_py3:
+      skip_python: 2
+      sort: True
+      stdin: unmapped.bam
+      outputs: [stdout, group_dir_unmapped_py3.tsv]
+      references: [group_dir_unmapped_py3.sam, group_dir_unmapped_py3.tsv]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --output-bam --out-sam --group-out=group_dir_unmapped_py3.tsv --output-unmapped
+
+group_unsorted_py3:
+      skip_python: 2
+      sort: True
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [group_unsorted_py3.sam]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam
 
 
 ## End of python 3 tests ##

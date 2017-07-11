@@ -338,11 +338,13 @@ def main(argv=None):
     group.add_option("--output-stats", dest="stats", type="string",
                      default=False,
                      help="Specify location to output stats")
- 
+
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
+
+    U.validateSamOptions(options)
 
     if options.random_seed:
         np.random.seed(options.random_seed)
@@ -416,7 +418,7 @@ def main(argv=None):
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
-        
+
     else:
         if options.per_contig and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
@@ -434,10 +436,7 @@ def main(argv=None):
 
     bundle_iterator = umi_methods.get_bundles(
         options,
-        all_reads=False,
-        return_unmapped=False,
-        return_read2=False,
-        metacontig_contig=None)
+        metacontig_contig=metacontig2contig)
 
     if options.stats:
         # set up arrays to hold stats data

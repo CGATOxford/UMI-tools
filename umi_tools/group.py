@@ -409,6 +409,7 @@ def main(argv=None):
         options,
         all_reads=True,
         return_read2=True,
+        return_unmapped=options.output_unmapped,
         metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
@@ -468,7 +469,8 @@ def main(argv=None):
                             gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
-                            umi_methods.get_read_position(read, options.soft)[1],
+                            umi_methods.get_read_position(
+                                read, options.soft_clip_threshold)[1],
                             gene,
                             umi.decode(),
                             counts[umi],

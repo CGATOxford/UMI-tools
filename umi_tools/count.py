@@ -175,8 +175,10 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False)
-    
-    options.per_gene = True # hardcodes counting to per-gene only
+
+    options.per_gene = True  # hardcodes counting to per-gene only
+
+    U.validateSamOptions(options)
 
     if options.random_seed:
         np.random.seed(options.random_seed)
@@ -230,8 +232,7 @@ def main(argv=None):
 
     bundle_iterator = umi_methods.get_bundles(
         options,
-        all_reads=True, # need to retain all reads to tally their number
-        return_read2=False,
+        only_count_reads=True,
         metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
@@ -265,8 +266,6 @@ def main(argv=None):
         nOutput += gene_count
 
     tmpfile.close()
-
-
 
     if options.per_cell:
 

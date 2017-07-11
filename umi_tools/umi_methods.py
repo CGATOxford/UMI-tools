@@ -943,7 +943,7 @@ class get_bundles:
     initiation arguments:
 
     options: script options
-    
+
     all_reads: if true, return all reads in the dictionary. Else,
     return the 'best' read (using MAPQ +/- multimapping) for each key
 
@@ -954,12 +954,14 @@ class get_bundles:
 
     def __init__(self,
                  options,
+                 only_count_reads=False,
                  all_reads=False,
                  return_unmapped=False,
                  return_read2=False,
                  metacontig_contig=None):
 
         self.options = options
+        self.only_count_reads = only_count_reads
         self.all_reads = all_reads
         self.return_unmapped = return_unmapped
         self.return_read2 = return_read2
@@ -1016,6 +1018,14 @@ class get_bundles:
                 self.read_counts[pos][key][umi] = 0
             else:
                 self.reads_dict[pos][key][umi]["read"].append(read)
+
+        elif self.only_count_reads:
+            # retain all reads per key
+            try:
+                self.reads_dict[pos][key][umi]["count"] += 1
+            except KeyError:
+                self.reads_dict[pos][key][umi]["count"] = 1
+                self.read_counts[pos][key][umi] = 0
 
         else:
             # retain just a single read per key
@@ -1091,7 +1101,7 @@ class get_bundles:
             if read.is_read2:
                 if self.return_read2:
                     if not read.is_unmapped or (
-                            read.is_unmapped and self.options.return_unmapped):
+                            read.is_unmapped and self.return_unmapped):
                         yield read, None, "single_read"
                 continue
             else:
@@ -1106,7 +1116,7 @@ class get_bundles:
                 else:
                     self.read_events['Single end unmapped'] += 1
 
-                if self.options.return_unmapped:
+                if self.return_unmapped:
                     self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue

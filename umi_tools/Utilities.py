@@ -462,8 +462,10 @@ class OptionParser(optparse.OptionParser):
                             action="store_true",
                             help="output help without usage information")
 
+
 class OptionGroup(optparse.OptionGroup):
     pass
+
 
 def callbackShortHelp(option, opt, value, parser):
     '''output short help (only command line options).'''
@@ -697,7 +699,7 @@ def Start(parser=None,
                          help="Treat a spliced read as different to an unspliced"
                          " one [default=%default]",
                          default=False)
-        
+
         group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
                          type="float",
                          help="number of bases clipped from 5' end before"
@@ -824,7 +826,6 @@ def Start(parser=None,
 
     parser.add_option_group(group)
 
-
     group = OptionGroup(parser, "common options")
 
     group.add_option("-v", "--verbose", dest="loglevel", type="int",
@@ -949,6 +950,7 @@ def Start(parser=None,
         handler.setFormatter(MultiLineFormatter(format))
 
     return global_options, global_args
+
 
 def validateSamOptions(options):
     ''' Check the validity of the option combinations '''
