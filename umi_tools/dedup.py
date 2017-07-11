@@ -12,71 +12,6 @@ Purpose
 
 The purpose of this command is to deduplicate BAM files based
 on the first mapping co-ordinate and the UMI attached to the read.
-It is assumed that the FASTQ files were processed with extract_umi.py
-before mapping and thus the UMI is the last word of the read name. e.g:
-
-@HISEQ:87:00000000_AATT
-
-where AATT is the UMI sequeuence.
-
-If you have used an alternative method which does not separate the
-read id and UMI with a "_", such as bcl2fastq which uses ":", you can
-specify the separator with the option "--umi-separator=<sep>",
-replacing <sep> with e.g ":".
-
-Alternatively, if your UMIs are encoded in a tag, you can specify this
-by setting the option --extract-umi-method=tag and set the tag name
-with the --umi-tag option. For example, if your UMIs are encoded in
-the 'UM' tag, provide the following options:
-"--extract-umi-method=tag --umi-tag=UM"
-
-By default, reads are considered identical if they have the same start
-coordinate, are on the same strand, and have the same UMI. Optionally,
-splicing status can be considered (see below).
-
-The start postion of a read is considered to be the start of its alignment
-minus any soft clipped bases. A read aligned at position 500 with
-cigar 2S98M will be assumed to start at postion 498.
-
-Methods
--------
-
-dedup can be run with multiple methods to identify group of reads with
-the same (or similar) UMI(s), from which a single read is
-returned. All methods start by identifying the reads with the same
-mapping position.
-
-The simpliest methods, unique and percentile, group reads with
-the exact same UMI. The network-based methods, cluster, adjacency and
-directional, build networks where nodes are UMIs and edges connect UMIs
-with an edit distance <= threshold (usually 1). The groups of reads
-are then defined from the network in a method-specific manner. For all
-the network-based methods, a single read is returned with the most
-abundant UMI in each read group. For details about how the read is
-selected, see 'Selecting the representative read' below.
-
-  "unique"
-      Reads group share the exact same UMI
-
-  "percentile"
-      Reads group share the exact same UMI. UMIs with counts < 1% of the
-      median counts for UMIs at the same position are ignored.
-
-  "cluster"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold). Each network is a read group
-
-  "adjacency"
-      Cluster UMIs as above. For each cluster, select the node(UMI)
-      with the highest counts. Visit all nodes one edge away. If all
-      nodes have been visted, stop. Otherise, repeat with remaining
-      nodes until all nodes have been visted. Each step
-      defines a read group.
-
-  "directional"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold) and umi A counts >= (2* umi B counts) - 1. Each
-      network is a read group.
 
 Selecting the representative read
 ---------------------------------
@@ -91,92 +26,8 @@ from a group of duplicated reads:
 Otherwise a read is chosen at random.
 
 
-Options
--------
---extract-umi-method (choice)
-      How are the UMIs encoded in the read?
-
-      Options are:
-
-      - "read_id" (default)
-            UMIs contained at the end of the read separated as
-            specified with --umi-separator option
-
-      - "tag"
-            UMIs contained in a tag, see --umi-tag option
-
---umi-separator (string)
-      Separator between read id and UMI. See --extract-umi-method above
-
---umi-tag (string)
-      Tag which contains UMI. See --extract-umi-method above
-
---method (string, choice)
-      Method used to identify PCR duplicates within reads. All methods
-      start by identifying the reads with the same mapping position
-
-      Options are:
-
-      - "unique"
-
-      - "percentile"
-
-      - "cluster"
-
-      - "adjacency"
-
-      - "directional" (default)
-
---edit-distance-threshold (int)
-       For the adjacency and cluster methods the threshold for the
-       edit distance to connect two UMIs in the network can be
-       increased. The default value of 1 works best unless the UMI is
-       very long (>14bp)
-
---no-sort-output
-       By default, output from UMI-tools are sorted. This involves the
-       use of a temporary unsorted file since reads are considered in
-       the order of their start position which is may not be the same
-       as their alignment coordinate due to soft-clipping and reverse
-       alignments. The temp file will be saved in $TMPDIR and deleted
-       when it has been sorted to the outfile. Use this option to turn
-       off sorting.
-
---paired
-       BAM is paired end - output both read pairs. This will also
-       force the Use of the template length to determine reads with
-       the same mapping coordinates.
-
---spliced-is-unique
-       Causes two reads that start in the same position on the same
-       strand and having the same UMI to be considered unique if one is spliced
-       and the other is not. (Uses the 'N' cigar operation to test for
-       splicing)
-
---soft-clip-threshold (int)
-       Mappers that soft clip, will sometimes do so rather than mapping a
-       spliced read if there is only a small overhang over the exon
-       junction. By setting this option, you can treat reads with at least
-       this many bases soft-clipped at the 3' end as spliced.
-
---multimapping-detection-method (string, choice)
-       If the sam/bam contains tags to identify multimapping reads, you can
-       specify for use when selecting the best read at a given loci.
-       Supported tags are "NH", "X0" and "XT". If not specified, the read
-       with the highest mapping quality will be selected
-
---read-length
-      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
-
---whole-contig (string)
-      forces dedup to parse an entire contig before yielding any reads
-      for deduplication. This is the only way to absolutely guarantee
-      that all reads with the same start position are grouped together
-      for deduplication since dedup uses the start position of the
-      read, not the alignment coordinate on which the reads are
-      sorted. However, by default, dedup reads for another 1000bp
-      before outputting read groups which will avoid any reads being
-      missed with short read sequencing (<1000bp)
+dedup-specific options
+----------------------
 
 --output-stats (string, filename_prefix)
        Output edit distance statistics and UMI usage statistics
@@ -197,64 +48,8 @@ Options
            inluding null expectations from random sampling of UMIs from the
            UMIs observed across all positions.
 
---subset (float, [0-1])
-      Only consider a fraction of the reads, chosen at random. This is useful
-      for doing saturation analyses.
-
---chrom (string)
-      Only consider a single chromosome. This is useful for debugging purposes
-
---per-contig (string)
-      Deduplicate per contig (field 3 in BAM; RNAME).
-      All reads with the same contig will be
-      considered to have the same alignment position. This is useful
-      if your library prep generates PCR duplicates with non identical
-      alignment positions such as CEL-Seq. In this case, you would
-      align to a reference transcriptome with one transcript per gene
-
---per-gene (string)
-      Deduplicate per gene. As above except with this option you can
-      align to a reference transcriptome with more than one transcript
-      per gene. You need to also provide --gene-transcript-map option
-
---gene-transcript-map (string)
-      File mapping genes to transripts (tab separated), e.g:
-
-      gene1   transcript1
-      gene1   transcript2
-      gene2   transcript3
-
---gene-tag (string)
-      Deduplicate per gene. As per --per-gene except here the gene
-      information is encoded in the bam read tag specified so you do
-      not need to supply --gene-transcript-map
-
---skip-tags-regex (string)
-      Used in conjunction with the --gene-tag option. Skip any reads
-      where the gene tag matches this regex.
-      Defualt matches anything which starts with "__" or "Unassigned":
-      ("^[__|Unassigned]")
-
--i, --in-sam/-o, --out-sam
-      By default, inputs are assumed to be in BAM format and output are output
-      in BAM format. Use these options to specify the use of SAM format for
-      inputs or outputs.
-
--I    (string, filename) input file name
-      The input file must be sorted and indexed.
-
--S    (string, filename) output file name
-
--L    (string, filename) log file name
-
-
-.. note::
-   In order to get a valid sam/bam file you need to redirect logging
-   information or turn it off logging via -v 0. You can redirect the
-   logging to a file with -L <logfile> or use the --log2stderr option
-   to send the logging to stderr.
-
 '''
+
 import sys
 import collections
 import re
@@ -282,6 +77,11 @@ try:
     import umi_tools.umi_methods as umi_methods
 except ImportError:
     import umi_methods
+
+
+# add the generic docstring text
+__doc__ = __doc__ + U.GENERIC_DOCSTRING
+__doc__ = __doc__ + U.GROUP_DEDUP_GENERIC_OPTIONS
 
 
 def detect_bam_features(bamfile, n_entries=1000):

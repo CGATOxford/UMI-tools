@@ -12,113 +12,7 @@ Purpose
 
 The purpose of this command is to counts the number of reads per gene based
 on the mapping co-ordinate and the UMI attached to the read.
-It is assumed that the FASTQ files were processed with extract_umi.py
-before mapping and thus the UMI is the last word of the read name. e.g:
 
-@HISEQ:87:00000000_AATT
-
-where AATT is the UMI sequeuence.
-
-If you have used an alternative method which does not separate the
-read id and UMI with a "_", such as bcl2fastq which uses ":", you can
-specify the separator with the option "--umi-separator=<sep>",
-replacing <sep> with e.g ":".
-
-Alternatively, if your UMIs are encoded in a tag, you can specify this
-by setting the option --extract-umi-method=tag and set the tag name
-with the --umi-tag option. For example, if your UMIs are encoded in
-the 'UM' tag, provide the following options:
-"--extract-umi-method=tag --umi-tag=UM"
-
-Finally, if you have used umis to extract the UMI +/- cell barcode,
-you can specify --extract-umi-method=umis
-
-By default, reads are considered identical (and therefore only counted
-once) if they are assigned to the same gene. Additionally, if you have
-multiple cells in a single input, you can specify the --per-cell
-option to count per cell
-
-The start postion of a read is considered to be the start of its alignment
-minus any soft clipped bases. A read aligned at position 500 with
-cigar 2S98M will be assumed to start at postion 498.
-
-Methods
--------
-
-count can be run with multiple methods to identify group of reads with
-the same (or similar) UMI(s), from which a single read is
-returned. All methods start by identifying the reads with the same
-mapping position.
-
-The simpliest methods, unique and percentile, group reads with
-the exact same UMI. The network-based methods, cluster, adjacency and
-directional, build networks where nodes are UMIs and edges connect UMIs
-with an edit distance <= threshold (usually 1). The groups of reads
-are then defined from the network in a method-specific manner. For all
-the network-based methods, each read group is equivalent to one read
-count for the gene.
-
-  "unique"
-      Reads group share the exact same UMI
-
-  "percentile"
-      Reads group share the exact same UMI. UMIs with counts < 1% of the
-      median counts for UMIs at the same position are ignored.
-
-  "cluster"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold). Each network is a read group
-
-  "adjacency"
-      Cluster UMIs as above. For each cluster, select the node(UMI)
-      with the highest counts. Visit all nodes one edge away. If all
-      nodes have been visted, stop. Otherise, repeat with remaining
-      nodes until all nodes have been visted. Each step
-      defines a read group.
-
-  "directional"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold) and umi A counts >= (2* umi B counts) - 1. Each
-      network is a read group.
-
-Options
--------
---extract-umi-method (choice)
-      How are the barcodes encoded in the read?
-
-      Options are:
-
-      - "read_id" (default)
-            Barcodes are contained at the end of the read separated as
-            specified with --umi-separator option
-
-      - "tag"
-            Barcodes contained in a tag(s), see --umi-tag/--cell-tag
-            options
-
-      - "umis"
-            Barcodes were extracted using umis (https://github.com/vals/umis)
-
---edit-distance-threshold (int)
-       For the adjacency and cluster methods the threshold for the
-       edit distance to connect two UMIs in the network can be
-       increased. The default value of 1 works best unless the UMI is
-very long (>14bp)
-
---per-contig
-      Count per contig (field 3 in BAM; RNAME).
-      All reads with the same contig will be
-      considered to have the same alignment position. This is useful
-      if your library prep generates PCR duplicates with non identical
-      alignment positions such as CEL-Seq. In this case, you could
-      align to a reference transcriptome with one transcript per gene
-
---gene-transcript-map (string)
-      File mapping genes to transripts (tab separated), e.g:
-
-      gene1   transcript1
-      gene1   transcript2
-      gene2   transcript3
 '''
 
 import sys
@@ -148,6 +42,10 @@ try:
     import umi_tools.umi_methods as umi_methods
 except ImportError:
     import umi_methods
+
+
+# add the generic docstring text
+__doc__ = __doc__ + U.GENERIC_DOCSTRING
 
 
 def main(argv=None):
