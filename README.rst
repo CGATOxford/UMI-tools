@@ -5,19 +5,32 @@ UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/ear
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
-This repository contains tools for dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags (RMTs). Currently there are three tools:
+This repository contains tools for dealing with Unique Molecular
+Identifiers (UMIs)/Random Molecular Tags (RMTs). Currently there are
+five tools
 
 * extract:
    **Flexible removal of UMI sequences from fastq reads.**
       UMIs are removed and appended to the read name. Any other barcode, for example a library barcode, is left on the read.  
 
-* dedup:
-   **Removes PCR duplicates.**
-      Implements a number of different UMI deduplication schemes. The recommended method is `directional`.
-    
 * group: 
    **Groups PCR duplicates using the same methods available through `dedup`.**
-      This is useful when you want to interrogate the PCR duplicates
+      This is useful when you want to manually interrogate the PCR duplicates
+
+* dedup:
+   **Removes PCR duplicates.**
+      Implements a number of different UMI deduplication schemes. The recommended method is `directional`
+    
+* count:
+   **Counts the number of reads per-gene**
+      May only be used where you have either aligned to a
+      transcriptome or identified the gene assignment for each read
+
+The group, dedup and count commands may be considered different levels
+of the same analysis; a count command can always be converted
+to a dedup or group command if you want to manually interrogate the
+grouping and deduplication steps. Similarly, a dedup command can be
+converted to a group command.
 
 See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
 
