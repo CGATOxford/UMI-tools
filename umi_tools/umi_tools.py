@@ -11,6 +11,7 @@ There are 3 tools:
   - extract
   - group
   - dedup
+  - count
 
 To get help on a specific tool, type:
 
