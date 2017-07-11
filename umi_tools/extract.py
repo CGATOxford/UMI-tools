@@ -276,6 +276,11 @@ def main(argv=None):
                       help=("Only extract from the first N reads. If N is "
                             "greater than the number of reads, all reads will "
                             "be used"))
+    parser.add_option("--reconcile-pairs",
+                      dest="reconcile", action="store_true",
+                      help=("Allow the presences of reads in read2 input that are"
+                            "not present in read1 input. This allows cell barcode"
+                            "filtering of read1s without considering read2s"))
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
                         whitelist_tsv=None,
@@ -291,7 +296,8 @@ def main(argv=None):
                         quality_encoding=None,
                         plot_prefix=None,
                         output_whitelist=None,
-                        cell_barcode_subset=50000000)
+                        cell_barcode_subset=50000000,
+                        reconcile=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -500,7 +506,13 @@ def main(argv=None):
         if options.read2_out:
             read2_out = U.openFile(options.read2_out, "w")
 
-        for read1, read2 in izip(read1s, read2s):
+        if options.reconcile:
+            strict = False
+        else:
+            strict = True
+
+        for read1, read2 in umi_methods.joinedFastqIterate(
+                read1s, read2s, strict):
             reads = ReadExtractor(read1, read2)
 
             if options.reads_subset:

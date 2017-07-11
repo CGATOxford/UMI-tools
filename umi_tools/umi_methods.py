@@ -109,6 +109,32 @@ def fastqIterate(infile):
 
         yield Record(line1[1:-1], line2[:-1], line4[:-1])
 
+
+def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
+    '''This will return an iterator that returns tuples of fastq records.
+    At each step it will confirm that the first field of the read name
+    (before the first whitespace character) is identical between the
+    two reads. The response if it is not depends on the value of
+    :param:`strict`. If strict is true an error is returned. If strict
+    is `False` the second file is advanced until a read that matches
+    is found.
+
+    This allows for protocols where read one contains cell barcodes, and these
+    reads have been filtered and corrected before processing without regard
+    to read2
+
+    '''
+
+    for read1 in fastq_iterator1:
+        read2 = next(fastq_iterator2)
+        pair_id = read1.identifier.split()[0]
+        if not strict:
+            while read2.identifier.split()[0] != pair_id:
+                read2 = next(fastq_iterator2)
+        if not read2.identifier.split()[0] == pair_id:
+            raise ValueError("\nRead pairs do not match\n%s != %s" %
+                             (pair_id, read2.identifier.split()[0]))
+        yield (read1, read2)
 # End of FastqIterate()
 ###############################################################################
 ###############################################################################
