@@ -275,6 +275,7 @@ def main(argv=None):
                         read2_out=False,
                         read2_out_only=False,
                         quality_filter_threshold=None,
+                        quality_encoding=None,
                         reconcile=False)
 
     # add common options (-h/--help, ...) and parse command line
