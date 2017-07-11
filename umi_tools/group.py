@@ -30,6 +30,9 @@ with the --umi-tag option. For example, if your UMIs are encoded in
 the 'UM' tag, provide the following options:
 "--extract-umi-method=tag --umi-tag=UM"
 
+Finally, if you have used umis to extract the UMI +/- cell barcode,
+you can specify --extract-umi-method=umis
+
 By default, reads are considered identical if they have the same start
 coordinate, are on the same strand, and have the same UMI. Optionally,
 splicing status can be considered (see below).
@@ -221,11 +224,6 @@ Options
 
 --per-contig (string)
       Group per contig (field 3 in BAM; RNAME).
-      All reads with the same contig will be
-      considered to have the same alignment position. This is useful
-      if your library prep generates PCR duplicates with non identical
-      alignment positions such as CEL-Seq. In this case, you could
-      align to a reference transcriptome with one transcript per gene
 
 --per-gene (string)
       Group per gene. As above except with this option you can
@@ -276,8 +274,6 @@ import sys
 import collections
 import os
 
-from functools import partial
-
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 from future.utils import iteritems
@@ -314,106 +310,31 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
-    parser.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                      help="Input file is in sam format [default=%default]",
-                      default=False)
-    parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                      help="Output alignments in sam format [default=%default]",
-                      default=False)
-    parser.add_option("--umi-separator", dest="umi_sep",
-                      type="string", help="separator between read id and UMI",
-                      default="_")
-    parser.add_option("--umi-tag", dest="umi_tag",
-                      type="string", help="tag containing umi",
-                      default='RX')
+    group = U.OptionGroup(parser, "group-specific options")
+
+    group.add_option("--group-out", dest="tsv", type="string",
+                     help="Outfile name for file mapping read id to read group",
+                     default=None)
+
+    group.add_option("--output-bam", dest="output_bam", action="store_true",
+                     default=False,
+                     help=("output a bam file with read groups tagged using the UG tag"
+                           "[default=%default]"))
+
+    group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
+                     default=False,
+                     help=("Retain all unmapped reads in output[default=%default]"))
+
     parser.add_option("--umi-group-tag", dest="umi_group_tag",
                       type="string", help="tag for the outputted umi group",
                       default='BX')
-    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
-                      choices=("read_id", "tag"), default="read_id",
-                      help="where is the read UMI encoded? [default=%default]")
-    parser.add_option("--subset", dest="subset", type="float",
-                      help="Use only a fraction of reads, specified by subset",
-                      default=None)
-    parser.add_option("--spliced-is-unique", dest="spliced",
-                      action="store_true",
-                      help="Treat a spliced read as different to an unspliced"
-                           " one [default=%default]",
-                      default=False)
-    parser.add_option("--soft-clip-threshold", dest="soft",
-                      type="float",
-                      help="number of bases clipped from 5' end before"
-                           "read is counted as spliced [default=%default]",
-                      default=4)
-    parser.add_option("--edit-distance-threshold", dest="threshold",
-                      type="int",
-                      default=1,
-                      help="Edit distance theshold at which to join two UMIs"
-                           "when clustering. [default=%default]")
-    parser.add_option("--chrom", dest="chrom", type="string",
-                      help="Restrict to one chromosome",
-                      default=None)
-    parser.add_option("--paired", dest="paired", action="store_true",
-                      default=False,
-                      help="paired BAM. [default=%default]")
-    parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional",
-                               "unique", "cluster"),
-                      default="directional",
-                      help="method to use for umi grouping [default=%default]")
-    parser.add_option("--no-sort-output", dest="no_sort_output",
-                      action="store_true", default=False,
-                      help="Sort the output")
-    parser.add_option("--per-contig", dest="per_contig", action="store_true",
-                      default=False,
-                      help=("group per contig (field 3 in BAM; RNAME),"
-                            " e.g for transcriptome where contig = gene"))
-    parser.add_option("--per-gene", dest="per_gene", action="store_true",
-                      default=False,
-                      help=("Group per gene,"
-                            "e.g for transcriptome where contig = transcript"
-                            "must also provide a transript to gene map with"
-                            "--gene-transcript-map [default=%default]"))
-    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
-                      type="string",
-                      help="file mapping transcripts to genes (tab separated)",
-                      default=None)
-    parser.add_option("--gene-tag", dest="gene_tag",
-                      type="string",
-                      help=("Group per gene where gene is"
-                            "defined by this bam tag [default=%default]"),
-                      default=None)
-    parser.add_option("--read-length", dest="read_length", action="store_true",
-                      default=False,
-                      help=("use read length in addition to position and UMI"
-                            "to identify possible duplicates [default=%default]"))
-    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
-                      default=False,
-                      help="Read whole contig before outputting bundles: guarantees that no reads"
-                           "are missed, but increases memory usage")
-    parser.add_option("--mapping-quality", dest="mapping_quality",
-                      type="int",
-                      help="Minimum mapping quality for a read to be retained"
-                      " [default=%default]",
-                      default=0)
-    parser.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
-                      default=False,
-                      help=("Retain all unmapped reads in output[default=%default]"))
-    parser.add_option("--group-out", dest="tsv", type="string",
-                      help="Outfile name for file mapping read id to read group",
-                      default=None)
-    parser.add_option("--output-bam", dest="output_bam", action="store_true",
-                      default=False,
-                      help=("output a bam file with read groups tagged using the UG tag"
-                            "[default=%default]"))
-    parser.add_option("--skip-tags-regex", dest="skip_regex",
-                      type="string",
-                      help=("Used with --gene-tag. "
-                            "Ignore reads where the gene-tag matches this regex"),
-                      default="^[__|Unassigned]")
+
+    parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
+
+    U.validateSamOptions(options)
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
@@ -453,10 +374,6 @@ def main(argv=None):
     else:
         out_mode = "wb"
 
-    if options.per_gene:
-        if not options.gene_transcript_map:
-            raise ValueError("--per-gene option requires --gene-transcript-map")
-
     infile = pysam.Samfile(in_name, in_mode)
 
     if options.output_bam:
@@ -470,21 +387,13 @@ def main(argv=None):
             ["read_id", "contig", "position", "gene", "umi", "umi_count",
              "final_umi", "final_umi_count", "unique_id"]))
 
-    # set the method with which to extract umis from reads
-    if options.get_umi_method == "read_id":
-        barcode_getter = partial(
-            umi_methods.get_barcode_read_id, sep=options.umi_sep)
-    elif options.get_umi_method == "tag":
-        barcode_getter = partial(
-            umi_methods.get_barcode_tag, umi_tag=options.umi_tag)
-    else:
-        raise ValueError("Unknown umi extraction method")
-
     nInput, nOutput, unique_id, input_reads, output_reads = 0, 0, 0, 0, 0
+
+    gene_tag = options.gene_tag
+    metacontig2contig = None
 
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
-        gene_tag = options.gene_tag
     else:
         if options.per_gene and options.gene_transcript_map:
             metacontig2contig = umi_methods.getMetaContig2contig(
@@ -495,32 +404,23 @@ def main(argv=None):
 
         else:
             inreads = infile.fetch(until_eof=options.output_unmapped)
-            gene_tag = options.gene_tag
 
     bundle_iterator = umi_methods.get_bundles(
-        ignore_umi=False,
-        subset=options.subset,
-        quality_threshold=options.mapping_quality,
-        paired=options.paired,
-        spliced=options.spliced,
-        soft_clip_threshold=options.soft,
-        per_contig=options.per_contig,
-        gene_tag=gene_tag,
-        skip_regex=options.skip_regex,
-        whole_contig=options.whole_contig,
-        read_length=options.read_length,
-        barcode_getter=barcode_getter,
+        options,
         all_reads=True,
         return_read2=True,
-        return_unmapped=options.output_unmapped)
+        metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
 
-        # write out read2s and unmapped if option set
+        # write out read2s and unmapped (if these options are set)
         if status == 'single_read':
             # bundle is just a single read here
-            outfile.write(bundle)
             nInput += 1
+
+            if outfile:
+                outfile.write(bundle)
+
             nOutput += 1
             continue
 

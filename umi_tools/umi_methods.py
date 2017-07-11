@@ -19,6 +19,7 @@ from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
 import numpy as np
+from functools import partial
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
@@ -240,36 +241,6 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
             true_to_false[match].add(cell_barcode)
 
     return true_to_false
-
-
-# TS: This is not being used since the network methods are not
-# appropriate to identify cell barcodes as they currently stand
-
-# def getNetworkEstimate(cell_barcode_counts):
-#     ''' Use the directional network method to identify the true cell
-#     barcodes '''
-
-#     clusterer = network.UMIClusterer("directional")
-#     barcode_groups = clusterer(
-#         [bytes(x, encoding="utf-8") for x in cell_barcode_counts.keys()],
-#         {bytes(x, encoding="utf-8"): y for x, y in cell_barcode_counts.items()},
-#         1)
-
-#     false_to_true = {}
-#     true_to_false = collections.defaultdict(set)
-
-#     true_barcodes = []
-#     for group in barcode_groups:
-#         true_barcode = group[0].decode("utf-8")
-#         true_barcodes.append(true_barcode)
-#         if len(group) > 1:
-#             error_barcodes = group[1:]
-#             for error_barcode in error_barcodes:
-#                 error_barcode = error_barcode.decode("utf-8")
-#                 false_to_true[error_barcode] = true_barcode
-#                 true_to_false[true_barcode].add(error_barcode)
-
-#     return true_barcodes, (false_to_true, true_to_false)
 
 
 def getCellWhitelist(cell_barcode_counts,
@@ -969,84 +940,52 @@ class get_bundles:
     entry with the number of reads with that
     position/spliced/strand/umi combination
 
-    options for initiation:
+    initiation arguments:
 
-    ignore_umi: don't include the umi in the dict key
-
-    subset: randomly exclude 1-subset fraction of reads
-
-    quality_threshold: exclude reads with MAPQ below this
-
-    paired: input is paired
-
-    spliced: include the spliced/not-spliced status in the dict key
-
-    soft_clip_threshold: reads with less than this 3' soft clipped are
-    treated as spliced
-
-    per_contig: use just the umi and contig as the dict key
-
-    gene_tag: use just the umi and gene as the dict key. Get the gene
-    id from the this tag
-
-    skip_regex: skip genes matching this regex. Useful to ignore
-    unassigned reads where the 'gene' is a descriptive tag such as
-    "Unassigned"
-
-    whole_contig: read the whole contig before yielding a bundle
-
-    read_length: include the read length in the dict key
-
-    detection_method: which method to use to detect multimapping
-    reads. options are NH", "X0", "XT". defaults to False (just select
-    the 'best' read by MAPQ)
-
-    barcode_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
-
+    options: script options
+    
     all_reads: if true, return all reads in the dictionary. Else,
     return the 'best' read (using MAPQ +/- multimapping) for each key
 
     return_read2: Return read2s immediately as a single read
 
-    return_unmapped: Return unmapped reads immediately as a single read
+    metacontig_contig: Maps metacontigs to the consistuent contigs
     '''
 
     def __init__(self,
-                 ignore_umi=False,
-                 subset=None,
-                 quality_threshold=0,
-                 paired=False,
-                 spliced=False,
-                 soft_clip_threshold=0,
-                 per_contig=False,
-                 gene_tag=None,
-                 skip_regex=None,
-                 whole_contig=False,
-                 read_length=False,
-                 detection_method=False,
-                 barcode_getter=None,
+                 options,
                  all_reads=False,
-                 return_read2=False,
                  return_unmapped=False,
-                 metacontig2contig=None):
+                 return_read2=False,
+                 metacontig_contig=None):
 
-        self.ignore_umi = ignore_umi
-        self.subset = subset
-        self.quality_threshold = quality_threshold
-        self.paired = paired
-        self.spliced = spliced
-        self.soft_clip_threshold = soft_clip_threshold
-        self.per_contig = per_contig
-        self.gene_tag = gene_tag
-        self.skip_regex = skip_regex
-        self.whole_contig = whole_contig
-        self.read_length = read_length
-        self.detection_method = detection_method
-        self.barcode_getter = barcode_getter
+        self.options = options
         self.all_reads = all_reads
-        self.return_read2 = return_read2
         self.return_unmapped = return_unmapped
-        self.metacontig2contig = metacontig2contig
+        self.return_read2 = return_read2
+        self.metacontig_contig = metacontig_contig
+
+        # set the method with which to extract umis from reads
+        if self.options.get_umi_method == "read_id":
+            self.barcode_getter = partial(
+                get_barcode_read_id,
+                cell_barcode=self.options.per_cell,
+                sep=self.options.umi_sep)
+
+        elif self.options.get_umi_method == "tag":
+            self.barcode_getter = partial(
+                get_barcode_tag,
+                umi_tag=self.options.umi_tag,
+                cell_barcode=self.options.per_cell,
+                cell_tag=self.options.cell_tag)
+
+        elif self.options.get_umi_method == "umis":
+            self.barcode_getter = partial(
+                get_barcode_umis,
+                cell_barcode=self.options.per_cell)
+
+        else:
+            raise ValueError("Unknown UMI extraction method")
 
         self.read_events = collections.Counter()
         self.observed_contigs = collections.defaultdict(set)
@@ -1096,8 +1035,8 @@ class get_bundles:
                     return
 
                 # TS: implemented different checks for multimapping here
-                if self.detection_method in ["NH", "X0"]:
-                    tag = self.detection_method
+                if self.options.detection_method in ["NH", "X0"]:
+                    tag = self.options.detection_method
                     if (self.reads_dict[pos][key][umi]["read"].opt(tag) <
                         read.opt(tag)):
                         return
@@ -1106,7 +1045,7 @@ class get_bundles:
                         self.reads_dict[pos][key][umi]["read"] = read
                         self.read_counts[pos][key][umi] = 0
 
-                elif self.detection_method == "XT":
+                elif self.options.detection_method == "XT":
                     if self.reads_dict[pos][key][umi]["read"].opt("XT") == "U":
                         return
                     elif read.opt("XT") == "U":
@@ -1121,16 +1060,16 @@ class get_bundles:
 
     def check_output(self, pos):
 
-        if self.per_contig or self.gene_tag:
+        if self.options.per_gene:
             do_output = not pos == self.last_chr
-            if self.metacontig2contig:
+            if self.metacontig_contig:
                 if (self.observed_contigs[self.last_chr] ==
-                    self.metacontig2contig[self.last_chr]):
+                    self.metacontig_contig[self.last_chr]):
                     out_keys = self.last_chr
             else:
                 out_keys = sorted(self.reads_dict.keys())
 
-        elif self.whole_contig:
+        elif self.options.whole_contig:
             do_output = not self.current_chr == self.last_chr
             out_keys = sorted(self.reads_dict.keys())
 
@@ -1151,14 +1090,15 @@ class get_bundles:
 
             if read.is_read2:
                 if self.return_read2:
-                    if not read.is_unmapped or (read.is_unmapped and return_unmapped):
+                    if not read.is_unmapped or (
+                            read.is_unmapped and self.options.return_unmapped):
                         yield read, None, "single_read"
                 continue
             else:
                 self.read_events['Input Reads'] += 1
 
             if read.is_unmapped:
-                if self.paired:
+                if self.options.paired:
                     if read.mate_is_unmapped:
                         self.read_events['Both unmapped'] += 1
                     else:
@@ -1166,44 +1106,44 @@ class get_bundles:
                 else:
                     self.read_events['Single end unmapped'] += 1
 
-                if self.return_unmapped:
+                if self.options.return_unmapped:
                     self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue
 
-            if read.mate_is_unmapped and self.paired:
+            if read.mate_is_unmapped and self.options.paired:
                 if not read.is_unmapped:
                     self.read_events['Read 2 unmapped'] += 1
                 if self.return_unmapped:
                     yield read, None, "single_read"
                 continue
 
-            if self.paired:
+            if self.options.paired:
                 self.read_events['Paired Reads'] += 1
 
-            if self.subset:
-                if random.random() >= self.subset:
+            if self.options.subset:
+                if random.random() >= self.options.subset:
                     self.read_events['Randomly excluded'] += 1
                     continue
 
-            if self.quality_threshold:
-                if read.mapq < self.quality_threshold:
+            if self.options.mapping_quality:
+                if read.mapq < self.options.mapping_quality:
                     self.read_events['< MAPQ threshold'] += 1
                     continue
 
-            if self.per_contig or self.gene_tag:
+            if self.options.per_gene:
 
-                if self.per_contig:
+                if self.options.per_contig:
                     pos = read.tid
 
-                elif self.gene_tag:
-                    pos = read.get_tag(self.gene_tag)
+                elif self.options.gene_tag:
+                    pos = read.get_tag(self.options.gene_tag)
 
-                    if self.metacontig2contig:
+                    if self.metacontig_contig:
                         # keep track of observed contigs for each gene
                         self.observed_contigs[pos].add(read.reference_name)
 
-                    if re.search(self.skip_regex, pos):
+                    if re.search(self.options.skip_regex, pos):
                         self.read_events['Gene skipped - matches regex'] += 1
                         continue
 
@@ -1227,7 +1167,7 @@ class get_bundles:
             else:
 
                 start, pos, is_spliced = get_read_position(
-                    read, self.soft_clip_threshold)
+                    read, self.options.soft_clip_threshold)
 
                 current_chr = read.tid
                 do_output, out_keys = self.check_output(pos)
@@ -1243,16 +1183,16 @@ class get_bundles:
                     self.last_pos = self.start
                     self.last_chr = self.current_chr
 
-                if self.read_length:
+                if self.options.read_length:
                     r_length = read.query_length
                 else:
                     r_length = 0
 
-                key = (read.is_reverse, self.spliced & is_spliced,
-                       self.paired*read.tlen, r_length)
+                key = (read.is_reverse, self.options.spliced & is_spliced,
+                       self.options.paired*read.tlen, r_length)
 
             # get the umi +/- cell barcode and update dictionaries
-            if self.ignore_umi:
+            if self.options.ignore_umi:
                 umi, cell = "", ""
             else:
                 umi, cell = self.barcode_getter(read)

@@ -462,10 +462,8 @@ class OptionParser(optparse.OptionParser):
                             action="store_true",
                             help="output help without usage information")
 
-
 class OptionGroup(optparse.OptionGroup):
     pass
-
 
 def callbackShortHelp(option, opt, value, parser):
     '''output short help (only command line options).'''
@@ -584,6 +582,8 @@ def Start(parser=None,
           argv=sys.argv,
           quiet=False,
           add_pipe_options=True,
+          add_group_dedup_options=True,
+          add_sam_options=True,
           return_parser=False):
     """set up an experiment.
 
@@ -633,6 +633,12 @@ def Start(parser=None,
     add_pipe_options : bool
         add common options for redirecting input/output
 
+    add_sam_options : bool
+        add options for UMI grouping/deduping and counting from a sam
+
+    add_group_dedup_options : bool
+        add options for UMI grouping and deduping
+
     Returns
     -------
     tuple
@@ -652,23 +658,174 @@ def Start(parser=None,
 
     global_starting_time = time.time()
 
-    group = OptionGroup(parser, "Script timing options")
+    if add_sam_options:
+        group = OptionGroup(parser, "Input options")
+
+        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
+                         help="Input file is in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
+                         choices=("read_id", "tag", "umis"), default="read_id",
+                         help="how is the read UMI +/ cell barcode encoded? "
+                         "[default=%default]")
+
+        group.add_option("--umi-separator", dest="umi_sep",
+                         type="string", help="separator between read id and UMI",
+                         default="_")
+
+        group.add_option("--umi-tag", dest="umi_tag",
+                         type="string", help="tag containing umi",
+                         default='RX')
+
+        group.add_option("--cell-tag", dest="cell_tag",
+                         type="string", help="tag containing cell",
+                         default=None)
+
+        group.add_option("--paired", dest="paired", action="store_true",
+                         default=False,
+                         help="paired BAM. [default=%default]")
+
+        group.add_option("--mapping-quality", dest="mapping_quality",
+                         type="int",
+                         help="Minimum mapping quality for a read to be retained"
+                         " [default=%default]",
+                         default=0)
+
+        group.add_option("--spliced-is-unique", dest="spliced",
+                         action="store_true",
+                         help="Treat a spliced read as different to an unspliced"
+                         " one [default=%default]",
+                         default=False)
+        
+        group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
+                         type="float",
+                         help="number of bases clipped from 5' end before"
+                         "read is counted as spliced [default=%default]",
+                         default=4)
+
+        parser.add_option_group(group)
+
+        group = OptionGroup(parser, "UMI grouping options")
+
+        group.add_option("--ignore-umi", dest="ignore_umi",
+                         action="store_true", help="Ignore UMI and dedup"
+                         " only on position", default=False)
+
+        group.add_option("--method", dest="method", type="choice",
+                         choices=("adjacency", "directional",
+                                  "percentile", "unique", "cluster"),
+                         default="directional",
+                         help="method to use for umi grouping [default=%default]")
+
+        group.add_option("--edit-distance-threshold", dest="threshold",
+                         type="int",
+                         default=1,
+                         help="Edit distance theshold at which to join two UMIs "
+                         "when grouping UMIs. [default=%default]")
+
+        parser.add_option_group(group)
+
+        group = OptionGroup(parser, "Single-cell RNA-Seq options")
+
+        group.add_option("--per-gene", dest="per_gene", action="store_true",
+                         default=False,
+                         help="Group/Dedup/Count per gene. Must combine with "
+                         "either --gene-tag or --per-contig")
+
+        group.add_option("--gene-tag", dest="gene_tag",
+                         type="string",
+                         help="gene is defined by this bam tag [default=%default]",
+                         default=None)
+
+        group.add_option("--skip-tags-regex", dest="skip_regex",
+                         type="string",
+                         help="Used with --gene-tag. "
+                         "Ignore reads where the gene-tag matches this regex",
+                         default="^[__|Unassigned]")
+
+        group.add_option("--per-contig", dest="per_contig", action="store_true",
+                         default=False,
+                         help="count per contig (field 3 in BAM; RNAME),"
+                         " e.g for transcriptome where contig = gene")
+
+        group.add_option("--gene-transcript-map", dest="gene_transcript_map",
+                         type="string",
+                         help="file mapping transcripts to genes (tab separated)",
+                         default=None)
+
+        group.add_option("--per-cell", dest="per_cell", action="store_true",
+                         default=False,
+                         help="Group/Dedup/Count per cell")
+
+        parser.add_option_group(group)
+
+    if add_group_dedup_options:
+
+        group = OptionGroup(parser, "Group/Dedup options")
+
+        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
+                         help="Output alignments in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--no-sort-output", dest="no_sort_output",
+                         action="store_true", default=False,
+                         help="Don't Sort the output")
+
+        group.add_option("--whole-contig", dest="whole_contig",
+                         action="store_true", default=False,
+                         help="Read whole contig before outputting bundles: "
+                         "guarantees that no reads are missed, but increases "
+                         "memory usage")
+
+        group.add_option("--multimapping-detection-method",
+                         dest="detection_method", type="choice",
+                         choices=("NH", "X0", "XT"),
+                         default=None,
+                         help="Some aligners identify multimapping using bam "
+                         "tags. Setting this option to NH, X0 or XT will "
+                         "use these tags when selecting the best read "
+                         "amongst reads with the same position and umi "
+                         "[default=%default]")
+
+        group.add_option("--read-length", dest="read_length",
+                         action="store_true", default=False,
+                         help="use read length in addition to position and UMI"
+                         "to identify possible duplicates [default=%default]")
+
+        parser.add_option_group(group)
+
+    # options added separately here to maintain better output order
+    if add_sam_options:
+        group = OptionGroup(parser, "debug options")
+
+        group.add_option("--chrom", dest="chrom", type="string",
+                         help="Restrict to one chromosome",
+                         default=None)
+
+        group.add_option("--subset", dest="subset", type="float",
+                         help="Use only a fraction of reads, specified by subset",
+                         default=None)
+
+        parser.add_option_group(group)
+
+    group = OptionGroup(parser, "profiling options")
 
     group.add_option("--timeit", dest='timeit_file', type="string",
                      help="store timeing information in file [%default].")
+
     group.add_option("--timeit-name", dest='timeit_name', type="string",
                      help="name in timing file for this class of jobs "
                      "[%default].")
+
     group.add_option("--timeit-header", dest='timeit_header',
                      action="store_true",
                      help="add header for timing information [%default].")
+
     parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Common options")
 
-    group.add_option("--random-seed", dest='random_seed', type="int",
-                     help="random seed to initialize number generator "
-                     "with [%default].")
+    group = OptionGroup(parser, "common options")
 
     group.add_option("-v", "--verbose", dest="loglevel", type="int",
                      help="loglevel [%default]. The higher, the more output.")
@@ -676,6 +833,11 @@ def Start(parser=None,
     group.add_option("-?", dest="short_help", action="callback",
                      callback=callbackShortHelp,
                      help="output short help (command line options only.")
+
+    group.add_option("--random-seed", dest='random_seed', type="int",
+                     help="random seed to initialize number generator "
+                     "with [%default].")
+
     parser.add_option_group(group)
 
     if quiet:
@@ -787,6 +949,41 @@ def Start(parser=None,
         handler.setFormatter(MultiLineFormatter(format))
 
     return global_options, global_args
+
+def validateSamOptions(options):
+    ''' Check the validity of the option combinations '''
+
+    if options.per_gene:
+        if options.gene_tag and options.per_contig:
+            raise ValueError("need to use either --per-contig "
+                             "OR --gene-tag, please do not provide both")
+
+        if not options.per_contig and not options.gene_tag:
+            raise ValueError("for per-gene applications, must supply "
+                             "--per-contig or --gene-tag")
+
+    if options.per_contig and not options.per_gene:
+        raise ValueError("need to use --per-gene with --per-contig")
+
+    if options.gene_tag and not options.per_gene:
+        raise ValueError("need to use --per-gene with --gene_tag")
+
+    if options.gene_transcript_map and not options.per_contig:
+        raise ValueError("need to use --per-contig and --per-gene"
+                         "with --gene-transcript-map")
+
+    if options.get_umi_method == "tag":
+        if options.umi_tag is None:
+            raise ValueError("Need to supply the --umi-tag option")
+        if options.per_cell and options.cell_tag is None:
+            raise ValueError("Need to supply the --cell-tag option")
+
+    if options.skip_regex:
+        try:
+            re.compile(options.skip_regex)
+        except re.error:
+            raise ValueError("skip-regex '%s' is not a "
+                             "valid regex" % options.skip_regex)
 
 
 def Stop():

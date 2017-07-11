@@ -274,7 +274,9 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
 
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv,
+                              add_group_dedup_options=False,
+                              add_sam_options=False)
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:

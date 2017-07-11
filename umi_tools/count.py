@@ -129,8 +129,6 @@ import os
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
-from functools import partial
-
 import pysam
 
 import pandas as pd
@@ -165,78 +163,20 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
-    parser.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                      help="Input file is in sam format [default=%default]",
-                      default=False)
-    parser.add_option("--umi-separator", dest="umi_sep",
-                      type="string", help="separator between read id and UMI",
-                      default="_")
-    parser.add_option("--umi-tag", dest="umi_tag",
-                      type="string", help="tag containing umi",
-                      default='RX')
-    parser.add_option("--cell-tag", dest="cell_tag",
-                      type="string", help="tag containing cell",
-                      default=None)
-    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
-                      choices=("read_id", "tag", "umis"), default="read_id",
-                      help=("how is the read UMI +/ cell barcode encoded? "
-                            "[default=%default]"))
-    parser.add_option("--subset", dest="subset", type="float",
-                      help="Use only a fraction of reads, specified by subset",
-                      default=None)
-    parser.add_option("--edit-distance-threshold", dest="threshold",
-                      type="int",
-                      default=1,
-                      help="Edit distance theshold at which to join two UMIs "
-                           "when grouping UMIs. [default=%default]")
-    parser.add_option("--chrom", dest="chrom", type="string",
-                      help="Restrict to one chromosome",
-                      default=None)
-    parser.add_option("--paired", dest="paired", action="store_true",
-                      default=False,
-                      help="paired BAM. [default=%default]")
-    parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional",
-                               "percentile", "unique", "cluster"),
-                      default="directional",
-                      help="method to use for umi counting [default=%default]")
-    parser.add_option("--mapping-quality", dest="mapping_quality",
-                      type="int",
-                      help="Minimum mapping quality for a read to be retained"
-                      " [default=%default]",
-                      default=0)
-    parser.add_option("--per-contig", dest="per_contig", action="store_true",
-                      default=False,
-                      help=("count per contig (field 3 in BAM; RNAME),"
-                            " e.g for transcriptome where contig = gene"))
-    parser.add_option("--per-cell", dest="per_cell", action="store_true",
-                      default=False,
-                      help=("Count per cell,"
-                            "e.g for transcriptome where contig = transcript"
-                            "must also provide a transript to gene map with"
-                            "--gene-transcript-map [default=%default]"))
+    group = U.OptionGroup(parser, "count-specific options")
+
     parser.add_option("--wide-format-cell-counts", dest="wide_format_cell_counts",
                       action="store_true",
                       default=False,
                       help=("output the cell counts in a wide format "
                             "(rows=genes, columns=cells)"))
-    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
-                      type="string",
-                      help="file mapping transcripts to genes (tab separated)",
-                      default=None)
-    parser.add_option("--gene-tag", dest="gene_tag",
-                      type="string",
-                      help=("Count per gene where gene is"
-                            "defined by this bam tag [default=%default]"),
-                      default=None)
-    parser.add_option("--skip-tags-regex", dest="skip_regex",
-                      type="string",
-                      help=("Used with --gene-tag. "
-                            "Ignore reads where the gene-tag matches this regex"),
-                      default="^[__|Unassigned]")
+
+    parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False)
+    
+    options.per_gene = True # hardcodes counting to per-gene only
 
     if options.random_seed:
         np.random.seed(options.random_seed)
@@ -251,6 +191,10 @@ def main(argv=None):
         in_mode = "r"
     else:
         in_mode = "rb"
+
+    if options.gene_tag and options.gene_transcript_map:
+        raise ValueError("need to use either --gene-transcript-map "
+                         "OR --gene-tag, please do not provide both")
 
     if not options.gene_transcript_map and not options.gene_tag:
         raise ValueError("need to use either --gene-transcript-map "
@@ -269,30 +213,6 @@ def main(argv=None):
 
     nInput, nOutput = 0, 0
 
-    # set the method with which to extract umis from reads
-    if options.get_umi_method == "read_id":
-        barcode_getter = partial(
-            umi_methods.get_barcode_read_id,
-            cell_barcode=options.per_cell,
-            sep=options.umi_sep)
-
-    elif options.get_umi_method == "tag":
-        if options.per_cell and options.cell_tag is None:
-            raise ValueError("Need to supply the --cell-tag option")
-        barcode_getter = partial(
-            umi_methods.get_barcode_tag,
-            umi_tag=options.umi_tag,
-            cell_barcode=options.per_cell,
-            cell_tag=options.cell_tag)
-
-    elif options.get_umi_method == "umis":
-        barcode_getter = partial(
-            umi_methods.get_barcode_umis,
-            cell_barcode=options.per_cell)
-
-    else:
-        raise ValueError("Unknown UMI extraction method")
-
     gene_tag = options.gene_tag
     metacontig2contig = None
 
@@ -309,14 +229,10 @@ def main(argv=None):
             inreads = infile.fetch()
 
     bundle_iterator = umi_methods.get_bundles(
-        subset=options.subset,
-        quality_threshold=options.mapping_quality,
-        paired=options.paired,
-        per_contig=options.per_contig,
-        gene_tag=gene_tag,
-        metacontig2contig=metacontig2contig,
-        skip_regex=options.skip_regex,
-        barcode_getter=barcode_getter)
+        options,
+        all_reads=True, # need to retain all reads to tally their number
+        return_read2=False,
+        metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
         if status == "single_read":
@@ -350,23 +266,34 @@ def main(argv=None):
 
     tmpfile.close()
 
-    gene_counts_dict = collections.Counter()
+
 
     if options.per_cell:
-        # pivot the counts table and write out
-        if options.wide_format_cell_counts:
+
+        if options.wide_format_cell_counts:  # pivot the counts table and write out
             counts_df = pd.read_table(tmpfilename, sep=":", header=None)
             counts_df.columns = ["gene", "cell", "count"]
             counts_df = pd.pivot_table(counts_df, values='count',
                                        index='gene', columns='cell')  # pivot
             counts_df = counts_df.fillna(0).astype(int)  # replace NA with 0
             counts_df.to_csv(options.stdout, index=True, sep="\t")
+
         else:
+            gene_counts_dict = collections.defaultdict(collections.Counter)
+
             options.stdout.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
             with U.openFile(tmpfilename, mode="r") as inf:
                 for line in inf:
-                    options.stdout.write(line.replace(":", "\t"))
+                    gene, cell, gene_count = line.strip().split(":")
+                    gene_counts_dict[gene][cell] = gene_count
+                for gene in sorted(list(gene_counts_dict.keys())):
+                    for cell in sorted(list(gene_counts_dict[gene].keys())):
+                        gene_count = gene_counts_dict[gene][cell]
+                        options.stdout.write("%s\t%s\t%s\n" % (
+                            gene, cell, gene_count))
     else:
+        gene_counts_dict = collections.Counter()
+
         options.stdout.write("%s\t%s\n" % ("gene", "count"))
 
         with U.openFile(tmpfilename, mode="r") as inf:

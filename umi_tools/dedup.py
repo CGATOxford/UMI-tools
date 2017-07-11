@@ -263,8 +263,6 @@ import os
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
-from functools import partial
-
 import pysam
 
 import pandas as pd
@@ -335,106 +333,13 @@ def main(argv=None):
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
+    group = U.OptionGroup(parser, "dedup-specific options")
 
-    parser.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                      help="Input file is in sam format [default=%default]",
-                      default=False)
-    parser.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                      help="Output alignments in sam format [default=%default]",
-                      default=False)
-    parser.add_option("--ignore-umi", dest="ignore_umi",
-                      action="store_true", help="Ignore UMI and dedup"
-                      " only on position", default=False)
-    parser.add_option("--umi-separator", dest="umi_sep",
-                      type="string", help="separator between read id and UMI",
-                      default="_")
-    parser.add_option("--umi-tag", dest="umi_tag",
-                      type="string", help="tag containing umi",
-                      default='RX')
-    parser.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
-                      choices=("read_id", "tag"), default="read_id",
-                      help="where is the read UMI encoded? [default=%default]")
-    parser.add_option("--subset", dest="subset", type="float",
-                      help="Use only a fraction of reads, specified by subset",
-                      default=None)
-    parser.add_option("--spliced-is-unique", dest="spliced",
-                      action="store_true",
-                      help="Treat a spliced read as different to an unspliced"
-                           " one [default=%default]",
-                      default=False)
-    parser.add_option("--soft-clip-threshold", dest="soft",
-                      type="float",
-                      help="number of bases clipped from 5' end before"
-                           "read is counted as spliced [default=%default]",
-                      default=4)
-    parser.add_option("--edit-distance-threshold", dest="threshold",
-                      type="int",
-                      default=1,
-                      help="Edit distance theshold at which to join two UMIs"
-                           "when clustering. [default=%default]")
-    parser.add_option("--chrom", dest="chrom", type="string",
-                      help="Restrict to one chromosome",
-                      default=None)
-    parser.add_option("--paired", dest="paired", action="store_true",
-                      default=False,
-                      help="paired BAM. [default=%default]")
-    parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional",
-                               "percentile", "unique", "cluster"),
-                      default="directional",
-                      help="method to use for umi deduping [default=%default]")
-    parser.add_option("--no-sort-output", dest="no_sort_output",
-                      action="store_true", default=False,
-                      help="Sort the output")
-    parser.add_option("--output-stats", dest="stats", type="string",
-                      default=False,
-                      help="Specify location to output stats")
-    parser.add_option("--whole-contig", dest="whole_contig", action="store_true",
-                      default=False,
-                      help="Read whole contig before outputting bundles: guarantees that no reads"
-                           "are missed, but increases memory usage")
-    parser.add_option("--multimapping-detection-method",
-                      dest="detection_method", type="choice",
-                      choices=("NH", "X0", "XT"),
-                      default=None,
-                      help=("Some aligners identify multimapping using bam "
-                            "tags. Setting this option to NH, X0 or XT will "
-                            "use these tags when selecting the best read "
-                            "amongst reads with the same position and umi "
-                            "[default=%default]"))
-    parser.add_option("--mapping-quality", dest="mapping_quality",
-                      type="int",
-                      help="Minimum mapping quality for a read to be retained"
-                      " [default=%default]",
-                      default=0)
-    parser.add_option("--read-length", dest="read_length", action="store_true",
-                      default=False,
-                      help=("use read length in addition to position and UMI"
-                            "to identify possible duplicates [default=%default]"))
-    parser.add_option("--per-contig", dest="per_contig", action="store_true",
-                      default=False,
-                      help=("dedup per contig (field 3 in BAM; RNAME),"
-                            " e.g for transcriptome where contig = gene"))
-    parser.add_option("--per-gene", dest="per_gene", action="store_true",
-                      default=False,
-                      help=("Deduplicate per gene,"
-                            "e.g for transcriptome where contig = transcript"
-                            "must also provide a transript to gene map with"
-                            "--gene-transcript-map [default=%default]"))
-    parser.add_option("--gene-transcript-map", dest="gene_transcript_map",
-                      type="string",
-                      help="file mapping transcripts to genes (tab separated)",
-                      default=None)
-    parser.add_option("--gene-tag", dest="gene_tag",
-                      type="string",
-                      help=("Deduplicate per gene where gene is"
-                            "defined by this bam tag [default=%default]"),
-                      default=None)
-    parser.add_option("--skip-tags-regex", dest="skip_regex",
-                      type="string",
-                      help=("Used with --gene-tag. "
-                            "Ignore reads where the gene-tag matches this regex"),
-                      default="^[__|Unassigned]")
+    group.add_option("--output-stats", dest="stats", type="string",
+                     default=False,
+                     help="Specify location to output stats")
+ 
+    parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
@@ -478,20 +383,9 @@ def main(argv=None):
     else:
         out_mode = "wb"
 
-    if options.stats:
-        if options.ignore_umi:
-            raise ValueError("'--output-stats' and '--ignore-umi' options"
-                             " cannot be used together")
-
-    if options.per_gene:
-        if not options.gene_transcript_map and not options.gene_tag:
-            raise ValueError("--per-gene option requires --gene-transcript-map "
-                             "or --gene-tag")
-    try:
-        re.compile(options.skip_regex)
-    except re.error:
-        raise ValueError("skip-regex '%s' is not a "
-                         "valid regex" % options.skip_regex)
+    if options.stats and options.ignore_umi:
+        raise ValueError("'--output-stats' and '--ignore-umi' options"
+                         " cannot be used together")
 
     infile = pysam.Samfile(in_name, in_mode)
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
@@ -517,15 +411,33 @@ def main(argv=None):
                         options.detection_method, ",".join(
                             [x for x in bam_features if bam_features[x]])))
 
-    # set the method with which to extract umis from reads
-    if options.get_umi_method == "read_id":
-        barcode_getter = partial(
-            umi_methods.get_barcode_read_id, sep=options.umi_sep)
-    elif options.get_umi_method == "tag":
-        barcode_getter = partial(
-            umi_methods.get_barcode_tag, umi_tag=options.umi_tag)
+    gene_tag = options.gene_tag
+    metacontig2contig = None
+
+    if options.chrom:
+        inreads = infile.fetch(reference=options.chrom)
+        
     else:
-        raise ValueError("Unknown umi extraction method")
+        if options.per_contig and options.gene_transcript_map:
+            metacontig2contig = umi_methods.getMetaContig2contig(
+                infile, options.gene_transcript_map)
+            metatag = "MC"
+            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            gene_tag = metatag
+
+        else:
+            inreads = infile.fetch()
+
+    # set up ReadCluster functor with methods specific to
+    # specified options.method
+    processor = network.ReadDeduplicator(options.method)
+
+    bundle_iterator = umi_methods.get_bundles(
+        options,
+        all_reads=False,
+        return_unmapped=False,
+        return_read2=False,
+        metacontig_contig=None)
 
     if options.stats:
         # set up arrays to hold stats data
@@ -538,44 +450,8 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom, barcode_getter=barcode_getter)
-
-    if options.chrom:
-        inreads = infile.fetch(reference=options.chrom)
-        gene_tag = options.gene_tag
-    else:
-        if options.per_gene and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
-                infile, options.gene_transcript_map)
-            metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
-            gene_tag = metatag
-
-        else:
-            inreads = infile.fetch()
-            gene_tag = options.gene_tag
-
-    # set up ReadCluster functor with methods specific to
-    # specified options.method
-    processor = network.ReadDeduplicator(options.method)
-
-    bundle_iterator = umi_methods.get_bundles(
-        ignore_umi=options.ignore_umi,
-        subset=options.subset,
-        quality_threshold=options.mapping_quality,
-        paired=options.paired,
-        spliced=options.spliced,
-        soft_clip_threshold=options.soft,
-        per_contig=options.per_contig,
-        gene_tag=gene_tag,
-        skip_regex=options.skip_regex,
-        whole_contig=options.whole_contig,
-        read_length=options.read_length,
-        detection_method=options.detection_method,
-        barcode_getter=barcode_getter,
-        all_reads=False,
-        return_read2=False,
-        return_unmapped=False)
+            infile.filename, chrom=options.chrom,
+            barcode_getter=bundle_iterator.barcode_getter)
 
     for bundle, key, status in bundle_iterator(inreads):
 
@@ -622,7 +498,7 @@ def main(argv=None):
                     [bundle[UMI]['count'] for UMI in bundle])
 
                 # collect post-dudupe stats
-                post_cluster_umis = [barcode_getter(x)[0] for x in reads]
+                post_cluster_umis = [bundle_iterator.barcode_getter(x)[0] for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
