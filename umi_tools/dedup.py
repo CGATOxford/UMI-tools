@@ -236,7 +236,7 @@ Options
 Usage
 -----
 
-    python dedup -I infile.bam -S deduped.bam -L dedup.log
+    umi_tools dedup -I infile.bam -S deduped.bam -L dedup.log
 
 
 .. note::
