@@ -84,4 +84,5 @@ To get help on umi_tools dedup run
 
 Dependencies
 ------------
-umi_tools is dependent on `numpy`, `pandas`, `cython`, `pysam` and `future`
+umi_tools is dependent on `numpy`, `pandas`, `cython`, `pysam`,
+`future`, `regex` and `scipy`
