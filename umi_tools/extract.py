@@ -183,7 +183,7 @@ except ImportError:
 try:
     import umi_tools.network as network
 except ImportError:
-    import netwxoork
+    import network
 
 try:
     from umi_tools._dedup_umi import edit_distance
