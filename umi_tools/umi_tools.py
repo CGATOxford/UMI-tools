@@ -7,7 +7,8 @@ umi_tools.py - Tools for UMI analyses
 :Date: |today|
 :Tags: Genomics UMI
 
-There are 3 tools:
+There are 5 tools:
+  - whitelist
   - extract
   - group
   - dedup
