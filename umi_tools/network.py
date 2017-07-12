@@ -27,6 +27,7 @@ except:
 
 sys.setrecursionlimit(10000)
 
+
 def breadth_first_search(node, adj_list):
     searched = set()
     queue = set()
