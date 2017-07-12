@@ -92,19 +92,6 @@ def main(argv=None):
     else:
         in_mode = "rb"
 
-    if options.gene_tag and options.gene_transcript_map:
-        raise ValueError("need to use either --gene-transcript-map "
-                         "OR --gene-tag, please do not provide both")
-
-    if not options.gene_transcript_map and not options.gene_tag:
-        raise ValueError("need to use either --gene-transcript-map "
-                         "or --gene-tag")
-    try:
-        re.compile(options.skip_regex)
-    except re.error:
-        raise ValueError("skip-regex '%s' is not a "
-                         "valid regex" % options.skip_regex)
-
     infile = pysam.Samfile(in_name, in_mode)
 
     # write out to tempfile and then sort to stdout
@@ -161,6 +148,7 @@ def main(argv=None):
             tmpfile.write("%s\n" % ":".join((gene, cell.decode(), str(gene_count))))
         else:
             tmpfile.write("%s\n" % ":".join((gene, str(gene_count))))
+
         nOutput += gene_count
 
     tmpfile.close()

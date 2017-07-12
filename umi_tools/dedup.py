@@ -2,7 +2,7 @@
 dedup.py - Deduplicate reads that are coded with a UMI
 =========================================================
 
-:Author: Ian Sudbery
+:Author: Ian Sudbery, Tom Smith
 :Release: $Id$
 :Date: |today|
 :Tags: Python UMI

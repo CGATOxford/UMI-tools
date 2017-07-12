@@ -987,7 +987,6 @@ def validateSamOptions(options):
             raise ValueError("skip-regex '%s' is not a "
                              "valid regex" % options.skip_regex)
 
-
 def Stop():
     """stop the experiment.
 

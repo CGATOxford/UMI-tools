@@ -15,6 +15,7 @@ import random
 import numpy as np
 import pysam
 import re
+import copy
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
@@ -877,7 +878,7 @@ class TwoPassPairWriter:
 
 def getMetaContig2contig(bamfile, gene_transcript_map):
     ''' '''
-    references = bamfile.references
+    references = set(bamfile.references)
     metacontig2contig = collections.defaultdict(set)
     for line in U.openFile(gene_transcript_map, "r"):
 
@@ -965,7 +966,13 @@ class get_bundles:
         self.all_reads = all_reads
         self.return_unmapped = return_unmapped
         self.return_read2 = return_read2
+        #self.metacontig_contig = copy.copy(metacontig_contig)
         self.metacontig_contig = metacontig_contig
+
+        self.contig_metacontig = {}
+        for metacontig in metacontig_contig:
+            for contig in metacontig_contig[metacontig]:
+                self.contig_metacontig[contig] = metacontig
 
         # set the method with which to extract umis from reads
         if self.options.get_umi_method == "read_id":
@@ -993,9 +1000,9 @@ class get_bundles:
         self.observed_contigs = collections.defaultdict(set)
 
         self.last_pos = 0
-        self.last_chr = ""
-        self.start = 0
-        self.current_chr = ""
+        self.last_chr = None
+        self.start = None
+        self.current_chr = None
 
         self.reads_dict = collections.defaultdict(
             lambda: collections.defaultdict(
@@ -1015,7 +1022,6 @@ class get_bundles:
             except KeyError:
                 self.reads_dict[pos][key][umi]["read"] = [read]
                 self.reads_dict[pos][key][umi]["count"] = 1
-                self.read_counts[pos][key][umi] = 0
             else:
                 self.reads_dict[pos][key][umi]["read"].append(read)
 
@@ -1025,7 +1031,6 @@ class get_bundles:
                 self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
                 self.reads_dict[pos][key][umi]["count"] = 1
-                self.read_counts[pos][key][umi] = 0
 
         else:
             # retain just a single read per key
@@ -1068,29 +1073,42 @@ class get_bundles:
                 if random.random() < prob:
                     self.reads_dict[pos][key][umi]["read"] = read
 
-    def check_output(self, pos):
+    def check_output(self):
+
+        do_output = False
+        out_keys = None
 
         if self.options.per_gene:
-            do_output = not pos == self.last_chr
+
             if self.metacontig_contig:
-                if (self.observed_contigs[self.last_chr] ==
-                    self.metacontig_contig[self.last_chr]):
-                    out_keys = self.last_chr
+
+                if (self.current_chr != self.last_chr and
+                    (self.observed_contigs[self.last_pos] ==
+                     self.metacontig_contig[self.last_pos])):
+                    do_output = True
+                    out_keys = [self.last_pos]
+
             else:
-                out_keys = sorted(self.reads_dict.keys())
+                if self.current_chr != self.last_chr:
+                    do_output = True
+                    out_keys = sorted(self.reads_dict.keys())
 
         elif self.options.whole_contig:
-            do_output = not self.current_chr == self.last_chr
-            out_keys = sorted(self.reads_dict.keys())
-
-        else:
-            do_output = (self.start > (self.last_pos+1000) or
-                         not self.current_chr == self.last_chr)
-
-            out_keys = sorted(self.reads_dict.keys())
 
             if self.current_chr != self.last_chr:
-                out_keys = [x for x in out_keys if x <= self.start-1000]
+                do_output = True
+                out_keys = sorted(self.reads_dict.keys())
+
+        else:
+
+            if (self.start > (self.last_pos+1000) or
+                not self.current_chr == self.last_chr):
+
+                do_output = True
+                out_keys = sorted(self.reads_dict.keys())
+
+                if self.current_chr == self.last_chr:
+                    out_keys = [x for x in out_keys if x <= self.start-1000]
 
         return do_output, out_keys
 
@@ -1141,46 +1159,53 @@ class get_bundles:
                     self.read_events['< MAPQ threshold'] += 1
                     continue
 
+            self.current_chr = read.reference_name
+
             if self.options.per_gene:
 
                 if self.options.per_contig:
-                    pos = read.tid
-
-                elif self.options.gene_tag:
-                    pos = read.get_tag(self.options.gene_tag)
 
                     if self.metacontig_contig:
-                        # keep track of observed contigs for each gene
-                        self.observed_contigs[pos].add(read.reference_name)
+                        transcript = read.reference_name
+                        gene = self.contig_metacontig[transcript]
+                    else:
+                        gene = read.reference_name
 
-                    if re.search(self.options.skip_regex, pos):
+                elif self.options.gene_tag:
+
+                    gene = read.get_tag(self.options.gene_tag)
+
+                    if re.search(self.options.skip_regex, gene):
                         self.read_events['Gene skipped - matches regex'] += 1
                         continue
 
+                pos = gene
                 key = pos
 
-                do_output, out_keys = self.check_output(pos)
+                if self.last_chr:
+                    do_output, out_keys = self.check_output()
+                else:
+                    do_output = False
 
                 if do_output:
-
-                    out_keys = list(self.reads_dict.keys())
-
                     for p in out_keys:
                         for k in sorted(self.reads_dict[p].keys()):
                             yield self.reads_dict[p][k], k, "bundle"
 
                         del self.reads_dict[p]
-                        del self.read_counts[p]
 
-                    self.last_chr = pos
+                self.last_chr = self.current_chr
+                self.last_pos = pos
 
             else:
 
                 start, pos, is_spliced = get_read_position(
                     read, self.options.soft_clip_threshold)
 
-                current_chr = read.tid
-                do_output, out_keys = self.check_output(pos)
+                if self.last_chr:
+                    do_output, out_keys = self.check_output()
+                else:
+                    do_output = False
 
                 if do_output:
                     for p in out_keys:
@@ -1188,10 +1213,11 @@ class get_bundles:
                             yield self.reads_dict[p][k], k, "bundle"
 
                     del self.reads_dict[p]
-                    del self.read_counts[p]
+                    if p in self.read_counts:
+                        del self.read_counts[p]
 
-                    self.last_pos = self.start
-                    self.last_chr = self.current_chr
+                self.last_pos = self.start
+                self.last_chr = self.current_chr
 
                 if self.options.read_length:
                     r_length = read.query_length
@@ -1210,8 +1236,13 @@ class get_bundles:
             key = (key, cell)
             self.update_dicts(read, pos, key, umi)
 
+            if self.metacontig_contig:
+                # keep track of observed contigs for each gene
+                self.observed_contigs[gene].add(transcript)
+
+
         # yield remaining bundles
-        for p in out_keys:
+        for p in self.reads_dict.keys():
             for k in sorted(self.reads_dict[p].keys()):
                 yield self.reads_dict[p][k], k, "bundle"
 
