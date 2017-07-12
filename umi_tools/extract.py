@@ -364,6 +364,11 @@ def main(argv=None):
                         options.pattern, options.pattern2))
 
     if options.filter_cell_barcodes:
+
+        if not options.whitelist:
+                U.error("must provide a whitelist (--whitelist) if using "
+                        "--filter-cell-barcode option")
+
         if not extract_cell:
             if options.extract_method == "string":
                 U.error("barcode pattern(s) do not include any cell bases "
@@ -375,8 +380,6 @@ def main(argv=None):
                             options.pattern, options.pattern2))
 
     if options.stdin == sys.stdin:
-        if not options.whitelist and options.filter_cell_barcode:
-            U.error("cannot support reading from stdin if correcting cell barcode")
         read1s = umi_methods.fastqIterate(U.openFile(options.stdin))
     else:
         read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))

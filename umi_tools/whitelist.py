@@ -247,7 +247,9 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
 
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv,
+                              add_group_dedup_options=False,
+                              add_sam_options=False)
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
