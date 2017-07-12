@@ -15,7 +15,6 @@ import random
 import numpy as np
 import pysam
 import re
-import copy
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
@@ -966,13 +965,13 @@ class get_bundles:
         self.all_reads = all_reads
         self.return_unmapped = return_unmapped
         self.return_read2 = return_read2
-        #self.metacontig_contig = copy.copy(metacontig_contig)
         self.metacontig_contig = metacontig_contig
 
         self.contig_metacontig = {}
-        for metacontig in metacontig_contig:
-            for contig in metacontig_contig[metacontig]:
-                self.contig_metacontig[contig] = metacontig
+        if self.contig_metacontig:
+            for metacontig in metacontig_contig:
+                for contig in metacontig_contig[metacontig]:
+                    self.contig_metacontig[contig] = metacontig
 
         # set the method with which to extract umis from reads
         if self.options.get_umi_method == "read_id":
@@ -1001,7 +1000,7 @@ class get_bundles:
 
         self.last_pos = 0
         self.last_chr = None
-        self.start = None
+        self.start = 0
         self.current_chr = None
 
         self.reads_dict = collections.defaultdict(
@@ -1102,7 +1101,7 @@ class get_bundles:
         else:
 
             if (self.start > (self.last_pos+1000) or
-                not self.current_chr == self.last_chr):
+                self.current_chr != self.last_chr):
 
                 do_output = True
                 out_keys = sorted(self.reads_dict.keys())
@@ -1202,19 +1201,17 @@ class get_bundles:
                 start, pos, is_spliced = get_read_position(
                     read, self.options.soft_clip_threshold)
 
-                if self.last_chr:
-                    do_output, out_keys = self.check_output()
-                else:
-                    do_output = False
+                do_output, out_keys = self.check_output()
 
                 if do_output:
                     for p in out_keys:
                         for k in sorted(self.reads_dict[p].keys()):
                             yield self.reads_dict[p][k], k, "bundle"
 
-                    del self.reads_dict[p]
-                    if p in self.read_counts:
-                        del self.read_counts[p]
+                        del self.reads_dict[p]
+                        if p in self.read_counts:
+                            del self.read_counts[p]
+                    U.info("dict size: %i" % len(self.reads_dict))
 
                 self.last_pos = self.start
                 self.last_chr = self.current_chr
@@ -1240,9 +1237,8 @@ class get_bundles:
                 # keep track of observed contigs for each gene
                 self.observed_contigs[gene].add(transcript)
 
-
         # yield remaining bundles
-        for p in self.reads_dict.keys():
+        for p in sorted(self.reads_dict.keys()):
             for k in sorted(self.reads_dict[p].keys()):
                 yield self.reads_dict[p][k], k, "bundle"
 

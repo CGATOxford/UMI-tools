@@ -83,7 +83,7 @@ count_single_cells_wide_gene_tag:
       references: [count_single_cells_gene_tag_wide.tsv]
       options: count -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --per-cell --extract-umi-method=umis --wide-format-cell-counts
 
-# # python 2 tests ##
+# python 2 tests ##
 
 dedup_single_ignore:
       skip_python: 3
