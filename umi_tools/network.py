@@ -27,25 +27,6 @@ except:
 
 sys.setrecursionlimit(10000)
 
-
-def estimate_adj_list_memory_footprint(number_UMIs, UMI_length):
-    '''Based on a simulation, the following formula was derived for the
-    memory usage of an adj_list, where N = number of umis and L =
-    length of umis and an empty dict is 288 bytes
-
-    288 + 197.9464N - 2756.488L - 0.8242NL
-
-    Note that this returns negative values for when N is small (e.g <
-    100) but we're only using this to look out for issue with large
-    memory usage so this isn't a problem
-    '''
-
-    return (288 +
-            (number_UMIs * 197.9464) -
-            (2756.4888 * UMI_length) -
-            (0.8242 * number_UMIs * UMI_length))
-
-
 def breadth_first_search(node, adj_list):
     searched = set()
     queue = set()
@@ -426,17 +407,6 @@ class UMIClusterer:
 
         if number_of_umis > self.max_umis_per_position:
             self.max_umis_per_position = number_of_umis
-
-        est_mem_usage = estimate_adj_list_memory_footprint(
-            number_of_umis, len(list(umis)[0]))
-
-        # TS: if we raise the warning here, we don't know what the
-        # position is. If we raise it in ReadDeduplicator, this won't
-        # work for group or count
-        if est_mem_usage > (1024**2) * 4:  # is estimated memory usage > 8GB?
-            U.warn("The memory usage for the current position is estimated to "
-                   "exceed 4GB! Resolving the networks at this position may "
-                   "take a long time")
 
         len_umis = [len(x) for x in umis]
 
