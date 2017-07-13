@@ -994,7 +994,7 @@ class get_bundles:
         self.metacontig_contig = metacontig_contig
 
         self.contig_metacontig = {}
-        if self.contig_metacontig:
+        if self.metacontig_contig:
             for metacontig in metacontig_contig:
                 for contig in metacontig_contig[metacontig]:
                     self.contig_metacontig[contig] = metacontig
