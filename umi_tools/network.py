@@ -14,9 +14,6 @@ import sys
 import regex
 import numpy as np
 
-import pyximport
-pyximport.install(build_in_temp=False)
-
 try:
     from umi_tools._dedup_umi import edit_distance
     import umi_tools.Utilities as U
