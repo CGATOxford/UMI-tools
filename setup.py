@@ -116,10 +116,10 @@ setup(
     package_dir=umi_tools_package_dirs,
     include_package_data=True,
     # dependencies
-    setup_requires=['cython'],
+    #setup_requires=['cython'],
     install_requires=install_requires,
     # extension modules
-    # ext_modules=cythonize("umi_tools/_dedup_umi.pyx"),
+    ext_modules=[Extension("umi_tools._dedup_umi", ["umi_tools/_dedup_umi.c"])],
     entry_points={
         'console_scripts': ['umi_tools = umi_tools.umi_tools:main']
     },
