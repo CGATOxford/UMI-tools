@@ -18,6 +18,7 @@ import re
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 from functools import partial
 
@@ -141,19 +142,21 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
 ###############################################################################
 
 
-def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
+def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None):
     ''' estimate the number of "true" cell barcodes
+
     input:
          cell_barcode_counts = dict(key = barcode, value = count)
+         cell_number (optional) = define number of cell barcodes to accept
          plotfile_prefix = (optional) prefix for plots
 
     returns:
          List of true barcodes
     '''
 
-    # very low abundance cell barcodes are filtered out (< 0.0001 *
+    # very low abundance cell barcodes are filtered out (< 0.001 *
     # the most abundant)
-    threshold = 0.0001 * cell_barcode_counts.most_common(1)[0][1]
+    threshold = 0.001 * cell_barcode_counts.most_common(1)[0][1]
 
     counts = sorted(cell_barcode_counts.values(), reverse=True)
     counts_thresh = [x for x in counts if x > threshold]
@@ -165,74 +168,152 @@ def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
     xx_values = 1000  # how many x values for density plot
     xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
 
-    local_mins = argrelextrema(density(xx), np.less)[0]
-    local_min = None
+    if cell_number:
+        threshold = counts[cell_number]
+        
+    else:
+        local_mins = argrelextrema(density(xx), np.less)[0]
+        local_min = None
 
-    # TS: Set of heuristic thresholds to decide which local minimum to select
-    # This is very unlikely to be the best way to achieve this!
-    for poss_local_min in local_mins[::-1]:
-        if (poss_local_min >= 0.2 * xx_values and
-            (log_counts.max() - xx[poss_local_min] > 1 or
-             xx[poss_local_min] < log_counts.max()/2)):
-            local_min = poss_local_min
-            break
+        # TS: Set of heuristic thresholds to decide which local minimum to select
+        # This is very unlikely to be the best way to achieve this!
+        for poss_local_min in local_mins[::-1]:
+            if (poss_local_min >= 0.2 * xx_values and
+                (log_counts.max() - xx[poss_local_min] > 1 or
+                 xx[poss_local_min] < log_counts.max()/2)):
+                local_min = poss_local_min
+                break
 
-    if local_min is None:
-        return None
+        if local_min is None:
+            return None
 
-    threshold = np.power(10, xx[local_min])
-    final_barcodes = set([
-        x for x, y in cell_barcode_counts.items() if y > threshold])
-
-    if plotfile_prefix:
-
-        # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
-        CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
-                          '#f781bf', '#a65628', '#984ea3',
-                          '#999999', '#e41a1c', '#dede00']
-
-        # make density plot
-        fig = plt.figure()
-        fig1 = fig.add_subplot(111)
-        fig1.plot(xx, density(xx), 'k')
-        fig1.set_xlabel("Reads (log10)")
-        fig1.set_ylabel("Density")
-
-        for pos in xx[local_mins]:
-            if pos == xx[local_min]:  # selected local minima
-                fig1.axvline(x=xx[local_min], color=CB_color_cycle[0],
-                             label="selected local minima")
-            else:
-                fig1.axvline(x=pos, color=CB_color_cycle[3],
-                             label="other local minima")
-
-        fig1.legend(loc=0)
-
-        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix)
-
-        # make knee plot
-        fig = plt.figure()
-        fig2 = fig.add_subplot(111)
-        fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
-        xmax = min(local_min * 5, len(counts))  # reasonable maximum x-axis value
-        fig2.set_xlim((0 - 0.01 * xmax, xmax))
-        fig2.set_xlabel("Rank")
-        fig2.set_ylabel("Cumulative sum of reads")
-
+        local_mins_counts = []
         for pos in xx[local_mins]:
             threshold = np.power(10, pos)
             passing_threshold = sum([y > threshold
                                      for x, y in cell_barcode_counts.items()])
 
-            if passing_threshold == len(final_barcodes):  # selected local minima
-                fig2.axvline(x=passing_threshold, color=CB_color_cycle[0],
-                             label="selected local minima")
-            else:
-                fig2.axvline(x=passing_threshold, color=CB_color_cycle[3],
-                             label="other local minima")
+            local_mins_counts.append(passing_threshold)
 
-        fig2.legend(loc=0)
-        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix)
+        threshold = np.power(10, xx[local_min])
+
+    final_barcodes = set([
+        x for x, y in cell_barcode_counts.items() if y > threshold])
+
+    if plotfile_prefix:
+
+
+        # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
+        CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                          '#f781bf', '#a65628', '#984ea3',
+                          '#999999', '#e41a1c', '#dede00']
+        user_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[0], ls="dashed",
+            markersize=15, label='User-defined')
+        selected_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[0], ls="dashed", markersize=15, label='Selected')
+        rejected_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[3], ls="dashed", markersize=15, label='Rejected')
+
+        # make density plot
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        fig1.plot(xx, density(xx), 'k')
+        fig1.set_xlabel("Count per cell (log10)")
+        fig1.set_ylabel("Density")
+
+        if cell_number:
+            fig1.axvline(np.log10(threshold), ls="dashed", color=CB_color_cycle[0])
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
+        else:
+            for pos in xx[local_mins]:
+                if pos == xx[local_min]:  # selected local minima
+                    fig1.axvline(x=xx[local_min], ls="dashed", color=CB_color_cycle[0])
+                else:
+                    fig1.axvline(x=pos, ls="dashed", color=CB_color_cycle[3])
+
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        # make knee plot
+        fig = plt.figure()
+        fig2 = fig.add_subplot(111)
+        fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
+        xmax = min(len(final_barcodes)* 5, len(counts))  # reasonable maximum x-axis value
+        fig2.set_xlim((0 - (0.01 * xmax), xmax))
+        fig2.set_xlabel("Rank")
+        fig2.set_ylabel("Cumulative count")
+
+        if cell_number:
+            fig2.axvline(x=cell_number, ls="dashed", color=CB_color_cycle[0])
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
+        else:
+            for local_mins_count in local_mins_counts:
+                if local_mins_count == len(final_barcodes):  # selected local minima
+                    fig2.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[0])
+                else:
+                    fig2.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[3])
+
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        colours_selected = [CB_color_cycle[0] for x in range(0, len(final_barcodes))]
+        colours_rejected = ["black" for x in range(0, len(counts)-len(final_barcodes))]
+        colours = colours_selected + colours_rejected
+
+        fig = plt.figure()
+        fig3 = fig.add_subplot(111)
+        fig3.scatter(x=range(1, len(counts)+1), y=counts, c=colours,s=10, linewidths=0)
+        fig3.loglog()
+        fig3.set_xlim(0, len(counts)*1.25)
+        fig3.set_xlabel('Barcode index')
+        fig3.set_ylabel('Count')
+
+        if cell_number:
+            fig3.axvline(x=cell_number, ls="dashed", color=CB_color_cycle[0])
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
+        else:
+            for local_mins_count in local_mins_counts:
+                if local_mins_count == len(final_barcodes):  # selected local minima
+                    fig3.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[0])
+                else:
+                    fig3.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[3])
+
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_counts.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        if not cell_number:
+            with U.openFile("%s_cell_thresholds.tsv" % plotfile_prefix, "w") as outf:
+                outf.write("count\taction\n")
+                for local_mins_count in local_mins_counts:
+                    if local_mins_count == len(final_barcodes):
+                        threshold_type = "Selected"
+                    else:
+                        threshold_type = "Rejected"
+
+                    outf.write("%s\t%s\n" % (local_mins_count, threshold_type))
 
     return final_barcodes
 
@@ -270,11 +351,12 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
 
 
 def getCellWhitelist(cell_barcode_counts,
+                     cell_number=False,
                      error_correct_threshold=0,
                      plotfile_prefix=None):
 
     cell_whitelist = getKneeEstimate(
-        cell_barcode_counts, plotfile_prefix=plotfile_prefix)
+        cell_barcode_counts, cell_number, plotfile_prefix)
     if error_correct_threshold > 0:
         true_to_false_map = getErrorCorrectMapping(
             cell_barcode_counts.keys(), cell_whitelist,
@@ -571,7 +653,6 @@ class ExtractFilterAndUpdate:
 
     def _getBarcodesRegex(self, read1, read2=None):
         ''' '''
-
         # first check both regexes for paired end samples to avoid uneccessarily
         # extracting barcodes from read1 where regex2 doesn't match read2
         if self.pattern:
@@ -773,6 +854,7 @@ class ExtractFilterAndUpdate:
         elif method == "regex":
             self.getCellBarcode = self._getCellBarcodeRegex
             self.getBarcodes = self._getBarcodesRegex
+
 
     def getReadCounts(self):
         return self.read_counts

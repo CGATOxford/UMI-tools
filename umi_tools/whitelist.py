@@ -11,7 +11,8 @@ Purpose
 -------
 
 Extract cell barcodes and identify the most likely true barcodes using
-the 'knee' method
+the 'knee' method. Use the --set-cell-number option if you want to
+manually set the number of accepted cell barcodes.
 
 
 Barcode extraction
@@ -96,8 +97,10 @@ detailed explanation:
 
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
-You can supply the --plot-prefix option to visualise the threshold set
-for true cell barcodes.
+You can supply the --plot-prefix option to visualise the set of
+thresholds considered for defining cell barcodes. This option will
+also generate a table containing the thresholds which were rejected if
+you want manually adjust the threshold a different threshold.
 
 Options
 -------
@@ -234,7 +237,16 @@ def main(argv=None):
                       type="int",
                       help=("Hamming distance for correction of "
                             "barcodes to whitelist barcodes"))
-    parser.set_defaults(extract_method="string",
+    parser.add_option("--method",
+                      dest="method",
+                      choices=["reads", "umis"],
+                      help=("Use reads or unique umi counts per cell"))
+    parser.add_option("--set-cell-number",
+                      dest="cell_number",
+                      type="int",
+                      help=("Specify the precise number of cell barcodes to accept"))
+    parser.set_defaults(method="reads",
+                        extract_method="string",
                         filter_cell_barcodes=False,
                         whitelist_tsv=None,
                         blacklist_tsv=None,
@@ -243,7 +255,8 @@ def main(argv=None):
                         pattern2=None,
                         read2_in=None,
                         plot_prefix=None,
-                        subset_reads=100000000)
+                        subset_reads=100000000,
+                        cell_number=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -350,13 +363,24 @@ def main(argv=None):
     n_reads = 0
     n_cell_barcodes = 0
 
+    # if using the umis method, need to keep a set of umis observed
+    if options.method == "umis":
+        cell_barcode_umis = collections.defaultdict(set)
+
     if not options.read2_in:
         for read1 in read1s:
             n_reads += 1
-            cell_barcode = ReadExtractor.getCellBarcode(read1)
-            if cell_barcode:
-                cell_barcode_counts[cell_barcode] += 1
+            barcode_values = ReadExtractor.getBarcodes(read1)
+            if barcode_values is None:
+                continue
+            else:
+                cell, umi, _, _, _, _, _ = barcode_values
+                if options.method == "umis":
+                    cell_barcode_umis[cell].add(umi)
+                else:
+                    cell_barcode_counts[cell] += 1
                 n_cell_barcodes += 1
+
             if options.subset_reads:
                 if n_cell_barcodes > options.subset_reads:
                     break
@@ -364,15 +388,29 @@ def main(argv=None):
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
         for read1, read2 in izip(read1s, read2s):
             n_reads += 1
-            cell_barcode = ReadExtractor.getCellBarcode(read1, read2)
-            if cell_barcode:
-                cell_barcode_counts[cell_barcode] += 1
+
+            barcode_values = ReadExtractor.getBarcodes(read1, read2)
+            if barcode_values is None:
+                continue
+            else:
+                cell, umi, _, _, _, _, _ = barcode_values
+                if options.method == "umis":
+                    cell_barcode_umis[cell].add(umi)
+                else:
+                    cell_barcode_counts[cell] += 1
+                n_cell_barcodes += 1
+
             if options.subset_reads:
                 if n_reads > options.subset_reads:
                     break
+    
+    if options.method == "umis":
+        for cell in cell_barcode_umis:
+            cell_barcode_counts[cell] = len(cell_barcode_umis[cell])
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
         cell_barcode_counts,
+        options.cell_number,
         options.error_correct_threshold,
         options.plot_prefix)
 
