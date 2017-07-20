@@ -11,8 +11,13 @@ Purpose
 -------
 
 Extract cell barcodes and identify the most likely true barcodes using
-the 'knee' method. Use the --set-cell-number option if you want to
-manually set the number of accepted cell barcodes.
+the 'knee' method.
+
+Use the --set-cell-number option if you want to manually set the
+number of accepted cell barcodes. Note that the exact number of of
+cell barcodes in the outputted whitelist may be slightly less than
+this if there are multiple cells observed with the same frequency at
+the threshold between accepted and rejected cell barcodes.
 
 
 Barcode extraction
@@ -91,11 +96,14 @@ the --extract-method option
 Identifying the true cell barcodes
 ----------------------------------
 
-We use the distribution of counts per UMI to identify the
+We use the distribution of counts per cell barcode to identify the
 cut-off for 'true' UMIs (the 'knee'). See this blog post for a more
 detailed explanation:
 
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
+
+Counts per cell barcode can be performed using either read or unique
+UMI counts. Use --method=[read|umis] to set the counting method.
 
 You can supply the --plot-prefix option to visualise the set of
 thresholds considered for defining cell barcodes. This option will
@@ -244,7 +252,7 @@ def main(argv=None):
     parser.add_option("--set-cell-number",
                       dest="cell_number",
                       type="int",
-                      help=("Specify the precise number of cell barcodes to accept"))
+                      help=("Specify the number of cell barcodes to accept"))
     parser.set_defaults(method="reads",
                         extract_method="string",
                         filter_cell_barcodes=False,
@@ -403,10 +411,16 @@ def main(argv=None):
             if options.subset_reads:
                 if n_reads > options.subset_reads:
                     break
-    
+
     if options.method == "umis":
         for cell in cell_barcode_umis:
             cell_barcode_counts[cell] = len(cell_barcode_umis[cell])
+
+    if options.cell number and options.cell_number > len(cell_barcode_counts):
+        raise ValueError(
+            "--set-cell-barcode option specifies more cell barcodes than the "
+            "number of observed barcodes %i/%i" % (
+                options.cell_number, len(cell_barcode_counts)))
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
         cell_barcode_counts,

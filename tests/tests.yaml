@@ -55,20 +55,27 @@ extract_scrb_seq_prefiltered:
       references: [scrb_extract.fastq]
       options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-out-only  -L test.log  --read2-out=scrb_extract_prefiltered_test.fastq --reconcile-pairs
 
-cell_barcode_scrb_seq:
+whitelist_scrb_seq:
       stdin: scrb_seq_fastq.1.gz
       outputs: [stdout]
       references: [scrb_whitelist.tsv]
       options: whitelist --bc-pattern=CCCCCCNNNNNNNNNN  -L test.log --stdin=scrb_seq_fastq.1.gz
 
-cell_barcode_indrop:
+whitelist_indrop:
       skip_python:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist.tsv]
       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
 
-cell_barcode_indrop_fuzzy:
+whitelist_indrop_user:
+      skip_python:
+      stdin: indrop.fastq.1.gz
+      outputs: [stdout]
+      references: [indrop_whitelist_user.tsv]
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --set-cell-number=607
+
+whitelist_indrop_fuzzy:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_fuzzy_whitelist.tsv]

@@ -170,7 +170,7 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
 
     if cell_number:
         threshold = counts[cell_number]
-        
+
     else:
         local_mins = argrelextrema(density(xx), np.less)[0]
         local_min = None
@@ -201,7 +201,6 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
         x for x, y in cell_barcode_counts.items() if y > threshold])
 
     if plotfile_prefix:
-
 
         # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
         CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
@@ -245,7 +244,7 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
         fig = plt.figure()
         fig2 = fig.add_subplot(111)
         fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
-        xmax = min(len(final_barcodes)* 5, len(counts))  # reasonable maximum x-axis value
+        xmax = min(len(final_barcodes) * 5, len(counts))  # reasonable maximum x-axis value
         fig2.set_xlim((0 - (0.01 * xmax), xmax))
         fig2.set_xlabel("Rank")
         fig2.set_ylabel("Cumulative count")
@@ -277,7 +276,8 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
 
         fig = plt.figure()
         fig3 = fig.add_subplot(111)
-        fig3.scatter(x=range(1, len(counts)+1), y=counts, c=colours,s=10, linewidths=0)
+        fig3.scatter(x=range(1, len(counts)+1), y=counts,
+                     c=colours, s=10, linewidths=0)
         fig3.loglog()
         fig3.set_xlim(0, len(counts)*1.25)
         fig3.set_xlabel('Barcode index')
@@ -854,7 +854,6 @@ class ExtractFilterAndUpdate:
         elif method == "regex":
             self.getCellBarcode = self._getCellBarcodeRegex
             self.getBarcodes = self._getBarcodesRegex
-
 
     def getReadCounts(self):
         return self.read_counts
