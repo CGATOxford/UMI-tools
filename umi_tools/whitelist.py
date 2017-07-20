@@ -416,7 +416,7 @@ def main(argv=None):
         for cell in cell_barcode_umis:
             cell_barcode_counts[cell] = len(cell_barcode_umis[cell])
 
-    if options.cell number and options.cell_number > len(cell_barcode_counts):
+    if options.cell_number and options.cell_number > len(cell_barcode_counts):
         raise ValueError(
             "--set-cell-barcode option specifies more cell barcodes than the "
             "number of observed barcodes %i/%i" % (
