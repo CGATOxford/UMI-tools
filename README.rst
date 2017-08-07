@@ -6,35 +6,51 @@ Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
 This repository contains tools for dealing with Unique Molecular
-Identifiers (UMIs)/Random Molecular Tags (RMTs). Currently there are
-five tools
+Identifiers (UMIs)/Random Molecular Tags (RMTs) and single Cell
+RNA-Seq cell barcodes. Currently there are 6
+commands. 
+
+The extract and whitelist commands are used to prepare a
+fastq containg UMIs +/- cell barcodes for alignment. 
+
+* whitelist:
+   **Builds a whitelist of the 'real' cell barcodes**
+      This is useful for droplet-based single cell RNA-Seq where the
+      identity of the true cell barcodes is unknown. Whitelist can
+      then be used to filter with extract (see below)
 
 * extract:
    **Flexible removal of UMI sequences from fastq reads.**
-      UMIs are removed and appended to the read name. Any other barcode, for example a library barcode, is left on the read.  
+      UMIs are removed and appended to the read name. Any other
+      barcode, for example a library barcode, is left on the read. Can
+      also filter reads by quality or against a whitelist (see above)
+
+The remaining commands, group, dedup and count/count_tab, are used to
+identify PCR duplicates using the UMIs and perform different levels of
+analysis depending on the needs of the user. A number of different UMI
+deduplication schemes are enabled - The recommended method is
+`directional`.
 
 * group: 
    **Groups PCR duplicates using the same methods available through `dedup`.**
       This is useful when you want to manually interrogate the PCR duplicates
 
 * dedup:
-   **Removes PCR duplicates.**
-      Implements a number of different UMI deduplication schemes. The recommended method is `directional`
+   **Groups PCR duplicates and deduplicates reads to yield one read per group**
+      Use this when you want to remove the PCR duplicates prior to any
+      downstream analysis
     
 * count:
-   **Counts the number of reads per-gene**
-      May only be used where you have either aligned to a
-      transcriptome or identified the gene assignment for each read
+   **Groups and deduplicates PCR duplicates and counts the unique molecules per gene**
+      Use this when you want to obtain a matrix with unique molecules
+      per gene. Can also perform per-cell counting for scRNA-Seq.
 
-The group, dedup and count commands may be considered different levels
-of the same analysis; a count command can always be converted
-to a dedup or group command if you want to manually interrogate the
-grouping and deduplication steps. Similarly, a dedup command can be
-converted to a group command.
+* count_tab:
+   **As per count except input is a flatfile**
 
 See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
 
-The `dedup` and `group` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
+The `dedup`, `group`, and `count` / `count_tab` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
 `Genome Research Publication <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_
 
@@ -82,20 +98,14 @@ To get detailed help on umi_tools run
 
    $ umi_tools --help
 
-To get help on umi_tools extract run
+To get help on a specific [COMMAND] run
 
 .. code:: bash
 
-   $ umi_tools extract --help
-
-To get help on umi_tools dedup run
-
-.. code:: bash
-
-   $ umi_tools dedup --help
+   $ umi_tools [COMMAND] --help
 
 
 Dependencies
 ------------
-umi_tools is dependent on `numpy`, `pandas`, `cython`, `pysam`,
-`future`, `regex` and `scipy`
+umi_tools is dependent on `numpy`, `pandas`, `scipy`, `cython`, `pysam`,
+`future`, `regex` and `matplotlib`
