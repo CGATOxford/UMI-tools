@@ -416,8 +416,13 @@ def main(argv=None):
     if options.cell_number and options.cell_number > len(cell_barcode_counts):
         raise ValueError(
             "--set-cell-barcode option specifies more cell barcodes than the "
-            "number of observed cell barcodes %i/%i" % (
-                options.cell_number, len(cell_barcode_counts)))
+            "number of observed cell barcodes. This may be because "
+            "--subset-reads was set to a value too low to capture reads from "
+            "all cells. %s cell barcodes observed from %s parsed reads. "
+            "Expected>= %s cell barcodes" % (
+                len(cell_barcode_counts),
+                options.subset_reads,
+                options.cell_number))
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
         cell_barcode_counts,
