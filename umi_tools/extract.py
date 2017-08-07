@@ -165,8 +165,6 @@ Command line options
 import sys
 import regex
 import collections
-import pyximport
-pyximport.install(build_in_temp=False)
 
 # python 3 doesn't require izip
 try:
