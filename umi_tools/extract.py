@@ -379,10 +379,7 @@ def main(argv=None):
                         "(starting with 'cell_') %s, %s" (
                             options.pattern, options.pattern2))
 
-    if options.stdin == sys.stdin:
-        read1s = umi_methods.fastqIterate(U.openFile(options.stdin))
-    else:
-        read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))
+    read1s = umi_methods.fastqIterate(options.stdin)
 
     # set up read extractor
     ReadExtractor = umi_methods.ExtractFilterAndUpdate(

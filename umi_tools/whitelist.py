@@ -192,7 +192,7 @@ except ImportError:
 try:
     import umi_tools.network as network
 except ImportError:
-    import netwxoork
+    import network
 
 try:
     from umi_tools._dedup_umi import edit_distance
@@ -276,7 +276,7 @@ def main(argv=None):
         if not options.read2_in:
             U.error("Must supply --bc-pattern for single-end")
         else:
-            U.error("Must supply --bc-pattern and/or --bc-pattern "
+            U.error("Must supply --bc-pattern and/or --bc-pattern2 "
                     "if paired-end ")
 
     if options.pattern2:
@@ -353,10 +353,7 @@ def main(argv=None):
                     "(starting with 'cell_') %s, %s" (
                         options.pattern, options.pattern2))
 
-    if options.stdin == sys.stdin:
-        read1s = umi_methods.fastqIterate(U.openFile(options.stdin))
-    else:
-        read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))
+    read1s = umi_methods.fastqIterate(options.stdin)
 
     # set up read extractor
     ReadExtractor = umi_methods.ExtractFilterAndUpdate(
@@ -419,7 +416,7 @@ def main(argv=None):
     if options.cell_number and options.cell_number > len(cell_barcode_counts):
         raise ValueError(
             "--set-cell-barcode option specifies more cell barcodes than the "
-            "number of observed barcodes %i/%i" % (
+            "number of observed cell barcodes %i/%i" % (
                 options.cell_number, len(cell_barcode_counts)))
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
@@ -427,9 +424,6 @@ def main(argv=None):
         options.cell_number,
         options.error_correct_threshold,
         options.plot_prefix)
-
-    # re-make the reads1s iterator
-    read1s = umi_methods.fastqIterate(U.openFile(options.stdin.name))
 
     for barcode in sorted(list(cell_whitelist)):
 
