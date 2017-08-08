@@ -98,7 +98,7 @@ def main(argv=None):
     tmpfilename = U.getTempFilename()
     tmpfile = U.openFile(tmpfilename, mode="w")
 
-    nInput, nOutput = 0, 0
+    nInput, nOutput, input_reads = 0, 0, 0
 
     gene_tag = options.gene_tag
     metacontig2contig = None
@@ -130,6 +130,10 @@ def main(argv=None):
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
         nInput += sum(counts.values())
+
+        while nInput >= input_reads + 1000000:
+            input_reads += 1000000
+            U.info("Parsed %i input reads" % input_reads)
 
         # set up UMIClusterer functor with methods specific to
         # specified options.method

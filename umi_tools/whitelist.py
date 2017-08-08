@@ -372,8 +372,17 @@ def main(argv=None):
     if options.method == "umis":
         cell_barcode_umis = collections.defaultdict(set)
 
+    # variables for progress monitor
+    displayMax = 100000
+    U.info("Starting barcode extraction")
+
     if not options.read2_in:
         for read1 in read1s:
+
+            # Update display in every 100kth iteration
+            if n_reads % displayMax == 0:
+                U.info("Parsed {} reads".format(n_reads))
+
             n_reads += 1
             barcode_values = ReadExtractor.getBarcodes(read1)
             if barcode_values is None:
@@ -392,6 +401,11 @@ def main(argv=None):
     else:
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
         for read1, read2 in izip(read1s, read2s):
+
+            # Update display in every 100kth iteration
+            if n_reads % displayMax == 0:
+                U.info("Parsed {} reads".format(n_reads))
+
             n_reads += 1
 
             barcode_values = ReadExtractor.getBarcodes(read1, read2)
@@ -408,6 +422,8 @@ def main(argv=None):
             if options.subset_reads:
                 if n_reads > options.subset_reads:
                     break
+
+    U.info("Starting whitelist determination")
 
     if options.method == "umis":
         for cell in cell_barcode_umis:

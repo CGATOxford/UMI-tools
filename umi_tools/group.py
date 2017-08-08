@@ -242,11 +242,11 @@ def main(argv=None):
 
         while nOutput >= output_reads + 10000:
             output_reads += 10000
-            U.debug("Outputted %i" % nOutput)
+            U.info("Written out %i reads" % output_reads)
 
-        while nInput >= output_reads + 1000000:
+        while nInput >= input_reads + 1000000:
             input_reads += 1000000
-            U.debug("Read %i input reads" % nInput)
+            U.info("Parsed %i input reads" % input_reads)
 
         # set up UMIClusterer functor with methods specific to
         # specified options.method

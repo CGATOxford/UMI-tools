@@ -1318,7 +1318,6 @@ class get_bundles:
                         del self.reads_dict[p]
                         if p in self.read_counts:
                             del self.read_counts[p]
-                    U.info("dict size: %i" % len(self.reads_dict))
 
                 self.last_pos = self.start
                 self.last_chr = self.current_chr
