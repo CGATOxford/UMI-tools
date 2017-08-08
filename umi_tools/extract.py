@@ -422,6 +422,12 @@ def main(argv=None):
             options.stdout.write(str(new_read) + "\n")
 
     else:
+        #variable for progress monitor
+        progCount = 0
+        displayMax = 100000
+        U.info("Starting barcode extraction")
+        sys.stdout.flush()
+
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
 
         if options.read2_out:
@@ -434,6 +440,13 @@ def main(argv=None):
 
         for read1, read2 in umi_methods.joinedFastqIterate(
                 read1s, read2s, strict):
+            # incrementing count for monitoring progress
+            progCount += 1
+            # Update display in every 100kth iteration
+            if (progCount % displayMax == 0):
+                U.info("\r Parsed {} reads".format(progCount)),
+                sys.stdout.flush()
+
             reads = ReadExtractor(read1, read2)
 
             if options.reads_subset:
