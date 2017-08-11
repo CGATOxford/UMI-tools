@@ -191,7 +191,7 @@ in the overall usage of particular UMI sequences). The last two
 columns the same, but for the naive `unique` deduplication method
 where every UMI is assumed to represent an independent molecule in the
 biological sample. Looking at the third row, we see that there are
-11167 positions where the average edit distance between
+1167 positions where the average edit distance between
 UMIs is 1, whereas in the random null (in the final column) we would
 only expect to see 33 such bases.
 
