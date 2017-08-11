@@ -380,7 +380,7 @@ def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
         for line in inf:
             if line.startswith('#'):
                 continue
-            
+
             line = line.strip().split("\t")
             whitelist_barcode = line[0]
             cell_whitelist.append(whitelist_barcode)
