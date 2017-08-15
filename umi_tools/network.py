@@ -73,6 +73,52 @@ def remove_umis(adj_list, cluster, nodes):
     return cluster - nodes_to_remove
 
 
+def get_substr_slices(umi_length, idx_size):
+    '''
+    Create slices to split a UMI into approximately equal size substrings
+    Returns a list of tuples that can be passed to slice function
+    '''
+    cs, r = divmod(umi_length, idx_size)
+    sub_sizes = [cs + 1] * r + [cs] * (idx_size - r)
+    offset = 0
+    slices = []
+    for s in sub_sizes:
+        slices.append((offset, offset + s))
+        offset += s
+    return slices
+
+
+def build_substr_idx(umis, umi_length, min_edit):
+    '''
+    Build a dictionary of nearest neighbours using substrings, can be used
+    to reduce the number of pairwise comparisons.
+    '''
+    substr_idx = collections.defaultdict(
+        lambda: collections.defaultdict(set))
+    slices = get_substr_slices(umi_length, min_edit + 1)
+    for idx in slices:
+        for u in umis:
+            u_sub = u[slice(*idx)]
+            substr_idx[idx][u_sub].add(u)
+    return substr_idx
+
+
+def iter_nearest_neighbours(umis, substr_idx):
+    '''
+    Added by Matt 06/05/17
+    use substring dict to get (approximately) all the nearest neighbours to
+    each in a set of umis.
+    '''
+    for u in umis:
+        neighbours = set()
+        for idx, substr_map in substr_idx.items():
+            u_sub = u[slice(*idx)]
+            neighbours = neighbours.union(substr_map[u_sub])
+        neighbours.remove(u)
+        for nbr in neighbours:
+            yield u, nbr
+
+
 class UMIClusterer:
     '''A functor that clusters a dictionary of UMIs and their counts.
     The primary return value is either a list of representative UMIs
@@ -132,7 +178,13 @@ class UMIClusterer:
         ''' identify all umis within hamming distance threshold'''
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        if len(umis) > 25:
+            umi_length = len(umis[0])
+            substr_idx = build_substr_idx(umis, umi_length, threshold)
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 adj_list[umi1].append(umi2)
                 adj_list[umi2].append(umi1)
@@ -144,7 +196,13 @@ class UMIClusterer:
         and where the counts of the first umi is > (2 * second umi counts)-1'''
 
         adj_list = {umi: [] for umi in umis}
-        for umi1, umi2 in itertools.combinations(umis, 2):
+        if len(umis) > 25:
+            umi_length = len(umis[0])
+            substr_idx = build_substr_idx(umis, umi_length, threshold)
+            iter_umi_pairs = iter_nearest_neighbours(umis, substr_idx)
+        else:
+            iter_umi_pairs = itertools.combinations(umis, 2)
+        for umi1, umi2 in iter_umi_pairs:
             if edit_distance(umi1, umi2) <= threshold:
                 if counts[umi1] >= (counts[umi2]*2)-1:
                     adj_list[umi1].append(umi2)
@@ -298,6 +356,8 @@ class UMIClusterer:
 
     def __call__(self, umis, counts, threshold):
         '''Counts is a directionary that maps UMIs to their counts'''
+
+        umis = list(umis)
 
         self.positions += 1
 
@@ -453,4 +513,3 @@ class CellClusterer:
                       self.get_groups(clusters, adj_list, counts)]
 
         return final_umis
-
