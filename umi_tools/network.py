@@ -11,10 +11,8 @@ network.py - Network methods for dealing with UMIs
 import collections
 import itertools
 import sys
+import regex
 import numpy as np
-
-import pyximport
-pyximport.install(build_in_temp=False)
 
 try:
     from umi_tools._dedup_umi import edit_distance
@@ -73,6 +71,104 @@ def remove_umis(adj_list, cluster, nodes):
                            for node in adj_list[x]] + nodes)
 
     return cluster - nodes_to_remove
+
+
+class CellClusterer:
+    '''A functor that clusters a dictionary of cell barcodes and their counts.
+    The primary return value is either a list of representative UMIs
+    or a list of lists where each inner list represents the contents of
+    one cluster.
+
+    '''
+
+    def _get_best_min_account(self, cluster, adj_list, counts):
+        ''' return the min UMI(s) need to account for cluster'''
+        if len(cluster) == 1:
+            return list(cluster)
+
+        sorted_nodes = sorted(cluster, key=lambda x: counts[x],
+                              reverse=True)
+
+        for i in range(len(sorted_nodes) - 1):
+            if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
+                return sorted_nodes[:i+1]
+
+    def _get_adj_list_directional(self, umis, counts):
+        ''' identify all umis within the hamming distance threshold
+        and where the counts of the first umi is > (2 * second umi counts)-1'''
+
+        adj_list = {umi: [] for umi in umis}
+
+        if self.fuzzy_match:
+            for umi1 in umis:
+                # we need a second regex for some insertions,
+                # e.g UMI1 = "ATCG", UMI2 = "ATTC"
+                comp_regex_err = regex.compile("(%s){e<=1}" % str(umi1))
+                comp_regex_del = regex.compile("(%s){i<=1}" % str(umi1)[::-1])
+                for umi2 in umis:
+                    if umi1 == umi2:
+                        continue
+                    if counts[umi1] >= (counts[umi2]*self.dir_threshold):
+                        if (max(len(umi1), len(umi2)) -
+                            min(len(umi1), len(umi2))) > 1:
+                            continue
+                        if (comp_regex_err.match(str(umi2)) or
+                            comp_regex_del.match(str(umi2))):
+                            adj_list[umi1].append(umi2)
+        else:
+            for umi1, umi2 in itertools.combinations(umis, 2):
+                if edit_distance(umi1, umi2) <= 1:
+                    if counts[umi1] >= (counts[umi2]*2)-1:
+                        adj_list[umi1].append(umi2)
+                    if counts[umi2] >= (counts[umi1]*2)-1:
+                        adj_list[umi2].append(umi1)
+
+        return adj_list
+
+    def _get_connected_components_adjacency(self, graph, counts):
+        ''' find the connected UMIs within an adjacency dictionary'''
+
+        found = set()
+        components = list()
+
+        for node in sorted(graph, key=lambda x: counts[x], reverse=True):
+            if node not in found:
+                # component = self.search(node, graph)
+                component = breadth_first_search(node, graph)
+                found.update(component)
+                components.append(component)
+        return components
+
+    def __init__(self, cluster_method="directional",
+                 dir_threshold=10, fuzzy_match=True):
+        ''' select the required class methods for the cluster_method
+        and set the attributes used to refine the directional method'''
+
+        self.dir_threshold = dir_threshold
+        self.fuzzy_match = fuzzy_match
+
+        if cluster_method == "directional":
+            self.get_adj_list = self._get_adj_list_directional
+            self.get_connected_components = self._get_connected_components_adjacency
+        else:
+            raise ValueError("CellClusterer currently only supports the directional method")
+
+    def __call__(self, umis, counts):
+        '''Counts is a directionary that maps UMIs to their counts'''
+
+        len_umis = [len(x) for x in umis]
+        if not max(len_umis) == min(len_umis):
+            U.warn("not all umis are the same length(!):  %d - %d" % (
+                min(len_umis), max(len_umis)))
+
+        adj_list = self.get_adj_list(umis, counts)
+
+        clusters = self.get_connected_components(umis, adj_list, counts)
+
+        final_umis = [list(x) for x in
+                      self.get_groups(clusters, adj_list, counts)]
+
+        return final_umis
 
 
 class UMIClusterer:
@@ -181,7 +277,6 @@ class UMIClusterer:
                 component = breadth_first_search(node, graph)
                 found.update(component)
                 components.append(component)
-
         return components
 
     def _get_connected_components_null(self, umis, adj_list, counts):
@@ -204,7 +299,6 @@ class UMIClusterer:
 
         observed = set()
         groups = []
-
         for cluster in clusters:
             if len(cluster) == 1:
                 groups.append(list(cluster))
@@ -270,6 +364,10 @@ class UMIClusterer:
     def __init__(self, cluster_method="directional"):
         ''' select the required class methods for the cluster_method'''
 
+        self.max_umis_per_position = 0
+        self.total_umis_per_position = 0
+        self.positions = 0
+
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
@@ -291,7 +389,7 @@ class UMIClusterer:
             # percentile method incompatible with defining UMI groups
             self.get_groups = self._group_percentile
 
-        if cluster_method == "unique":
+        elif cluster_method == "unique":
             self.get_adj_list = self._get_adj_list_null
             self.get_connected_components = self._get_connected_components_null
             self.get_groups = self._group_unique
@@ -299,15 +397,23 @@ class UMIClusterer:
     def __call__(self, umis, counts, threshold):
         '''Counts is a directionary that maps UMIs to their counts'''
 
+        self.positions += 1
+
+        number_of_umis = len(umis)
+
+        self.total_umis_per_position += number_of_umis
+
+        if number_of_umis > self.max_umis_per_position:
+            self.max_umis_per_position = number_of_umis
+
         len_umis = [len(x) for x in umis]
+
         assert max(len_umis) == min(len_umis), (
             "not all umis are the same length(!):  %d - %d" % (
                 min(len_umis), max(len_umis)))
 
         adj_list = self.get_adj_list(umis, counts, threshold)
-
         clusters = self.get_connected_components(umis, adj_list, counts)
-
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
 
