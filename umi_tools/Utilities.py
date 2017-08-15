@@ -584,6 +584,8 @@ def Start(parser=None,
           argv=sys.argv,
           quiet=False,
           add_pipe_options=True,
+          add_group_dedup_options=True,
+          add_sam_options=True,
           return_parser=False):
     """set up an experiment.
 
@@ -633,6 +635,12 @@ def Start(parser=None,
     add_pipe_options : bool
         add common options for redirecting input/output
 
+    add_sam_options : bool
+        add options for UMI grouping/deduping and counting from a sam
+
+    add_group_dedup_options : bool
+        add options for UMI grouping and deduping
+
     Returns
     -------
     tuple
@@ -652,23 +660,173 @@ def Start(parser=None,
 
     global_starting_time = time.time()
 
-    group = OptionGroup(parser, "Script timing options")
+    if add_sam_options:
+        group = OptionGroup(parser, "Input options")
+
+        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
+                         help="Input file is in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
+                         choices=("read_id", "tag", "umis"), default="read_id",
+                         help="how is the read UMI +/ cell barcode encoded? "
+                         "[default=%default]")
+
+        group.add_option("--umi-separator", dest="umi_sep",
+                         type="string", help="separator between read id and UMI",
+                         default="_")
+
+        group.add_option("--umi-tag", dest="umi_tag",
+                         type="string", help="tag containing umi",
+                         default='RX')
+
+        group.add_option("--cell-tag", dest="cell_tag",
+                         type="string", help="tag containing cell",
+                         default=None)
+
+        group.add_option("--paired", dest="paired", action="store_true",
+                         default=False,
+                         help="paired BAM. [default=%default]")
+
+        group.add_option("--mapping-quality", dest="mapping_quality",
+                         type="int",
+                         help="Minimum mapping quality for a read to be retained"
+                         " [default=%default]",
+                         default=0)
+
+        parser.add_option_group(group)
+
+        group = OptionGroup(parser, "UMI grouping options")
+
+        group.add_option("--method", dest="method", type="choice",
+                         choices=("adjacency", "directional",
+                                  "percentile", "unique", "cluster"),
+                         default="directional",
+                         help="method to use for umi grouping [default=%default]")
+
+        group.add_option("--edit-distance-threshold", dest="threshold",
+                         type="int",
+                         default=1,
+                         help="Edit distance theshold at which to join two UMIs "
+                         "when grouping UMIs. [default=%default]")
+
+        parser.add_option_group(group)
+
+        group = OptionGroup(parser, "Single-cell RNA-Seq options")
+
+        group.add_option("--per-gene", dest="per_gene", action="store_true",
+                         default=False,
+                         help="Group/Dedup/Count per gene. Must combine with "
+                         "either --gene-tag or --per-contig")
+
+        group.add_option("--gene-tag", dest="gene_tag",
+                         type="string",
+                         help="gene is defined by this bam tag [default=%default]",
+                         default=None)
+
+        group.add_option("--skip-tags-regex", dest="skip_regex",
+                         type="string",
+                         help="Used with --gene-tag. "
+                         "Ignore reads where the gene-tag matches this regex",
+                         default="^[__|Unassigned]")
+
+        group.add_option("--per-contig", dest="per_contig", action="store_true",
+                         default=False,
+                         help="count per contig (field 3 in BAM; RNAME),"
+                         " e.g for transcriptome where contig = gene")
+
+        group.add_option("--gene-transcript-map", dest="gene_transcript_map",
+                         type="string",
+                         help="file mapping transcripts to genes (tab separated)",
+                         default=None)
+
+        group.add_option("--per-cell", dest="per_cell", action="store_true",
+                         default=False,
+                         help="Group/Dedup/Count per cell")
+
+        parser.add_option_group(group)
+
+    if add_group_dedup_options:
+
+        group = OptionGroup(parser, "Group/Dedup options")
+
+        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
+                         help="Output alignments in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--no-sort-output", dest="no_sort_output",
+                         action="store_true", default=False,
+                         help="Don't Sort the output")
+
+        group.add_option("--whole-contig", dest="whole_contig",
+                         action="store_true", default=False,
+                         help="Read whole contig before outputting bundles: "
+                         "guarantees that no reads are missed, but increases "
+                         "memory usage")
+
+        group.add_option("--multimapping-detection-method",
+                         dest="detection_method", type="choice",
+                         choices=("NH", "X0", "XT"),
+                         default=None,
+                         help="Some aligners identify multimapping using bam "
+                         "tags. Setting this option to NH, X0 or XT will "
+                         "use these tags when selecting the best read "
+                         "amongst reads with the same position and umi "
+                         "[default=%default]")
+
+        group.add_option("--spliced-is-unique", dest="spliced",
+                         action="store_true",
+                         help="Treat a spliced read as different to an unspliced"
+                         " one [default=%default]",
+                         default=False)
+
+        group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
+                         type="float",
+                         help="number of bases clipped from 5' end before"
+                         "read is counted as spliced [default=%default]",
+                         default=4)
+
+        group.add_option("--read-length", dest="read_length",
+                         action="store_true", default=False,
+                         help="use read length in addition to position and UMI"
+                         "to identify possible duplicates [default=%default]")
+
+        parser.add_option_group(group)
+
+    # options added separately here to maintain better output order
+    if add_sam_options:
+        group = OptionGroup(parser, "debug options")
+
+        group.add_option("--ignore-umi", dest="ignore_umi",
+                         action="store_true", help="Ignore UMI and dedup"
+                         " only on position", default=False)
+
+        group.add_option("--chrom", dest="chrom", type="string",
+                         help="Restrict to one chromosome",
+                         default=None)
+
+        group.add_option("--subset", dest="subset", type="float",
+                         help="Use only a fraction of reads, specified by subset",
+                         default=None)
+
+        parser.add_option_group(group)
+
+    group = OptionGroup(parser, "profiling options")
 
     group.add_option("--timeit", dest='timeit_file', type="string",
                      help="store timeing information in file [%default].")
+
     group.add_option("--timeit-name", dest='timeit_name', type="string",
                      help="name in timing file for this class of jobs "
                      "[%default].")
+
     group.add_option("--timeit-header", dest='timeit_header',
                      action="store_true",
                      help="add header for timing information [%default].")
+
     parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Common options")
-
-    group.add_option("--random-seed", dest='random_seed', type="int",
-                     help="random seed to initialize number generator "
-                     "with [%default].")
+    group = OptionGroup(parser, "common options")
 
     group.add_option("-v", "--verbose", dest="loglevel", type="int",
                      help="loglevel [%default]. The higher, the more output.")
@@ -676,6 +834,11 @@ def Start(parser=None,
     group.add_option("-?", dest="short_help", action="callback",
                      callback=callbackShortHelp,
                      help="output short help (command line options only.")
+
+    group.add_option("--random-seed", dest='random_seed', type="int",
+                     help="random seed to initialize number generator "
+                     "with [%default].")
+
     parser.add_option_group(group)
 
     if quiet:
@@ -787,6 +950,42 @@ def Start(parser=None,
         handler.setFormatter(MultiLineFormatter(format))
 
     return global_options, global_args
+
+
+def validateSamOptions(options):
+    ''' Check the validity of the option combinations '''
+
+    if options.per_gene:
+        if options.gene_tag and options.per_contig:
+            raise ValueError("need to use either --per-contig "
+                             "OR --gene-tag, please do not provide both")
+
+        if not options.per_contig and not options.gene_tag:
+            raise ValueError("for per-gene applications, must supply "
+                             "--per-contig or --gene-tag")
+
+    if options.per_contig and not options.per_gene:
+        raise ValueError("need to use --per-gene with --per-contig")
+
+    if options.gene_tag and not options.per_gene:
+        raise ValueError("need to use --per-gene with --gene_tag")
+
+    if options.gene_transcript_map and not options.per_contig:
+        raise ValueError("need to use --per-contig and --per-gene"
+                         "with --gene-transcript-map")
+
+    if options.get_umi_method == "tag":
+        if options.umi_tag is None:
+            raise ValueError("Need to supply the --umi-tag option")
+        if options.per_cell and options.cell_tag is None:
+            raise ValueError("Need to supply the --cell-tag option")
+
+    if options.skip_regex:
+        try:
+            re.compile(options.skip_regex)
+        except re.error:
+            raise ValueError("skip-regex '%s' is not a "
+                             "valid regex" % options.skip_regex)
 
 
 def Stop():
@@ -944,3 +1143,232 @@ def getTempFilename(dir=None, shared=False, suffix=""):
     tmpfile = getTempFile(dir=dir, shared=shared, suffix=suffix)
     tmpfile.close()
     return tmpfile.name
+
+# this is the generic docstring we want to add to the documentation
+# for group/dedup/count
+GENERIC_DOCSTRING = '''
+It is assumed that the FASTQ files were processed with extract_umi.py
+before mapping and thus the UMI is the last word of the read name. e.g:
+
+@HISEQ:87:00000000_AATT
+
+where AATT is the UMI sequeuence.
+
+If you have used an alternative method which does not separate the
+read id and UMI with a "_", such as bcl2fastq which uses ":", you can
+specify the separator with the option "--umi-separator=<sep>",
+replacing <sep> with e.g ":".
+
+Alternatively, if your UMIs are encoded in a tag, you can specify this
+by setting the option --extract-umi-method=tag and set the tag name
+with the --umi-tag option. For example, if your UMIs are encoded in
+the 'UM' tag, provide the following options:
+"--extract-umi-method=tag --umi-tag=UM"
+
+Finally, if you have used umis to extract the UMI +/- cell barcode,
+you can specify --extract-umi-method=umis
+
+The start postion of a read is considered to be the start of its alignment
+minus any soft clipped bases. A read aligned at position 500 with
+cigar 2S98M will be assumed to start at postion 498.
+
+
+Input/Output Options
+-------------
+-i, --in-sam/-o, --out-sam
+      By default, inputs are assumed to be in BAM format and output are output
+      in BAM format. Use these options to specify the use of SAM format for
+      inputs or outputs.
+
+-I    (string, filename) input file name
+      The input file must be sorted and indexed.
+
+-S    (string, filename) output file name
+
+-L    (string, filename) log file name
+
+.. note::
+   In order to get a valid sam/bam file you need to redirect logging
+   information or turn it off logging via -v 0. You can redirect the
+   logging to a file with -L <logfile> or use the --log2stderr option
+   to send the logging to stderr.
+
+--paired
+       BAM is paired end - output both read pairs. This will also
+       force the Use of the template length to determine reads with
+       the same mapping coordinates.
+
+--extract-umi-method (choice)
+      How are the barcodes encoded in the read?
+
+      Options are:
+
+      - "read_id" (default)
+            Barcodes are contained at the end of the read separated as
+            specified with --umi-separator option
+
+      - "tag"
+            Barcodes contained in a tag(s), see --umi-tag/--cell-tag
+            options
+
+      - "umis"
+            Barcodes were extracted using umis (https://github.com/vals/umis)
+
+--umi-separator (string)
+      Separator between read id and UMI. See --extract-umi-method above
+
+--umi-tag (string)
+      Tag which contains UMI. See --extract-umi-method above
+
+--cell-tag (string)
+      Tag which contains cell barcode. See --extract-umi-method above
+
+
+UMI grouping options
+---------------------------
+
+--method (string, choice)
+    count can be run with multiple methods to identify group of reads with
+    the same (or similar) UMI(s), from which a single read is
+    returned. All methods start by identifying the reads with the same
+    mapping position.
+
+    The simpliest methods, unique and percentile, group reads with
+    the exact same UMI. The network-based methods, cluster, adjacency and
+    directional, build networks where nodes are UMIs and edges connect UMIs
+    with an edit distance <= threshold (usually 1). The groups of reads
+    are then defined from the network in a method-specific manner. For all
+    the network-based methods, each read group is equivalent to one read
+    count for the gene.
+
+      "unique"
+          Reads group share the exact same UMI
+
+      "percentile"
+          Reads group share the exact same UMI. UMIs with counts < 1% of the
+          median counts for UMIs at the same position are ignored.
+
+      "cluster"
+          Identify clusters of connected UMIs (based on hamming distance
+          threshold). Each network is a read group
+
+      "adjacency"
+          Cluster UMIs as above. For each cluster, select the node(UMI)
+          with the highest counts. Visit all nodes one edge away. If all
+          nodes have been visted, stop. Otherise, repeat with remaining
+          nodes until all nodes have been visted. Each step
+          defines a read group.
+
+      "directional" (default)
+          Identify clusters of connected UMIs (based on hamming distance
+          threshold) and umi A counts >= (2* umi B counts) - 1. Each
+          network is a read group.
+
+
+--edit-distance-threshold (int)
+       For the adjacency and cluster methods the threshold for the
+       edit distance to connect two UMIs in the network can be
+       increased. The default value of 1 works best unless the UMI is
+       very long (>14bp)
+
+
+Single-cell RNA-Seq options
+---------------------------
+
+--per-gene (string)
+      Reads will be grouped together if they have the same gene.  This
+      is useful if your library prep generates PCR duplicates with non
+      identical alignment positions such as CEL-Seq. Note this option
+      is hardcoded to be on with the count command. I.e counting is
+      always performed per-gene. Must be combined with either
+      --gene-tag or --per-contig option
+
+--gene-tag (string)
+      Deduplicate per gene. The gene information is encoded in the bam
+      read tag specified
+
+--skip-tags-regex (string)
+      Used in conjunction with the --gene-tag option. Skip any reads
+      where the gene tag matches this regex.
+      Defualt matches anything which starts with "__" or "Unassigned":
+      ("^[__|Unassigned]")
+
+--per-contig
+      Deduplicate per contig (field 3 in BAM; RNAME).
+      All reads with the same contig will be considered to have the
+      same alignment position. This is useful if you have aligned to a
+      reference transcriptome with one transcript per gene. If you
+      have aligned to a transcriptome with more than one transcript
+      per gene, you can supply a map between transcripts and gene
+      using the --gene-transcript-map option
+
+--gene-transcript-map (string)
+      File mapping genes to transripts (tab separated), e.g:
+
+      gene1   transcript1
+      gene1   transcript2
+      gene2   transcript3
+
+--per-cell (string)
+      Reads will only be grouped together if they have the same cell
+      barcode. Can be combined with --per-gene.
+
+
+Debug options
+-------------
+
+--subset (float, [0-1])
+      Only consider a fraction of the reads, chosen at random. This is useful
+      for doing saturation analyses.
+
+--chrom (string)
+      Only consider a single chromosome. This is useful for debugging purposes
+
+'''
+
+
+GROUP_DEDUP_GENERIC_OPTIONS = '''
+Group/Dedup options
+-------------------
+
+--no-sort-output
+       By default, output is sorted. This involves the
+       use of a temporary unsorted file since reads are considered in
+       the order of their start position which is may not be the same
+       as their alignment coordinate due to soft-clipping and reverse
+       alignments. The temp file will be saved in $TMPDIR and deleted
+       when it has been sorted to the outfile. Use this option to turn
+       off sorting.
+i
+
+--spliced-is-unique
+       Causes two reads that start in the same position on the same
+       strand and having the same UMI to be considered unique if one is spliced
+       and the other is not. (Uses the 'N' cigar operation to test for
+       splicing)
+
+--soft-clip-threshold (int)
+       Mappers that soft clip, will sometimes do so rather than mapping a
+       spliced read if there is only a small overhang over the exon
+       junction. By setting this option, you can treat reads with at least
+       this many bases soft-clipped at the 3' end as spliced.
+
+--multimapping-detection-method (string, choice)
+       If the sam/bam contains tags to identify multimapping reads, you can
+       specify for use when selecting the best read at a given loci.
+       Supported tags are "NH", "X0" and "XT". If not specified, the read
+       with the highest mapping quality will be selected
+
+--read-length
+      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
+
+--whole-contig (string)
+      forces dedup to parse an entire contig before yielding any reads
+      for deduplication. This is the only way to absolutely guarantee
+      that all reads with the same start position are grouped together
+      for deduplication since dedup uses the start position of the
+      read, not the alignment coordinate on which the reads are
+      sorted. However, by default, dedup reads for another 1000bp
+      before outputting read groups which will avoid any reads being
+      missed with short read sequencing (<1000bp)
+'''
