@@ -1,6 +1,6 @@
 '''
-count.py - Count reads per gene using UMIs
-==========================================
+count.py - Count reads per gene from BAM using UMIs
+===================================================
 
 :Author: Ian Sudbery, Tom Smith
 :Release: $Id$
@@ -10,7 +10,7 @@ count.py - Count reads per gene using UMIs
 Purpose
 -------
 
-The purpose of this command is to counts the number of reads per gene based
+The purpose of this command is to count the number of reads per gene based
 on the mapping co-ordinate and the UMI attached to the read.
 
 '''
