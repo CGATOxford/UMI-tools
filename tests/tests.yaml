@@ -242,13 +242,6 @@ group_gene_tag:
       references: [group_dir_per_gene.tsv, group_dir_per_gene.sam]
       options: group -L test.log  --random-seed=123456789 --method=directional --gene-tag=XF --skip-tags-regex="^[__|Unassigned]" --group-out=group_dir_per_gene.tsv --output-bam --out-sam
 
-group_unique:
-      skip_python: 3
-      stdin: chr19.bam
-      outputs: [stdout, group_uniq.tsv]
-      references: [group_uniq.sam, group_uniq.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=unique --output-bam --out-sam --group-out=group_uniq.tsv
-
 # End of python 2 tests ##
 
 # python 3 tests ##

@@ -36,18 +36,11 @@ read id is included once only.
 '''
 
 import sys
-import collections
-import re
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
 from functools import partial
-
-import pysam
-
-import pandas as pd
-import numpy as np
 
 try:
     import umi_tools.Utilities as U
@@ -84,15 +77,6 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False)
 
-    if options.random_seed:
-        np.random.seed(options.random_seed)
-
-    if options.stdin != sys.stdin:
-        infile = U.openFile(options.stdin.name, "r")
-        options.stdin.close()
-    else:
-        infile = sys.stdin
-
     nInput, nOutput = 0, 0
 
     # set the method with which to extract umis from reads
@@ -101,17 +85,17 @@ def main(argv=None):
 
     options.stdout.write("%s\t%s\n" % ("gene", "count"))
 
+    # set up UMIClusterer functor with methods specific to
+    # specified options.method
+    processor = network.UMIClusterer(options.method)
+
     for gene, counts in umi_methods.get_gene_count_tab(
-            infile,
+            options.stdin,
             umi_getter=umi_getter):
 
         umis = counts.keys()
 
         nInput += sum(counts.values())
-
-        # set up UMIClusterer functor with methods specific to
-        # specified options.method
-        processor = network.UMIClusterer(options.method)
 
         # group the umis
         groups = processor(

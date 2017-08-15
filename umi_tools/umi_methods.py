@@ -1411,13 +1411,15 @@ def get_gene_count_tab(infile,
 
     ''' Yields the counts per umi for each gene
 
-    ignore_umi: don't include the umi in the dict key
+    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+
+
+    TODO: ADD FOLLOWING OPTION
 
     skip_regex: skip genes matching this regex. Useful to ignore
                 unassigned reads where the 'gene' is a descriptive tag
                 such as "Unassigned"
 
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
     '''
 
     gene = None
