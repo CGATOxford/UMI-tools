@@ -223,7 +223,11 @@ Depedencies from conda/PyPI manager
         $ conda install setuptools
         $ conda install pandas
         $ conda install future
+        $ conda install scipy
+        $ conda install matplotlib
+        $ conda install cython
         $ conda config --add channels bioconda
+        $ conda install regex
         $ conda install pysam
 
 4.  Install UMI-tools using the ``setup.py`` script::

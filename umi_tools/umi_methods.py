@@ -18,7 +18,9 @@ import re
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
+from functools import partial
 
 # required to make iteritems python2 and python3 compatible
 from future.utils import iteritems
@@ -140,19 +142,21 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
 ###############################################################################
 
 
-def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
+def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None):
     ''' estimate the number of "true" cell barcodes
+
     input:
          cell_barcode_counts = dict(key = barcode, value = count)
+         cell_number (optional) = define number of cell barcodes to accept
          plotfile_prefix = (optional) prefix for plots
 
     returns:
          List of true barcodes
     '''
 
-    # very low abundance cell barcodes are filtered out (< 0.0001 *
+    # very low abundance cell barcodes are filtered out (< 0.001 *
     # the most abundant)
-    threshold = 0.0001 * cell_barcode_counts.most_common(1)[0][1]
+    threshold = 0.001 * cell_barcode_counts.most_common(1)[0][1]
 
     counts = sorted(cell_barcode_counts.values(), reverse=True)
     counts_thresh = [x for x in counts if x > threshold]
@@ -164,18 +168,38 @@ def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
     xx_values = 1000  # how many x values for density plot
     xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
 
-    local_mins = argrelextrema(density(xx), np.less)[0]
-    local_min = None
-    for poss_local_min in local_mins:
-        if poss_local_min >= 0.2 * xx_values:
-            local_min = poss_local_min
-            break
-    if local_min is None:
-        return None
+    if cell_number:
+        threshold = counts[cell_number]
 
-    threshold = np.power(10, xx[local_min])
-    final_barcodes = set([
-        x for x, y in cell_barcode_counts.items() if y > threshold])
+    else:
+        local_mins = argrelextrema(density(xx), np.less)[0]
+        local_min = None
+
+        # TS: Set of heuristic thresholds to decide which local minimum to select
+        # This is very unlikely to be the best way to achieve this!
+        for poss_local_min in local_mins[::-1]:
+            if (poss_local_min >= 0.2 * xx_values and
+                (log_counts.max() - xx[poss_local_min] > 1 or
+                 xx[poss_local_min] < log_counts.max()/2)):
+                local_min = poss_local_min
+                break
+
+        local_mins_counts = []
+        for pos in xx[local_mins]:
+            threshold = np.power(10, pos)
+            passing_threshold = sum([y > threshold
+                                     for x, y in cell_barcode_counts.items()])
+
+            local_mins_counts.append(passing_threshold)
+
+        if local_min is not None:
+            threshold = np.power(10, xx[local_min])
+
+    if cell_number or local_min is not None:
+        final_barcodes = set([
+            x for x, y in cell_barcode_counts.items() if y > threshold])
+    else:
+        final_barcodes = None
 
     if plotfile_prefix:
 
@@ -183,61 +207,156 @@ def getKneeEstimate(cell_barcode_counts, plotfile_prefix=None):
         CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
                           '#f781bf', '#a65628', '#984ea3',
                           '#999999', '#e41a1c', '#dede00']
+        user_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[0], ls="dashed",
+            markersize=15, label='User-defined')
+        selected_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[0], ls="dashed", markersize=15, label='Selected')
+        rejected_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[3], ls="dashed", markersize=15, label='Rejected')
 
         # make density plot
         fig = plt.figure()
         fig1 = fig.add_subplot(111)
         fig1.plot(xx, density(xx), 'k')
-        fig1.set_xlabel("Reads (log10)")
+        fig1.set_xlabel("Count per cell (log10)")
         fig1.set_ylabel("Density")
 
-        for pos in xx[local_mins]:
-            if pos == xx[local_min]:  # selected local minima
-                fig1.axvline(x=xx[local_min], color=CB_color_cycle[0],
-                             label="selected local minima")
-            else:
-                fig1.axvline(x=pos, color=CB_color_cycle[3],
-                             label="other local minima")
+        if cell_number:
+            fig1.axvline(np.log10(threshold), ls="dashed", color=CB_color_cycle[0])
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
 
-        fig1.legend(loc=0)
+        elif local_min is None:  # no local_min was accepted
+            for pos in xx[local_mins]:
+                fig1.axvline(x=pos, ls="dashed", color=CB_color_cycle[3])
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+        else:
+            for pos in xx[local_mins]:
+                if pos == xx[local_min]:  # selected local minima
+                    fig1.axvline(x=xx[local_min], ls="dashed", color=CB_color_cycle[0])
+                else:
+                    fig1.axvline(x=pos, ls="dashed", color=CB_color_cycle[3])
 
-        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix)
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         # make knee plot
         fig = plt.figure()
         fig2 = fig.add_subplot(111)
         fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
-        xmax = min(local_min * 5, len(counts))  # reasonable maximum x-axis value
-        fig2.set_xlim((0 - 0.01 * xmax, xmax))
+
+        xmax = len(counts)
+        if local_min is not None:
+            # reasonable maximum x-axis value
+            xmax = min(len(final_barcodes) * 5, xmax)
+
+        fig2.set_xlim((0 - (0.01 * xmax), xmax))
         fig2.set_xlabel("Rank")
-        fig2.set_ylabel("Cumulative sum of reads")
+        fig2.set_ylabel("Cumulative count")
 
-        for pos in xx[local_mins]:
-            threshold = np.power(10, pos)
-            passing_threshold = sum([y > threshold
-                                     for x, y in cell_barcode_counts.items()])
+        if cell_number:
+            fig2.axvline(x=cell_number, ls="dashed", color=CB_color_cycle[0])
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
 
-            if passing_threshold == len(final_barcodes):  # selected local minima
-                fig2.axvline(x=passing_threshold, color=CB_color_cycle[0],
-                             label="selected local minima")
-            else:
-                fig2.axvline(x=passing_threshold, color=CB_color_cycle[3],
-                             label="other local minima")
+        elif local_min is None:  # no local_min was accepted
+            for local_mins_count in local_mins_counts:
+                fig2.axvline(x=local_mins_count, ls="dashed",
+                             color=CB_color_cycle[3])
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
 
-        fig2.legend(loc=0)
-        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix)
+        else:
+            for local_mins_count in local_mins_counts:
+                if local_mins_count == len(final_barcodes):  # selected local minima
+                    fig2.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[0])
+                else:
+                    fig2.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[3])
+
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        if local_min is not None:
+            colours_selected = [CB_color_cycle[0] for x in range(0, len(final_barcodes))]
+            colours_rejected = ["black" for x in range(0, len(counts)-len(final_barcodes))]
+            colours = colours_selected + colours_rejected
+        else:
+            colours = ["black" for x in range(0, len(counts))]
+
+        fig = plt.figure()
+        fig3 = fig.add_subplot(111)
+        fig3.scatter(x=range(1, len(counts)+1), y=counts,
+                     c=colours, s=10, linewidths=0)
+        fig3.loglog()
+        fig3.set_xlim(0, len(counts)*1.25)
+        fig3.set_xlabel('Barcode index')
+        fig3.set_ylabel('Count')
+
+        if cell_number:
+            fig3.axvline(x=cell_number, ls="dashed", color=CB_color_cycle[0])
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[user_line],
+                              title="Cell threshold")
+        elif local_min is None:  # no local_min was accepted
+            for local_mins_count in local_mins_counts:
+                fig3.axvline(x=local_mins_count, ls="dashed",
+                             color=CB_color_cycle[3])
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+        else:
+            for local_mins_count in local_mins_counts:
+                if local_mins_count == len(final_barcodes):  # selected local minima
+                    fig3.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[0])
+                else:
+                    fig3.axvline(x=local_mins_count, ls="dashed",
+                                 color=CB_color_cycle[3])
+
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
+        fig.savefig("%s_cell_barcode_counts.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        if not cell_number:
+            with U.openFile("%s_cell_thresholds.tsv" % plotfile_prefix, "w") as outf:
+                outf.write("count\taction\n")
+                for local_mins_count in local_mins_counts:
+                    if local_min and local_mins_count == len(final_barcodes):
+                        threshold_type = "Selected"
+                    else:
+                        threshold_type = "Rejected"
+
+                    outf.write("%s\t%s\n" % (local_mins_count, threshold_type))
 
     return final_barcodes
 
 
-def getErrorCorrectMappings(cell_barcodes, whitelist, threshold=1):
+def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
 
     Any cell barcode within the threshold to more than one whitelist
     barcode will be excluded'''
 
-    false_to_true = {}
     true_to_false = collections.defaultdict(set)
 
     whitelist = set([str(x).encode("utf-8") for x in whitelist])
@@ -258,88 +377,120 @@ def getErrorCorrectMappings(cell_barcodes, whitelist, threshold=1):
                     match = white_cell.decode("utf-8")
 
         if match is not None:
-            false_to_true[cell_barcode] = match
             true_to_false[match].add(cell_barcode)
 
-    return false_to_true, true_to_false
-
-
-# TS: This is not being used since the network methods are not
-# appropriate to identify cell barcodes as they currently stand
-
-# def getNetworkEstimate(cell_barcode_counts):
-#     ''' Use the directional network method to identify the true cell
-#     barcodes '''
-
-#     clusterer = network.UMIClusterer("directional")
-#     barcode_groups = clusterer(
-#         [bytes(x, encoding="utf-8") for x in cell_barcode_counts.keys()],
-#         {bytes(x, encoding="utf-8"): y for x, y in cell_barcode_counts.items()},
-#         1)
-
-#     false_to_true = {}
-#     true_to_false = collections.defaultdict(set)
-
-#     true_barcodes = []
-#     for group in barcode_groups:
-#         true_barcode = group[0].decode("utf-8")
-#         true_barcodes.append(true_barcode)
-#         if len(group) > 1:
-#             error_barcodes = group[1:]
-#             for error_barcode in error_barcodes:
-#                 error_barcode = error_barcode.decode("utf-8")
-#                 false_to_true[error_barcode] = true_barcode
-#                 true_to_false[true_barcode].add(error_barcode)
-
-#     return true_barcodes, (false_to_true, true_to_false)
+    return true_to_false
 
 
 def getCellWhitelist(cell_barcode_counts,
+                     cell_number=False,
                      error_correct_threshold=0,
                      plotfile_prefix=None):
 
     cell_whitelist = getKneeEstimate(
-        cell_barcode_counts, plotfile_prefix=plotfile_prefix)
+        cell_barcode_counts, cell_number, plotfile_prefix)
+
+    if cell_whitelist is None:
+        U.error("No local minima was accepted. Recommend checking the plot "
+                "output and counts per local minima "
+                "(requires `--plot-prefix` option) and then re-running with "
+                "manually selected threshold (`--set-cell-number` option)")
+
     if error_correct_threshold > 0:
-        error_correct_mappings = getErrorCorrectMappings(
+        true_to_false_map = getErrorCorrectMapping(
             cell_barcode_counts.keys(), cell_whitelist,
             error_correct_threshold)
     else:
-        error_correct_mappings = None
+        true_to_false_map = None
 
-    return cell_whitelist, error_correct_mappings
+    return cell_whitelist, true_to_false_map
 
 
-def getUserDefinedBarcodes(whitelist_tsv):
+def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
     cell_whitelist = []
+
+    if getErrorCorrection:
+        false_to_true_map = {}
+    else:
+        false_to_true_map = None
+
     with U.openFile(whitelist_tsv, "r") as inf:
+
         for line in inf:
-            cell_whitelist.append(line.strip())
-    return set(cell_whitelist)
+            if line.startswith('#'):
+                continue
+
+            line = line.strip().split("\t")
+            whitelist_barcode = line[0]
+            cell_whitelist.append(whitelist_barcode)
+
+            if getErrorCorrection:
+                for error_barcode in line[1].split(","):
+                    false_to_true_map[error_barcode] = whitelist_barcode
+
+    return set(cell_whitelist), false_to_true_map
 
 
-def get_umi_read_id(read, sep="_"):
-    ''' extract the umi from the read id using the specified separator '''
+def get_barcode_read_id(read, cell_barcode=False, sep="_"):
+    ''' extract the umi +/- cell barcode from the read id using the
+    specified separator '''
 
     try:
-        return read.qname.split(sep)[-1].encode('utf-8')
-    except IndexError:
+        if cell_barcode:
+            umi = read.qname.split(sep)[-1].encode('utf-8')
+            cell = read.qname.split(sep)[-2].encode('utf-8')
+        else:
+            umi = read.qname.split(sep)[-1].encode('utf-8')
+            cell = None
+
+        return umi, cell
+
+    except:
         raise ValueError(
-            "Could not extract UMI from the read ID, please"
-            "check UMI is encoded in the read name")
+            "Could not extract UMI +/- cell barcode from the read"
+            "ID, please check UMI is encoded in the read name")
 
 
-def get_umi_tag(read, tag='RX'):
-    ''' extract the umi from the specified tag '''
+def get_barcode_tag(read, cell_barcode=False, umi_tag='RX', cell_tag=None):
+    ''' extract the umi +/- cell barcode from the specified tag '''
 
     try:
         # 10X pipelines append a 'GEM' tag to the UMI, e.g
         # AGAGSGATAGATA-1
-        return read.get_tag(tag).split("-")[0].encode('utf-8')
+        if cell_barcode:
+            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
+            cell = read.get_tag(cell_tag).split("-")[0].encode('utf-8')
+        else:
+            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
+            cell = None
+        return umi, cell
+
     except IndexError:
-        raise ValueError(
-            "Could not extract UMI from the read tags, please"
-            "check UMI is encoded in the read tag: %s" % tag)
+        raise ValueError("Could not extract UMI +/- cell barcode from the "
+                         "read tag")
+
+
+def get_barcode_umis(read, cell_barcode=False):
+    ''' extract the umi +/- cell barcode from the read name where the barcodes
+    were extracted using umis'''
+
+    umi, cell = None, None
+    try:
+        read_name_elements = read.qname.split(":")
+        for element in read_name_elements:
+            if element.startswith("UMI_"):
+                umi = element[4:].encode('utf-8')
+            elif element.startswith("CELL_") and cell_barcode:
+                cell = element[5:].encode('utf-8')
+
+        if umi is None:
+            raise ValueError()
+
+        return umi, cell
+
+    except:
+        raise ValueError("Could not extract UMI +/- cell barcode from the "
+                         "read tag")
 
 
 def get_average_umi_distance(umis):
@@ -543,7 +694,6 @@ class ExtractFilterAndUpdate:
 
     def _getBarcodesRegex(self, read1, read2=None):
         ''' '''
-
         # first check both regexes for paired end samples to avoid uneccessarily
         # extracting barcodes from read1 where regex2 doesn't match read2
         if self.pattern:
@@ -667,6 +817,10 @@ class ExtractFilterAndUpdate:
         '''Filter out cell barcodes not in the whitelist, with
         optional cell barcode error correction'''
 
+        if self.cell_blacklist and cell in self.cell_blacklist:
+            self.read_counts['Cell barcode in blacklist'] += 1
+            return None
+
         if cell not in self.cell_whitelist:
             if self.false_to_true_map:
                 if cell in self.false_to_true_map:
@@ -678,6 +832,10 @@ class ExtractFilterAndUpdate:
             else:
                 self.read_counts['Filtered cell barcode'] += 1
                 return None
+
+        if self.cell_blacklist and cell in self.cell_blacklist:
+            self.read_counts['Cell barcode corrected to barcode blacklist'] += 1
+            return None
 
         return cell
 
@@ -701,8 +859,10 @@ class ExtractFilterAndUpdate:
         self.quality_filter_threshold = quality_filter_threshold
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
+
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
+        self.cell_blacklist = None  # These will be updated if required
 
         # If the pattern is a string we can identify the position of
         # the cell and umi bases at instantiation
@@ -782,9 +942,6 @@ class ExtractFilterAndUpdate:
             return read1
         else:
             return read1, read2
-
-    def getReadCounts(self):
-        return self.read_counts
 
 
 class TwoPassPairWriter:
@@ -866,8 +1023,36 @@ class TwoPassPairWriter:
         self.outfile.close()
 
 
-def get_read_position(read, soft_clip_threshold):
+def getMetaContig2contig(bamfile, gene_transcript_map):
     ''' '''
+    references = set(bamfile.references)
+    metacontig2contig = collections.defaultdict(set)
+    for line in U.openFile(gene_transcript_map, "r"):
+
+        if line.startswith("#"):
+            continue
+
+        if len(line.strip()) == 0:
+            break
+
+        gene, transcript = line.strip().split("\t")
+        if transcript in references:
+            metacontig2contig[gene].add(transcript)
+
+    return metacontig2contig
+
+
+def metafetcher(bamfile, metacontig2contig, metatag):
+    ''' return reads in order of metacontigs'''
+    for metacontig in metacontig2contig:
+        for contig in metacontig2contig[metacontig]:
+            for read in bamfile.fetch(contig):
+                read.tags += [(metatag, metacontig)]
+                yield read
+
+
+def get_read_position(read, soft_clip_threshold):
+    ''' get the read position (taking account of clipping) '''
     is_spliced = False
 
     if read.is_reverse:
@@ -894,377 +1079,326 @@ def get_read_position(read, soft_clip_threshold):
     return start, pos, is_spliced
 
 
-def getMetaContig2contig(bamfile, gene_transcript_map):
-    ''' '''
-    references = bamfile.references
-    metacontig2contig = collections.defaultdict(set)
-    for line in U.openFile(gene_transcript_map, "r"):
+class get_bundles:
 
-        if line.startswith("#"):
-            continue
+    ''' A functor - When called returns a dictionary of dictionaries,
+    representing the unique reads at a position/spliced/strand
+    combination. The key to the top level dictionary is a umi. Each
+    dictionary contains a "read" entry with the best read, and a count
+    entry with the number of reads with that
+    position/spliced/strand/umi combination
 
-        if len(line.strip()) == 0:
-            break
+    initiation arguments:
 
-        gene, transcript = line.strip().split("\t")
-        if transcript in references:
-            metacontig2contig[gene].add(transcript)
-
-    return metacontig2contig
-
-
-def metafetcher(bamfile, metacontig2contig, metatag):
-    ''' return reads in order of metacontigs'''
-    for metacontig in metacontig2contig:
-        for contig in metacontig2contig[metacontig]:
-            for read in bamfile.fetch(contig):
-                read.tags += [(metatag, metacontig)]
-                yield read
-
-
-def get_bundles(inreads,
-                ignore_umi=False,
-                subset=None,
-                quality_threshold=0,
-                paired=False,
-                spliced=False,
-                soft_clip_threshold=0,
-                per_contig=False,
-                gene_tag=None,
-                skip_regex=None,
-                whole_contig=False,
-                read_length=False,
-                detection_method=False,
-                umi_getter=None,
-                all_reads=False,
-                return_read2=False,
-                return_unmapped=False):
-
-    ''' Returns a dictionary of dictionaries, representing the unique reads at
-    a position/spliced/strand combination. The key to the top level dictionary
-    is a umi. Each dictionary contains a "read" entry with the best read, and a
-    count entry with the number of reads with that position/spliced/strand/umi
-    combination
-
-    ignore_umi: don't include the umi in the dict key
-
-    subset: randomly exclude 1-subset fraction of reads
-
-    quality_threshold: exclude reads with MAPQ below this
-
-    paired: input is paired
-
-    spliced: include the spliced/not-spliced status in the dict key
-
-    soft_clip_threshold: reads with less than this 3' soft clipped are
-    treated as spliced
-
-    per_contig: use just the umi and contig as the dict key
-
-    gene_tag: use just the umi and gene as the dict key. Get the gene
-    id from the this tag
-
-    skip_regex: skip genes matching this regex. Useful to ignore
-    unassigned reads where the 'gene' is a descriptive tag such as
-    "Unassigned"
-
-    whole_contig: read the whole contig before yielding a bundle
-
-    read_length: include the read length in the dict key
-
-    detection_method: which method to use to detect multimapping
-    reads. options are NH", "X0", "XT". defaults to False (just select
-    the 'best' read by MAPQ)
-
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    options: script options
 
     all_reads: if true, return all reads in the dictionary. Else,
     return the 'best' read (using MAPQ +/- multimapping) for each key
 
     return_read2: Return read2s immediately as a single read
 
-    return_unmapped: Return unmapped reads immediately as a single read
+    metacontig_contig: Maps metacontigs to the consistuent contigs
     '''
 
-    last_pos = 0
-    last_chr = ""
-    reads_dict = collections.defaultdict(
-        lambda: collections.defaultdict(
-            lambda: collections.defaultdict(dict)))
-    read_counts = collections.defaultdict(
-        lambda: collections.defaultdict(dict))
+    def __init__(self,
+                 options,
+                 only_count_reads=False,
+                 all_reads=False,
+                 return_unmapped=False,
+                 return_read2=False,
+                 metacontig_contig=None):
 
-    read_events = collections.Counter()
+        self.options = options
+        self.only_count_reads = only_count_reads
+        self.all_reads = all_reads
+        self.return_unmapped = return_unmapped
+        self.return_read2 = return_read2
+        self.metacontig_contig = metacontig_contig
 
-    for read in inreads:
+        self.contig_metacontig = {}
+        if self.metacontig_contig:
+            for metacontig in metacontig_contig:
+                for contig in metacontig_contig[metacontig]:
+                    self.contig_metacontig[contig] = metacontig
 
-        if read.is_read2:
-            if return_read2:
-                if not read.is_unmapped or (read.is_unmapped and return_unmapped):
-                    yield read, read_events, 'single_read'
-            continue
-        else:
-            read_events['Input Reads'] += 1
+        # set the method with which to extract umis from reads
+        if self.options.get_umi_method == "read_id":
+            self.barcode_getter = partial(
+                get_barcode_read_id,
+                cell_barcode=self.options.per_cell,
+                sep=self.options.umi_sep)
 
-        if read.is_unmapped:
-            if paired:
-                if read.mate_is_unmapped:
-                    read_events['Both unmapped'] += 1
-                else:
-                    read_events['Read 1 unmapped'] += 1
-            else:
-                read_events['Single end unmapped'] += 1
+        elif self.options.get_umi_method == "tag":
+            self.barcode_getter = partial(
+                get_barcode_tag,
+                umi_tag=self.options.umi_tag,
+                cell_barcode=self.options.per_cell,
+                cell_tag=self.options.cell_tag)
 
-            if return_unmapped:
-                read_events['Input Reads'] += 1
-                yield read, read_events, 'single_read'
-            continue
-
-        if read.mate_is_unmapped and paired:
-            if not read.is_unmapped:
-                read_events['Read 2 unmapped'] += 1
-            if return_unmapped:
-                yield read, read_events, 'single_read'
-            continue
-
-        if paired:
-            read_events['Paired Reads'] += 1
-
-        if subset:
-            if random.random() >= subset:
-                read_events['Randomly excluded'] += 1
-                continue
-
-        if quality_threshold:
-            if read.mapq < quality_threshold:
-                read_events['< MAPQ threshold'] += 1
-                continue
-
-        # TS - some methods require deduping on a per contig or per
-        # gene basis. To fit in with current workflow, simply assign
-        # pos and key as contig
-
-        if per_contig or gene_tag:
-
-            if per_contig:
-                pos = read.tid
-                key = pos
-            elif gene_tag:
-                pos = read.get_tag(gene_tag)
-                key = pos
-                if re.search(skip_regex, pos):
-                    continue
-
-            if not pos == last_chr:
-
-                out_keys = list(reads_dict.keys())
-
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle, read_events, 'mapped'
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_chr = pos
+        elif self.options.get_umi_method == "umis":
+            self.barcode_getter = partial(
+                get_barcode_umis,
+                cell_barcode=self.options.per_cell)
 
         else:
+            raise ValueError("Unknown UMI extraction method")
 
-            start, pos, is_spliced = get_read_position(
-                read, soft_clip_threshold)
+        self.read_events = collections.Counter()
+        self.observed_contigs = collections.defaultdict(set)
 
-            if whole_contig:
-                do_output = not read.tid == last_chr
-            else:
-                do_output = start > (last_pos+1000) or not read.tid == last_chr
+        self.last_pos = 0
+        self.last_chr = None
+        self.start = 0
+        self.current_chr = None
 
-            if do_output:
-                if not read.tid == last_chr:
-                    out_keys = list(reads_dict.keys())
-                else:
-                    out_keys = [x for x in reads_dict.keys() if x <= start-1000]
+        self.reads_dict = collections.defaultdict(
+            lambda: collections.defaultdict(
+                lambda: collections.defaultdict(dict)))
+        self.read_counts = collections.defaultdict(
+            lambda: collections.defaultdict(dict))
 
-                for p in out_keys:
-                    for bundle in reads_dict[p].values():
-                        yield bundle, read_events, 'mapped'
-                    del reads_dict[p]
-                    del read_counts[p]
-
-                last_pos = start
-                last_chr = read.tid
-
-            if read_length:
-                r_length = read.query_length
-            else:
-                r_length = 0
-
-            key = (read.is_reverse, spliced & is_spliced,
-                   paired*read.tlen, r_length)
-
-        if ignore_umi:
-            umi = ""
-        else:
-            umi = umi_getter(read)
+    def update_dicts(self, read, pos, key, umi):
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
 
-        if all_reads:
+        if self.all_reads:
             # retain all reads per key
             try:
-                reads_dict[pos][key][umi]["count"] += 1
+                self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
-                reads_dict[pos][key][umi]["read"] = [read]
-                reads_dict[pos][key][umi]["count"] = 1
-                read_counts[pos][key][umi] = 0
+                self.reads_dict[pos][key][umi]["read"] = [read]
+                self.reads_dict[pos][key][umi]["count"] = 1
             else:
-                reads_dict[pos][key][umi]["read"].append(read)
+                self.reads_dict[pos][key][umi]["read"].append(read)
+
+        elif self.only_count_reads:
+            # retain all reads per key
+            try:
+                self.reads_dict[pos][key][umi]["count"] += 1
+            except KeyError:
+                self.reads_dict[pos][key][umi]["count"] = 1
 
         else:
             # retain just a single read per key
             try:
-                reads_dict[pos][key][umi]["count"] += 1
+                self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
-                reads_dict[pos][key][umi]["read"] = read
-                reads_dict[pos][key][umi]["count"] = 1
-                read_counts[pos][key][umi] = 0
+                self.reads_dict[pos][key][umi]["read"] = read
+                self.reads_dict[pos][key][umi]["count"] = 1
+                self.read_counts[pos][key][umi] = 0
             else:
-                if reads_dict[pos][key][umi]["read"].mapq > read.mapq:
-                    continue
+                if self.reads_dict[pos][key][umi]["read"].mapq > read.mapq:
+                    return
 
-                if reads_dict[pos][key][umi]["read"].mapq < read.mapq:
-                    reads_dict[pos][key][umi]["read"] = read
-                    read_counts[pos][key][umi] = 0
-                    continue
+                if self.reads_dict[pos][key][umi]["read"].mapq < read.mapq:
+                    self.reads_dict[pos][key][umi]["read"] = read
+                    self.read_counts[pos][key][umi] = 0
+                    return
 
                 # TS: implemented different checks for multimapping here
-                if detection_method in ["NH", "X0"]:
-                    tag = detection_method
-                    if reads_dict[pos][key][umi]["read"].opt(tag) < read.opt(tag):
-                        continue
-                    elif reads_dict[pos][key][umi]["read"].opt(tag) > read.opt(tag):
-                        reads_dict[pos][key][umi]["read"] = read
-                        read_counts[pos][key][umi] = 0
+                if self.options.detection_method in ["NH", "X0"]:
+                    tag = self.options.detection_method
+                    if (self.reads_dict[pos][key][umi]["read"].opt(tag) <
+                        read.opt(tag)):
+                        return
+                    elif (self.reads_dict[pos][key][umi]["read"].opt(tag) >
+                          read.opt(tag)):
+                        self.reads_dict[pos][key][umi]["read"] = read
+                        self.read_counts[pos][key][umi] = 0
 
-                elif detection_method == "XT":
-                    if reads_dict[pos][key][umi]["read"].opt("XT") == "U":
-                        continue
+                elif self.options.detection_method == "XT":
+                    if self.reads_dict[pos][key][umi]["read"].opt("XT") == "U":
+                        return
                     elif read.opt("XT") == "U":
-                        reads_dict[pos][key][umi]["read"] = read
-                        read_counts[pos][key][umi] = 0
+                        self.reads_dict[pos][key][umi]["read"] = read
+                        self.read_counts[pos][key][umi] = 0
 
-                read_counts[pos][key][umi] += 1
-                prob = 1.0/read_counts[pos][key][umi]
+                self.read_counts[pos][key][umi] += 1
+                prob = 1.0/self.read_counts[pos][key][umi]
 
                 if random.random() < prob:
-                    reads_dict[pos][key][umi]["read"] = read
+                    self.reads_dict[pos][key][umi]["read"] = read
 
-    # yield remaining bundles
-    for p in reads_dict:
-        for bundle in reads_dict[p].values():
-            yield bundle, read_events, 'mapped'
+    def check_output(self):
 
+        do_output = False
+        out_keys = None
 
-def get_gene_count(inreads,
-                   subset=None,
-                   quality_threshold=0,
-                   paired=False,
-                   per_contig=False,
-                   gene_tag=None,
-                   skip_regex=None,
-                   umi_getter=None):
+        if self.options.per_gene:
 
-    ''' Yields the counts per umi for each gene
+            if self.metacontig_contig:
 
-    ignore_umi: don't include the umi in the dict key
+                if (self.current_chr != self.last_chr and
+                    (self.observed_contigs[self.last_pos] ==
+                     self.metacontig_contig[self.last_pos])):
+                    do_output = True
+                    out_keys = [self.last_pos]
 
-    subset: randomly exclude 1-subset fraction of reads
+            else:
+                if self.current_chr != self.last_chr:
+                    do_output = True
+                    out_keys = sorted(self.reads_dict.keys())
 
-    quality_threshold: exclude reads with MAPQ below this
+        elif self.options.whole_contig:
 
-    paired: input is paired
+            if self.current_chr != self.last_chr:
+                do_output = True
+                out_keys = sorted(self.reads_dict.keys())
 
-    per_contig: use just the umi and contig as the dict key
-
-    gene_tag: use just the umi and gene as the dict key. Get the gene
-              id from the this tag
-
-    skip_regex: skip genes matching this regex. Useful to ignore
-                unassigned reads where the 'gene' is a descriptive tag
-                such as "Unassigned"
-
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
-    '''
-
-    last_chr = ""
-    gene = ""
-
-    # make an empty counts_dict counter
-    counts_dict = collections.defaultdict(
-        lambda: collections.defaultdict(dict))
-
-    read_events = collections.Counter()
-
-    for read in inreads:
-
-        if read.is_read2:
-            continue
         else:
-            read_events['Input Reads'] += 1
 
-        if read.is_unmapped:
-            read_events['Skipped - Unmapped Reads'] += 1
-            continue
+            if (self.start > (self.last_pos+1000) or
+                self.current_chr != self.last_chr):
 
-        if paired:
-            read_events['Paired Reads'] += 1
+                do_output = True
+                out_keys = sorted(self.reads_dict.keys())
 
-        if subset:
-            if random.random() >= subset:
-                read_events['Skipped - Randomly excluded'] += 1
+                if self.current_chr == self.last_chr:
+                    out_keys = [x for x in out_keys if x <= self.start-1000]
+
+        return do_output, out_keys
+
+    def __call__(self, inreads):
+
+        for read in inreads:
+
+            if read.is_read2:
+                if self.return_read2:
+                    if not read.is_unmapped or (
+                            read.is_unmapped and self.return_unmapped):
+                        yield read, None, "single_read"
+                continue
+            else:
+                self.read_events['Input Reads'] += 1
+
+            if read.is_unmapped:
+                if self.options.paired:
+                    if read.mate_is_unmapped:
+                        self.read_events['Both unmapped'] += 1
+                    else:
+                        self.read_events['Read 1 unmapped'] += 1
+                else:
+                    self.read_events['Single end unmapped'] += 1
+
+                if self.return_unmapped:
+                    self.read_events['Input Reads'] += 1
+                    yield read, None, "single_read"
                 continue
 
-        if quality_threshold:
-            if read.mapq < quality_threshold:
-                read_events['Skipped - < MAPQ threshold'] += 1
+            if read.mate_is_unmapped and self.options.paired:
+                if not read.is_unmapped:
+                    self.read_events['Read 2 unmapped'] += 1
+                if self.return_unmapped:
+                    yield read, None, "single_read"
                 continue
 
-        if per_contig:
-            gene = read.tid
-        elif gene_tag:
-            gene = read.get_tag(gene_tag)
-            if re.search(skip_regex, gene):
-                read_events['Skipped - matches --skip-tags-regex'] += 1
-                continue
+            if self.options.paired:
+                self.read_events['Paired Reads'] += 1
 
-        # only output when the contig changes to avoid problems with
-        # overlapping genes
-        if read.tid != last_chr:
+            if self.options.subset:
+                if random.random() >= self.options.subset:
+                    self.read_events['Randomly excluded'] += 1
+                    continue
 
-            for gene in counts_dict:
-                yield gene, counts_dict[gene], read_events
+            if self.options.mapping_quality:
+                if read.mapq < self.options.mapping_quality:
+                    self.read_events['< MAPQ threshold'] += 1
+                    continue
 
-            last_chr = read.tid
+            self.current_chr = read.reference_name
 
-            # make a new empty counts_dict counter
-            counts_dict = collections.defaultdict(
-                lambda: collections.defaultdict(dict))
+            if self.options.per_gene:
 
-        umi = umi_getter(read)
-        try:
-            counts_dict[gene][umi]["count"] += 1
-        except KeyError:
-            counts_dict[gene][umi]["count"] = 1
+                if self.options.per_contig:
 
-    # yield remaining genes
-    for gene in counts_dict:
-        yield gene, counts_dict[gene], read_events
+                    if self.metacontig_contig:
+                        transcript = read.reference_name
+                        gene = self.contig_metacontig[transcript]
+                    else:
+                        gene = read.reference_name
+
+                elif self.options.gene_tag:
+
+                    try:
+                        gene = read.get_tag(self.options.gene_tag)
+                    except KeyError:
+                        self.read_events['Read skipped, no tag'] += 1
+                        continue
+
+                    if re.search(self.options.skip_regex, gene):
+                        self.read_events['Gene skipped - matches regex'] += 1
+                        continue
+
+                pos = gene
+                key = pos
+
+                if self.last_chr:
+                    do_output, out_keys = self.check_output()
+                else:
+                    do_output = False
+
+                if do_output:
+                    for p in out_keys:
+                        for k in sorted(self.reads_dict[p].keys()):
+                            yield self.reads_dict[p][k], k, "bundle"
+
+                        del self.reads_dict[p]
+
+                self.last_chr = self.current_chr
+                self.last_pos = pos
+
+            else:
+
+                start, pos, is_spliced = get_read_position(
+                    read, self.options.soft_clip_threshold)
+
+                do_output, out_keys = self.check_output()
+
+                if do_output:
+                    for p in out_keys:
+                        for k in sorted(self.reads_dict[p].keys()):
+                            yield self.reads_dict[p][k], k, "bundle"
+
+                        del self.reads_dict[p]
+                        if p in self.read_counts:
+                            del self.read_counts[p]
+
+                self.last_pos = self.start
+                self.last_chr = self.current_chr
+
+                if self.options.read_length:
+                    r_length = read.query_length
+                else:
+                    r_length = 0
+
+                key = (read.is_reverse, self.options.spliced & is_spliced,
+                       self.options.paired*read.tlen, r_length)
+
+            # get the umi +/- cell barcode and update dictionaries
+            if self.options.ignore_umi:
+                umi, cell = "", ""
+            else:
+                umi, cell = self.barcode_getter(read)
+
+            key = (key, cell)
+            self.update_dicts(read, pos, key, umi)
+
+            if self.metacontig_contig:
+                # keep track of observed contigs for each gene
+                self.observed_contigs[gene].add(transcript)
+
+        # yield remaining bundles
+        for p in sorted(self.reads_dict.keys()):
+            for k in sorted(self.reads_dict[p].keys()):
+                yield self.reads_dict[p][k], k, "bundle"
 
 
 class random_read_generator:
     ''' class to generate umis at random based on the
     distributon of umis in a bamfile '''
 
-    def __init__(self, bamfile, chrom, umi_getter):
+    def __init__(self, bamfile, chrom, barcode_getter):
         inbam = pysam.Samfile(bamfile)
 
         if chrom:
@@ -1273,7 +1407,7 @@ class random_read_generator:
             self.inbam = inbam.fetch()
 
         self.umis = collections.defaultdict(int)
-        self.umi_getter = umi_getter
+        self.barcode_getter = barcode_getter
         self.fill()
 
     def fill(self):
@@ -1288,7 +1422,7 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[self.umi_getter(read)] += 1
+            self.umis[self.barcode_getter(read)[0]] += 1
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())

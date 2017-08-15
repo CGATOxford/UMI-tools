@@ -47,7 +47,6 @@ install_requires = [
     "numpy>=1.7",
     "pandas>=0.12.0",
     "future",
-    "six",
     "regex",
     "scipy",
     "matplotlib"]

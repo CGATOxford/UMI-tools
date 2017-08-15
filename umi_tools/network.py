@@ -364,6 +364,10 @@ class UMIClusterer:
     def __init__(self, cluster_method="directional"):
         ''' select the required class methods for the cluster_method'''
 
+        self.max_umis_per_position = 0
+        self.total_umis_per_position = 0
+        self.positions = 0
+
         if cluster_method == "adjacency":
             self.get_adj_list = self._get_adj_list_adjacency
             self.get_connected_components = self._get_connected_components_adjacency
@@ -393,15 +397,23 @@ class UMIClusterer:
     def __call__(self, umis, counts, threshold):
         '''Counts is a directionary that maps UMIs to their counts'''
 
+        self.positions += 1
+
+        number_of_umis = len(umis)
+
+        self.total_umis_per_position += number_of_umis
+
+        if number_of_umis > self.max_umis_per_position:
+            self.max_umis_per_position = number_of_umis
+
         len_umis = [len(x) for x in umis]
+
         assert max(len_umis) == min(len_umis), (
             "not all umis are the same length(!):  %d - %d" % (
                 min(len_umis), max(len_umis)))
 
         adj_list = self.get_adj_list(umis, counts, threshold)
-
         clusters = self.get_connected_components(umis, adj_list, counts)
-
         final_umis = [list(x) for x in
                       self.get_groups(clusters, adj_list, counts)]
 
