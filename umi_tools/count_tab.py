@@ -11,103 +11,9 @@ Purpose
 -------
 
 The purpose of this command is to count the number of reads per gene
-based on gene assigned to each each and read UMI.  It is assumed that
-the FASTQ files were processed with extract_umi.py before mapping and
-thus the UMI is the last word of the read name. e.g:
-
-@HISEQ:87:00000000_AATT
-
-where AATT is the UMI sequeuence.
-
-
-Methods
--------
-
-count can be run with multiple methods to identify group of reads with
-the same (or similar) UMI(s), from which a single read is
-returned. All methods start by identifying the reads with the same
-mapping position.
-
-The simpliest methods, unique and percentile, group reads with
-the exact same UMI. The network-based methods, cluster, adjacency and
-directional, build networks where nodes are UMIs and edges connect UMIs
-with an edit distance <= threshold (usually 1). The groups of reads
-are then defined from the network in a method-specific manner. For all
-the network-based methods, each read group is equivalent to one read
-count for the gene.
-
-  "unique"
-      Reads group share the exact same UMI
-
-  "percentile"
-      Reads group share the exact same UMI. UMIs with counts < 1% of the
-      median counts for UMIs at the same position are ignored.
-
-  "cluster"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold). Each network is a read group
-
-  "adjacency"
-      Cluster UMIs as above. For each cluster, select the node(UMI)
-      with the highest counts. Visit all nodes one edge away. If all
-      nodes have been visted, stop. Otherise, repeat with remaining
-      nodes until all nodes have been visted. Each step
-      defines a read group.
-
-  "directional"
-      Identify clusters of connected UMIs (based on hamming distance
-      threshold) and umi A counts >= (2* umi B counts) - 1. Each
-      network is a read group.
-
-Options
--------
---extract-umi-method (choice)
-      How are the UMIs encoded in the read?
-
-      Options are:
-
-      - "read_id" (default)
-            UMIs contained at the end of the read separated as
-            specified with --umi-separator option
-
-      - "tag"
-            UMIs contained in a tag, see --umi-tag option
-
---umi-separator (string)
-      Separator between read id and UMI. See --extract-umi-method above
-
---method (string, choice)
-      Method used to identify PCR duplicates within reads. All methods
-      start by identifying the reads with the same mapping position
-
-      Options are:
-
-      - "unique"
-
-      - "percentile"
-
-      - "cluster"
-
-      - "adjacency"
-
-      - "directional" (default)
-
---edit-distance-threshold (int)
-       For the adjacency and cluster methods the threshold for the
-       edit distance to connect two UMIs in the network can be
-       increased. The default value of 1 works best unless the UMI is
-very long (>14bp)
-
--I    (string, filename) input file name
-      The input file must be sorted and indexed.
-
--S    (string, filename) output file name
-
--L    (string, filename) log file name
-
-
-Usage
------
+based on the read's gene assignment and UMI. Note this command is not
+currently able to perform per-cell counting. See the count command if
+you want to perform per-cell counting.
 
 The input must be in the following format (tab separated), where the
 first column is the read identifier and the second column is the
@@ -158,6 +64,9 @@ try:
 except ImportError:
     import umi_methods
 
+# add the generic docstring text
+__doc__ = __doc__ + U.GENERIC_DOCSTRING
+
 
 def main(argv=None):
     """script main.
@@ -172,25 +81,8 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
-    parser.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                      help="Input file is in sam format [default=%default]",
-                      default=False)
-    parser.add_option("--umi-separator", dest="umi_sep",
-                      type="string", help="separator between read id and UMI",
-                      default="_")
-    parser.add_option("--edit-distance-threshold", dest="threshold",
-                      type="int",
-                      default=1,
-                      help="Edit distance theshold at which to join two UMIs"
-                           "when clustering. [default=%default]")
-    parser.add_option("--method", dest="method", type="choice",
-                      choices=("adjacency", "directional",
-                               "percentile", "unique", "cluster"),
-                      default="directional",
-                      help="method to use for umi deduping [default=%default]")
-
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False)
 
     if options.random_seed:
         np.random.seed(options.random_seed)
