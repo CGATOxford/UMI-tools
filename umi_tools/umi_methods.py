@@ -184,9 +184,6 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
                 local_min = poss_local_min
                 break
 
-        if local_min is None:
-            return None
-
         local_mins_counts = []
         for pos in xx[local_mins]:
             threshold = np.power(10, pos)
@@ -195,10 +192,14 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
 
             local_mins_counts.append(passing_threshold)
 
-        threshold = np.power(10, xx[local_min])
+        if local_min is not None:
+            threshold = np.power(10, xx[local_min])
 
-    final_barcodes = set([
-        x for x, y in cell_barcode_counts.items() if y > threshold])
+    if cell_number or local_min is not None:
+        final_barcodes = set([
+            x for x, y in cell_barcode_counts.items() if y > threshold])
+    else:
+        final_barcodes = None
 
     if plotfile_prefix:
 
@@ -226,6 +227,13 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
             lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
                               handles=[user_line],
                               title="Cell threshold")
+
+        elif local_min is None:  # no local_min was accepted
+            for pos in xx[local_mins]:
+                fig1.axvline(x=pos, ls="dashed", color=CB_color_cycle[3])
+            lgd = fig1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
         else:
             for pos in xx[local_mins]:
                 if pos == xx[local_min]:  # selected local minima
@@ -244,7 +252,12 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
         fig = plt.figure()
         fig2 = fig.add_subplot(111)
         fig2.plot(range(0, len(counts)), np.cumsum(counts), c="black")
-        xmax = min(len(final_barcodes) * 5, len(counts))  # reasonable maximum x-axis value
+
+        xmax = len(counts)
+        if local_min is not None:
+            # reasonable maximum x-axis value
+            xmax = min(len(final_barcodes) * 5, xmax)
+
         fig2.set_xlim((0 - (0.01 * xmax), xmax))
         fig2.set_xlabel("Rank")
         fig2.set_ylabel("Cumulative count")
@@ -254,6 +267,15 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
             lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
                               handles=[user_line],
                               title="Cell threshold")
+
+        elif local_min is None:  # no local_min was accepted
+            for local_mins_count in local_mins_counts:
+                fig2.axvline(x=local_mins_count, ls="dashed",
+                             color=CB_color_cycle[3])
+            lgd = fig2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
+
         else:
             for local_mins_count in local_mins_counts:
                 if local_mins_count == len(final_barcodes):  # selected local minima
@@ -270,9 +292,12 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
         fig.savefig("%s_cell_barcode_knee.png" % plotfile_prefix,
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
-        colours_selected = [CB_color_cycle[0] for x in range(0, len(final_barcodes))]
-        colours_rejected = ["black" for x in range(0, len(counts)-len(final_barcodes))]
-        colours = colours_selected + colours_rejected
+        if local_min is not None:
+            colours_selected = [CB_color_cycle[0] for x in range(0, len(final_barcodes))]
+            colours_rejected = ["black" for x in range(0, len(counts)-len(final_barcodes))]
+            colours = colours_selected + colours_rejected
+        else:
+            colours = ["black" for x in range(0, len(counts))]
 
         fig = plt.figure()
         fig3 = fig.add_subplot(111)
@@ -288,6 +313,13 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
             lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
                               handles=[user_line],
                               title="Cell threshold")
+        elif local_min is None:  # no local_min was accepted
+            for local_mins_count in local_mins_counts:
+                fig3.axvline(x=local_mins_count, ls="dashed",
+                             color=CB_color_cycle[3])
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, rejected_line],
+                              title="Possible thresholds")
         else:
             for local_mins_count in local_mins_counts:
                 if local_mins_count == len(final_barcodes):  # selected local minima
@@ -308,7 +340,7 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
             with U.openFile("%s_cell_thresholds.tsv" % plotfile_prefix, "w") as outf:
                 outf.write("count\taction\n")
                 for local_mins_count in local_mins_counts:
-                    if local_mins_count == len(final_barcodes):
+                    if local_min and local_mins_count == len(final_barcodes):
                         threshold_type = "Selected"
                     else:
                         threshold_type = "Rejected"
@@ -357,6 +389,13 @@ def getCellWhitelist(cell_barcode_counts,
 
     cell_whitelist = getKneeEstimate(
         cell_barcode_counts, cell_number, plotfile_prefix)
+
+    if cell_whitelist is None:
+        U.error("No local minima was accepted. Recommend checking the plot "
+                "output and counts per local minima "
+                "(requires `--plot-prefix` option) and then re-running with "
+                "manually selected threshold (`--set-cell-number` option)")
+
     if error_correct_threshold > 0:
         true_to_false_map = getErrorCorrectMapping(
             cell_barcode_counts.keys(), cell_whitelist,
