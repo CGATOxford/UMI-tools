@@ -78,7 +78,8 @@ def check_script(test_name,
                  stdin,
                  options, outputs,
                  references,
-                 current_dir):
+                 current_dir,
+                 sort=False):
     '''check script.
     # 1. Name of the script
     # 2. Filename to use as stdin
@@ -111,8 +112,12 @@ def check_script(test_name,
     options = re.sub("\n", "", options)
 
     # use /bin/bash in order to enable "<( )" syntax in shells
-    statement = ("/bin/bash -c "
-                 "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
+    if sort:
+        statement = ("/bin/bash -c "
+                     "'umi_tools %(options)s %(stdin)s |sort > %(stdout)s'") % locals()
+    else:
+        statement = ("/bin/bash -c "
+                     "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
 
     process = subprocess.Popen(statement,
                                shell=True,
@@ -254,7 +259,8 @@ def test_tool():
               values['options'],
               values['outputs'],
               values['references'],
-              current_dir)
+              current_dir,
+              values.get('sort', False))
 
 
 def _read(fn):
