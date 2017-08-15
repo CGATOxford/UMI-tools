@@ -417,6 +417,8 @@ def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
     with U.openFile(whitelist_tsv, "r") as inf:
 
         for line in inf:
+            if line.startswith('#'):
+                continue
 
             line = line.strip().split("\t")
             whitelist_barcode = line[0]
@@ -1318,7 +1320,11 @@ class get_bundles:
 
                 elif self.options.gene_tag:
 
-                    gene = read.get_tag(self.options.gene_tag)
+                    try:
+                        gene = read.get_tag(self.options.gene_tag)
+                    except KeyError:
+                        self.read_events['Read skipped, no tag'] += 1
+                        continue
 
                     if re.search(self.options.skip_regex, gene):
                         self.read_events['Gene skipped - matches regex'] += 1
