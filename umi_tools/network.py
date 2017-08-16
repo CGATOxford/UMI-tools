@@ -14,13 +14,8 @@ import sys
 import regex
 import numpy as np
 
-try:
-    from umi_tools._dedup_umi import edit_distance
-    import umi_tools.Utilities as U
-
-except:
-    from _dedup_umi import edit_distance
-    import Utilities as U
+from umi_tools._dedup_umi import edit_distance
+import umi_tools.Utilities as U
 
 sys.setrecursionlimit(10000)
 

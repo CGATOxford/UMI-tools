@@ -173,8 +173,9 @@ Command line options
 import sys
 import regex
 import collections
-import pyximport
-pyximport.install(build_in_temp=False)
+
+import umi_tools.Utilities as U
+import umi_tools.umi_methods as umi_methods
 
 # python 3 doesn't require izip
 try:
@@ -184,25 +185,7 @@ except ImportError:
     # Python 3
     izip = zip
 
-try:
-    import umi_tools.Utilities as U
-except ImportError:
-    import Utilities as U
 
-try:
-    import umi_tools.network as network
-except ImportError:
-    import network
-
-try:
-    from umi_tools._dedup_umi import edit_distance
-except:
-    from _dedup_umi import edit_distance
-
-try:
-    import umi_tools.umi_methods as umi_methods
-except ImportError:
-    import umi_methods
 
 
 def main(argv=None):

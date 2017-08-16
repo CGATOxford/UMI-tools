@@ -12,11 +12,13 @@ umi_methods.py - Methods for dealing with UMIs
 import itertools
 import collections
 import random
-import numpy as np
 import pysam
 import re
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
+import matplotlib
+# require to run on systems with no X11
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
@@ -26,15 +28,9 @@ from functools import partial
 from future.utils import iteritems
 from builtins import dict
 
-try:
-    import umi_tools.Utilities as U
-except:
-    import Utilities as U
+import umi_tools.Utilities as U
+from umi_tools._dedup_umi import edit_distance
 
-try:
-    from umi_tools._dedup_umi import edit_distance
-except:
-    from _dedup_umi import edit_distance
 
 RANGES = {
     'phred33': (33, 77),
