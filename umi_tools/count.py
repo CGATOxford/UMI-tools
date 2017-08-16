@@ -45,7 +45,7 @@ except ImportError:
 
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING
+__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
 
 
 def main(argv=None):
