@@ -249,6 +249,11 @@ def main(argv=None):
                       dest="method",
                       choices=["reads", "umis"],
                       help=("Use reads or unique umi counts per cell"))
+    parser.add_option("--expect-cells",
+                      dest="expect_cells",
+                      type="int",
+                      help=("Prior expectation on the upper limit on the "
+                            "number of cells sequenced"))
     parser.add_option("--set-cell-number",
                       dest="cell_number",
                       type="int",
@@ -264,6 +269,7 @@ def main(argv=None):
                         read2_in=None,
                         plot_prefix=None,
                         subset_reads=100000000,
+                        expect_cells=False,
                         cell_number=False)
 
     # add common options (-h/--help, ...) and parse command line
@@ -271,6 +277,10 @@ def main(argv=None):
     (options, args) = U.Start(parser, argv=argv,
                               add_group_dedup_options=False,
                               add_sam_options=False)
+
+    if options.expect_cells and options.cell_number:
+        U.error("Cannot supply both --expect-cells and "
+                "--cell-number options")
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
@@ -442,6 +452,7 @@ def main(argv=None):
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
         cell_barcode_counts,
+        options.expect_cells,
         options.cell_number,
         options.error_correct_threshold,
         options.plot_prefix)
