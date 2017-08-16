@@ -186,8 +186,6 @@ except ImportError:
     izip = zip
 
 
-
-
 def main(argv=None):
     """script main.
 
