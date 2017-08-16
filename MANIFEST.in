@@ -2,6 +2,6 @@
 include ez_setup.py
 # extensions
 include umi_tools/*.pyx
-include umis_tools/*.c
+include umi_tools/*.c
 # requirements.txt
 include requirements.txt

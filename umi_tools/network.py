@@ -8,6 +8,8 @@ network.py - Network methods for dealing with UMIs
 :Tags: Python UMI
 
 '''
+
+from __future__ import absolute_import
 import collections
 import itertools
 import sys

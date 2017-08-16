@@ -9,6 +9,7 @@ umi_methods.py - Methods for dealing with UMIs
 
 '''
 
+from __future__ import absolute_import
 import itertools
 import collections
 import random
