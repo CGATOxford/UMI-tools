@@ -28,6 +28,8 @@ To use a specific tool, type::
 import os
 import sys
 import imp
+import matplotlib
+matplotlib.use('Agg')
 
 
 def main(argv=None):
