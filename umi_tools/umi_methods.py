@@ -188,11 +188,8 @@ def getKneeEstimate(cell_barcode_counts,
 
             if not local_min:   # if we have selected a local min yet
                 if expect_cells:  # we have a "soft" expectation
-                    # the last threshold here prevents selecting a local
-                    # minima with v.low counts
                     if (passing_threshold > expect_cells * 0.1 and
-                        passing_threshold <= expect_cells and
-                        poss_local_min >= 0.05 * xx_values):
+                        passing_threshold <= expect_cells):
                         local_min = poss_local_min
 
                 else:  # we have no prior expectation

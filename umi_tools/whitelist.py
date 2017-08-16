@@ -50,7 +50,7 @@ whitelist-specific options
         barcodes.
 
 --expect-cells=[EXPECTED_CELLS]
-        An estimate for the number of true cell barcodes. The knee
+        An upper limit estimate for the number of inputted cells. The knee
         method will now select the first threshold (order ascendingly)
         which results in the number of cell barcodes accepted being <=
         EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
