@@ -381,7 +381,7 @@ $ wc -l whitelist.txt
 119 whitelist.txt
 ```
 
-Based on our prior knowledge that there were ~100 true CBs, we've probably slightly over-estimated the number of CBs here. We can visualise this by looking at the following plots which present the same data:
+Based on our prior knowledge that there were ~100 true CBs, we've probably slightly over-estimated the number of CBs here. We can visualise this by looking at the following plots which present the same data in different ways to help assess the threshold:
 
 ![Counts distribution](./cell_barcode_count_density.png)
 Figure 1. "expect_whitelist_cell_barcode_counts_density.png" 
@@ -406,9 +406,9 @@ Logs counts per barcode (ranked)
 
 For all plots, the 'Selected' local minima (or threshold) is shown by the dashed line. If we had other local minima which were 'Rejected' these would also be shown. The thresholds are also tabulated in the file `expect_whitelist_cell_thresholds.tsv`.
 
-In the first plot, we can see two clear peaks, with the right peak representing the true cell barcodes.  In this case, the local minima appears to be slightly too close to the 'false' CBs. This is confirmed in the second and third plots, where the 'knee' in the cumulative counts, and counts per barcode appears to be to the left of our selected threshold and closer to 100 cells. So it looks like in this case, the automatic detection of the 'knee' is slightly off. Based on this we might want to re-run `whitelist` and set the number of cells with the `--set-cell-number` option as described above. 
+In Figure 1, we can see two clear peaks, with the right peak representing the true cell barcodes.  In this case, the local minima appears to be in the correct place. This is confirmed in Figures 2 & 3, where the threshold appears to be at the 'knee' in the cumulative counts, and counts per barcode. So it looks like in this case, the automatic detection of the 'knee' has worked well. However, in some cases, the automatic selection may not work so well. In these case we can re-run `whitelist` and set the number of cells with the `--set-cell-number` option as described above. 
 
-In most cases, there will be many local minima and sometimes the wrong one may be selected. If so, you can insepect the `[PLOT_PREFIX]_cell_thresholds.tsv` file and re-run the `whitelist` command using the `--set-cell-number` option with the threshold which you have deemed to be most appropriate.
+In most cases, there will be many local minima and sometimes the wrong one may be selected. If so, you can insepect the `[PLOT_PREFIX]_cell_thresholds.tsv` file and re-run the `whitelist` command using the `--set-cell-number` option with the threshold which you have deemed to be most appropriate. We've not yet come across a case where no local minima identified near the 'knee', but if so, you can inspect the counts per barcode and cumulative counts figures and estimate a number to use with the `--set-cell-number` option.
 
 
 ### Correction of cell barcodes
