@@ -506,12 +506,13 @@ def openFile(filename, mode="r", create_dir=False):
             if mode == "r":
                 return gzip.open(filename, 'rt', encoding="ascii")
             elif mode == "w":
-                return gzip.open(filename, 'wt', encoding="ascii")
+                return gzip.open(filename, 'wt', compresslevel=6,
+                                 encoding="ascii")
             else:
                 raise NotImplementedError(
                     "mode '{}' not implemented".format(mode))
         else:
-            return gzip.open(filename, mode)
+            return gzip.open(filename, mode, compresslevel=6)
     else:
         return open(filename, mode)
 

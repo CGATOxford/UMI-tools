@@ -73,6 +73,7 @@ Using regex and filtering against a whitelist of cell barcodes:
         -L extract.log [OPTIONS]
 
 '''
+from __future__ import absolute_import
 import sys
 import regex
 import collections
