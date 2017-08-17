@@ -85,22 +85,10 @@ from builtins import dict
 from future.utils import iteritems
 
 import pysam
-import numpy as np
 
-try:
-    import umi_tools.Utilities as U
-except ImportError:
-    import Utilities as U
-
-try:
-    import umi_tools.network as network
-except ImportError:
-    import network
-
-try:
-    import umi_tools.umi_methods as umi_methods
-except ImportError:
-    import umi_methods
+import umi_tools.Utilities as U
+import umi_tools.network as network
+import umi_tools.umi_methods as umi_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
