@@ -1,6 +1,6 @@
 .. image:: https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?url=https://cloud.githubusercontent.com/assets/6096414/19521726/a4dea98e-960c-11e6-806a-a18ff04a391e.png&container=focus&resize_w=550
 
-UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (early access)
+UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
 
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
@@ -10,7 +10,7 @@ Identifiers (UMIs)/Random Molecular Tags (RMTs) and single Cell
 RNA-Seq cell barcodes. Currently there are 6
 commands. 
 
-The extract and whitelist commands are used to prepare a
+The ``extract`` and ``whitelist`` commands are used to prepare a
 fastq containg UMIs +/- cell barcodes for alignment. 
 
 * whitelist:
@@ -29,7 +29,7 @@ The remaining commands, group, dedup and count/count_tab, are used to
 identify PCR duplicates using the UMIs and perform different levels of
 analysis depending on the needs of the user. A number of different UMI
 deduplication schemes are enabled - The recommended method is
-`directional`.
+_directional_.
 
 * group: 
    **Groups PCR duplicates using the same methods available through `dedup`.**
@@ -48,9 +48,14 @@ deduplication schemes are enabled - The recommended method is
 * count_tab:
    **As per count except input is a flatfile**
 
-See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
+See `QUICK_START.md <./doc/QUICK_START.md>`_ for a quick tutorial on
+the most common usage pattern.
 
-The `dedup`, `group`, and `count` / `count_tab` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
+If you want to use UMI-tools in single-cell RNA-Seq data processing,
+see `Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_
+
+
+The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
 `Genome Research Publication <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_
 
@@ -85,12 +90,13 @@ Enter repository and run:
 
    $ python setup.py install
 
-For more detail see `INSTALL.rst <INSTALL.rst>`_
+For more detail see `INSTALL.rst <./doc/INSTALL.rst>`_
 
 Help
 ----- 
 
-See `QUICK_START.md <QUICK_START.md>`_ for a quick tutorial on the most common usage pattern.
+See `QUICK_START.md <./doc/QUICK_START.md>`_ and
+`Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_ for tutorials on the most common usage patterns.
 
 To get detailed help on umi_tools run
 

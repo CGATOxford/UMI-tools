@@ -43,7 +43,6 @@ umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
 
 install_requires = [
     "setuptools>=1.1",
-    "cython>=0.19",
     "numpy>=1.7",
     "pandas>=0.12.0",
     "future",

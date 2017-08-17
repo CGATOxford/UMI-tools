@@ -1,6 +1,9 @@
 UMI-Tools quick start guide
 =============================
 
+This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the `Single cell tutorial <Single_cell_tutorial.md>`_
+
+
 - [UMI-Tools quick start guide](#umi-tools-quick-start-guide)
   * [Step 1: Install `UMI-Tools`](#step-1--install--umi-tools-)
   * [Step 2: Download the test data](#step-2--download-the-test-data)
@@ -224,47 +227,6 @@ achieved by adding the `--paired` option to the call to `dedup`:
 Paired deduplicating is signficantly slower and more memory intensive
 than single-ended.
 
-### Mapping to the transcriptome ###
-
-A common practice in single cell RNA-seq is to map to the
-transcriptome rather than the genome. The identity of the gene
-is indicated by the contig to which reads are mapped. In these
-cases, the precise location of mapping is not informative (because
-fragmentation happens after amplification), only the identity of the
-gene.
-
-If the transcriptome contains just a single transcript per gene, UMI-tools can be instructed
-to use this scheme using the `--per-contig` option to instruct UMI-tools to treat all reads
-with the same value in field 3 of the BAM (RNAME) as having the same alignment coordinates:
-
-    $ umi_tools dedup -I transcriptome_mapped.bam --per-contig -S deduplicated.bam
-   
-Alternatively, if the transcriptome contains multiple transcripts per gene you can provide
-the `--per-gene` option and a file mapping transcript and gene ids with the
-`--gene-transcript-map` option.
-
-This file should be in the following format (tab separated):
-
-gene_1    transcript_1
-
-gene_1    transcript_2
-
-gene_2    transcript_3
-
-gene_3    transcript_4
-
-    $ umi_tools dedup -I transcriptome_mapped.bam --per-gene --gene-transcript-map=gene2transcript.tsv -S deduplicated.bam
-
-Finally, if the gene_id is contained in a BAM tag, you can use the `--gene-tag` option.
-
-    $ umi_tools dedup -I transcriptome_mapped.bam --gene-tag=GI -S deduplicated.bam
-
-Regardless which route you take, all reads that align to the same gene
-will be considered to have the same alignment coordinates.
-
-
-
-
 ### Read grouping ###
 For some applications it may be neccessary to mark the duplicates but retain all reads, for example,
 where the PCR duplicates are used to correct sequence errors by generating a consensus sequence. In
@@ -286,22 +248,6 @@ The groups flatfile contains the following columns:
 - final_umi_count = how many times was the umi observed at the same alignment coordinates, inc. error correction
 - unique_id = the unique identifier for this group
     
-
-
-### Bespoke UMI extraction ###
-We have tried to accommodate the common ways in which UMIs are encoded in the reads for umi_tools extract,
-however many techniques use very particular methods to incorporate UMIs. For example, inDrop (Klein et al, 2015) incorporates the UMI at different places from read to read due to a variable length of the cell barcode.
-In such cases, it may be neccessary to write your own code to extract the UMI
-from the read fastq read sequence and attach it to the fastq read identifier.
-
-Following UMI extraction, the final fastq read identifier should be in the format
-[\<identifier>]\_[\<UMI>], where identifier is the original identifier and UMI is
-the UMI sequence (see below). Note that the UMI must be appended before the first space in the
-identifier in order to be retained in the BAM following alignment. In addition,
-if you have paired end reads, both with a UMI, the UMI sequence is the concatenation
-of the 2 UMIs so that each read has the exact same UMI. If you are having trouble with
-bespoke UMI extraction, raise a GitHub issue and we'll try and help out.
-
 
 #### Example UMI extraction: ####
 
