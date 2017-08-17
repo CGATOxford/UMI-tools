@@ -91,7 +91,7 @@ worth just trying::
     $ pip install umi_tools
 
 If you get a permissions error try adding ``--user`` to the ``pip``
-command. Note that ``umi_tools`` will now only be install for the
+command. Note that ``umi_tools`` will now only be installed for the
 current user.
 
 If that doesn't work, then you need to find what is missing. You can
@@ -232,10 +232,19 @@ Depedencies from conda/PyPI manager
 
 4.  Install UMI-tools using the ``setup.py`` script::
 
-        $ python setup.py install
+        $ python setup.py install --user
 
 Completely from source
 +++++++++++++++++++++++
+
+.. WARNING::
+    **This section is deprecated and no longer updateed**. Once upon a time it
+    was possible for us to provide complete instructions for installing completely 
+    from source without a package manager. Unfortunately, our dependencies have 
+    multiplied and the dependencies of our dependencies have also multiplied. 
+    You can try the below and it may work as the system libraries required are not
+    particularly rare, especially if you are already doing bioinformatics. However, 
+    if one of the dependencies fails to install, I'm afraid you are on your own. 
 
 This method will allow you to install without installing pip or
 conda. It is in theory possible to install completely without root by
