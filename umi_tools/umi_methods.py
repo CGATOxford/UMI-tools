@@ -163,7 +163,7 @@ def getKneeEstimate(cell_barcode_counts,
     counts_thresh = [x for x in counts if x > threshold]
     log_counts = np.log10(counts_thresh)
 
-    # guassian density with hardcoded bw 
+    # guassian density with hardcoded bw
     density = gaussian_kde(log_counts, bw_method=0.1)
 
     xx_values = 10000  # how many x values for density plot
