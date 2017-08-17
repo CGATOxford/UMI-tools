@@ -383,8 +383,13 @@ $ wc -l whitelist.txt
 
 Based on our prior knowledge that there were ~100 true CBs, we've probably slightly over-estimated the number of CBs here. We can visualise this by looking at the following plots which present the same data:
 
+![Counts distribution](./cell_barcode_count_density.png)
 1. expect_whitelist_cell_barcode_counts_density.png - Distribution of read counts per CB. The least abundant CBs are removed from this plot
+
+![Cumulative counts](./cell_barcode_knee.png)
 2. expect_whitelist_cell_barcode_knee.png - Cumulative counts as number of accepted barcodes is increased
+
+![Counts per barcode](./cell_barcode_counts.png)
 3. expect_whitelist_cell_barcode_counts.png - Logs counts per barcode (ranked)
 
 For all plots, the 'Selected' local minima (or threshold) is shown by the dashed line. If we had other local minima which were 'Rejected' these would also be shown. The thresholds are also tabulated in the file `expect_whitelist_cell_thresholds.tsv`.
