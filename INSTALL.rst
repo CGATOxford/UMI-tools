@@ -30,21 +30,6 @@ or grab a zip of the `latest release`_ from github and unpack
 
 If these options don't work, see below.
 
-A note about installing with `sudo`
------------------------------------
-
-It is perfectly possible to install UMI-tools without root access to the machine you are install on (although this will make installing things like `zlib` easier). However if you do install as root using any of::
-
-    $ sudo pip install umi_tools
-    $ sudo conda install -c https://conda.anaconda.org/toms umi_tools
-    $ sydo python setup.py install
-    
-You may need to run umi_tools with `sudo` the first time you run the `dedup` command, like so::
-
-    $ sudo umi_tools dedup --help
-    
-After this first run, you should be able to use `umi_tools` without `sudo` on all subsequent occasions. This is because the cython extensions are compiled the first time the tool is run and they require access to the install directory to successfully complete. 
-
 Conda package manager
 ----------------------
 
@@ -225,7 +210,6 @@ Depedencies from conda/PyPI manager
         $ conda install future
         $ conda install scipy
         $ conda install matplotlib
-        $ conda install cython
         $ conda config --add channels bioconda
         $ conda install regex
         $ conda install pysam
@@ -288,6 +272,14 @@ Linux install the ``build-essential`` or ``g++`` packages.
         $ tar -xzf pysam-0.8.4.tar.gz
         $ cd pysam-0.8.4
         $ python setup.py install --user
+
+Running tests
++++++++++++++
+
+After installing from source you can run the test suite to make sure everything is working. To do this you'll need to install `nose` and `pyyaml` using your favourite package manager and then run::
+
+    $ nosetests tests/test_umi_tools.py
+    
 
 Getting further help
 ---------------------
