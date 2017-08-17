@@ -68,12 +68,19 @@ whitelist_indrop:
       references: [indrop_whitelist.tsv]
       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
 
-whitelist_indrop_user:
+whitelist_indrop_set_cell:
       skip_python:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist_user.tsv]
       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --set-cell-number=607
+
+whitelist_indrop_expect_cells:
+      skip_python:
+      stdin: indrop.fastq.1.gz
+      outputs: [stdout]
+      references: [indrop_whitelist_user.tsv]
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --expect-cells=1000
 
 whitelist_indrop_fuzzy:
       stdin: indrop.fastq.1.gz

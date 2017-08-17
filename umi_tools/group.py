@@ -91,7 +91,7 @@ import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING
+__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + U.GROUP_DEDUP_GENERIC_OPTIONS
 
 

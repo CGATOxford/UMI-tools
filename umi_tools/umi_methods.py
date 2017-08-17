@@ -139,11 +139,15 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
 ###############################################################################
 
 
-def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None):
+def getKneeEstimate(cell_barcode_counts,
+                    expect_cells=False,
+                    cell_number=False,
+                    plotfile_prefix=None):
     ''' estimate the number of "true" cell barcodes
 
     input:
          cell_barcode_counts = dict(key = barcode, value = count)
+         expect_cells (optional) = define the expected number of cells
          cell_number (optional) = define number of cell barcodes to accept
          plotfile_prefix = (optional) prefix for plots
 
@@ -165,29 +169,35 @@ def getKneeEstimate(cell_barcode_counts, cell_number=False, plotfile_prefix=None
     xx_values = 1000  # how many x values for density plot
     xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
 
-    if cell_number:
+    if cell_number:  # we have a prior hard expectation on the number of cells
         threshold = counts[cell_number]
 
     else:
         local_mins = argrelextrema(density(xx), np.less)[0]
         local_min = None
-
-        # TS: Set of heuristic thresholds to decide which local minimum to select
-        # This is very unlikely to be the best way to achieve this!
-        for poss_local_min in local_mins[::-1]:
-            if (poss_local_min >= 0.2 * xx_values and
-                (log_counts.max() - xx[poss_local_min] > 1 or
-                 xx[poss_local_min] < log_counts.max()/2)):
-                local_min = poss_local_min
-                break
-
         local_mins_counts = []
-        for pos in xx[local_mins]:
-            threshold = np.power(10, pos)
-            passing_threshold = sum([y > threshold
-                                     for x, y in cell_barcode_counts.items()])
 
+        for poss_local_min in local_mins[::-1]:
+
+            passing_threshold = sum([y > np.power(10, xx[poss_local_min])
+                                     for x, y in cell_barcode_counts.items()])
             local_mins_counts.append(passing_threshold)
+
+            if not local_min:   # if we have selected a local min yet
+                if expect_cells:  # we have a "soft" expectation
+                    if (passing_threshold > expect_cells * 0.1 and
+                        passing_threshold <= expect_cells):
+                        local_min = poss_local_min
+
+                else:  # we have no prior expectation
+                    # TS: In abscence of any expectation (either hard or soft),
+                    # this set of heuristic thresholds are used to decide
+                    # which local minimum to select.
+                    # This is very unlikely to be the best way to achieve this!
+                    if (poss_local_min >= 0.2 * xx_values and
+                        (log_counts.max() - xx[poss_local_min] > 1 or
+                         xx[poss_local_min] < log_counts.max()/2)):
+                        local_min = poss_local_min
 
         if local_min is not None:
             threshold = np.power(10, xx[local_min])
@@ -380,12 +390,13 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
 
 
 def getCellWhitelist(cell_barcode_counts,
+                     expect_cells=False,
                      cell_number=False,
                      error_correct_threshold=0,
                      plotfile_prefix=None):
 
     cell_whitelist = getKneeEstimate(
-        cell_barcode_counts, cell_number, plotfile_prefix)
+        cell_barcode_counts, expect_cells, cell_number, plotfile_prefix)
 
     if cell_whitelist is None:
         U.error("No local minima was accepted. Recommend checking the plot "

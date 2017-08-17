@@ -13,90 +13,11 @@ Purpose
 Extract cell barcodes and identify the most likely true barcodes using
 the 'knee' method.
 
-Use the --set-cell-number option if you want to manually set the
-number of accepted cell barcodes. Note that the exact number of of
-cell barcodes in the outputted whitelist may be slightly less than
-this if there are multiple cells observed with the same frequency at
-the threshold between accepted and rejected cell barcodes.
-
-
-Barcode extraction
-------------------
-
-There are two methods enabled to extract the umi barocode (+/- cell
-barcode). For both methods, the patterns should be provided using the
---bc-pattern and --bc-pattern options. The method is specified using
-the --extract-method option
-
--'string':
-       This should be used where the barcodes are always in the same
-       place in the read.
-
-       - N = UMI position (required)
-       - C = cell barcode position (optional)
-       - X = sample position (optional)
-
-       Bases with Ns and Cs will be extracted and added to the read
-       name. The corresponding sequence qualities will be removed from
-       the read. Bases with an X will be reattached to the read.
-
-       E.g. If the pattern is NNNNCC,
-       Then the read:
-       @HISEQ:87:00000000 read1
-       AAGGTTGCTGATTGGATGGGCTAG
-       DA1AEBFGGCG01DFH00B1FF0B
-       +
-       will become:
-       @HISEQ:87:00000000_TT_AAGG read1
-       GCTGATTGGATGGGCTAG
-       1AFGGCG01DFH00B1FF0B
-       +
-
-       where 'TT' is the cell barcode and 'AAGG' is the UMI.
-
--'regex'
-       This method allows for more flexible barcode extraction and
-       should be used where the cell barcodes are variable in
-       length. Alternatively, the regex option can also be used to
-       filter out reads which do not contain an expected adapter
-       sequence.
-
-       The expected groups in the regex are:
-
-       umi_n = UMI positions, where n can be any value (required)
-       cell_n = cell barcode positions, where n can be any value (optional)
-       discard_n = positions to discard, where n can be any value (optional)
-
-       UMI positions and cell barcode positions will be extrated and
-       added to the read name. The corresponding sequence qualities
-       will be removed from the read. Discard bases and the
-       corresponding quality scores will be removed from the read. All
-       bases matched by other groups or componentts of the regex will
-       reattached to the read sequence
-
-       For example, the following regex can be used to extract reads
-       from the Klein et al inDrop data:
-
-       (?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*
-
-       Where only reads with a 3' T-tail and GAGTGATTGCTTGTGACGCCTT in
-       the correct position to yield two cell barcodes of 8-12 and 8bp
-       respectively, and a 6bp UMI will be retained.
-
-       You can also specify fuzzy matching to allow errors. For example if
-       the discard group above was specified as below this would enable
-       matches with up to 2 errors in the discard_1 group.
-
-       (?P<discard_1>GAGTGATTGCTTGTGACGCCTT{s<=2})
-
-       Note that all UMIs must be the same length for downstream
-       processing with dedup, group or count commands
-
-
 Identifying the true cell barcodes
 ----------------------------------
 
-We use the distribution of counts per cell barcode to identify the
+In the absence of the --set-cell-number options (see below),
+we use the distribution of counts per cell barcode to identify the
 cut-off for 'true' UMIs (the 'knee'). See this blog post for a more
 detailed explanation:
 
@@ -105,23 +26,34 @@ https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-b
 Counts per cell barcode can be performed using either read or unique
 UMI counts. Use --method=[read|umis] to set the counting method.
 
-You can supply the --plot-prefix option to visualise the set of
-thresholds considered for defining cell barcodes. This option will
-also generate a table containing the thresholds which were rejected if
-you want manually adjust the threshold a different threshold.
+The process of selecting the "best" local minima is not completely
+fullproof. We recommend users always run whitelist with the
+--plot-prefix option to visualise the set of thresholds considered for
+defining cell barcodes. This option will also generate a table
+containing the thresholds which were rejected if you want manually
+adjust the threshold a different threshold.
 
-Options
--------
+In addition, if you have some prior expectation on the maximum number
+of cells which may have been sequenced, you can provide this using the
+option --expect-cells (see below).
 
---3prime
-       By default the barcode is assumed to be on the 5' end of the
-       read, but use this option to sepecify that it is on the 3' end
-       instead. This option only works with --extact-method=string
-       since 3' encoding can be specified explicitly with a regex, e.g
-       ".*(?P<umi_1>.{5})$"
 
--L (string, filename)
-       Specify a log file to retain logging information and final statistics
+whitelist-specific options
+--------------------------
+
+--set-cell-number
+        Use this option to explicity set the number of cell barcodes
+        which should be accepted. Note that the exact number of cell
+        barcodes in the outputted whitelist may be slightly less than
+        this if there are multiple cells observed with the same
+        frequency at the threshold between accepted and rejected cell
+        barcodes.
+
+--expect-cells=[EXPECTED_CELLS]
+        An upper limit estimate for the number of inputted cells. The knee
+        method will now select the first threshold (order ascendingly)
+        which results in the number of cell barcodes accepted being <=
+        EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
 
 Usage:
 ------
@@ -166,9 +98,6 @@ example output:
 
 If --error-correct-threshold is set to 0, columns 2 and 4 will be empty.
 
-Command line options
---------------------
-
 '''
 import sys
 import regex
@@ -184,6 +113,9 @@ try:
 except ImportError:
     # Python 3
     izip = zip
+
+# add the generic docstring text
+__doc__ = __doc__ + U.GENERIC_DOCSTRING_WE
 
 
 def main(argv=None):
@@ -218,9 +150,9 @@ def main(argv=None):
                             "detection of the number of 'true' cell barcodes"))
     parser.add_option("--subset-reads",
                       dest="subset_reads", type="int",
-                      help=("Use only the first N reads to automatically "
-                            "identify the true cell barcodes. If N is greater "
-                            "than the number of reads, all reads will be used"))
+                      help=("Use the first N reads to automatically identify "
+                            "the true cell barcodes. If N is greater than the "
+                            "number of reads, all reads will be used"))
     parser.add_option("--error-correct-threshold",
                       dest="error_correct_threshold",
                       type="int",
@@ -230,6 +162,11 @@ def main(argv=None):
                       dest="method",
                       choices=["reads", "umis"],
                       help=("Use reads or unique umi counts per cell"))
+    parser.add_option("--expect-cells",
+                      dest="expect_cells",
+                      type="int",
+                      help=("Prior expectation on the upper limit on the "
+                            "number of cells sequenced"))
     parser.add_option("--set-cell-number",
                       dest="cell_number",
                       type="int",
@@ -245,6 +182,7 @@ def main(argv=None):
                         read2_in=None,
                         plot_prefix=None,
                         subset_reads=100000000,
+                        expect_cells=False,
                         cell_number=False)
 
     # add common options (-h/--help, ...) and parse command line
@@ -252,6 +190,10 @@ def main(argv=None):
     (options, args) = U.Start(parser, argv=argv,
                               add_group_dedup_options=False,
                               add_sam_options=False)
+
+    if options.expect_cells and options.cell_number:
+        U.error("Cannot supply both --expect-cells and "
+                "--cell-number options")
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
@@ -423,6 +365,7 @@ def main(argv=None):
 
     cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
         cell_barcode_counts,
+        options.expect_cells,
         options.cell_number,
         options.error_correct_threshold,
         options.plot_prefix)

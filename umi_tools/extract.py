@@ -18,79 +18,6 @@ for an explanation for how to encode the barcode pattern(s) to
 specficy the position of the UMI +/- cell barcode.
 
 
-Barcode extraction
-------------------
-
-There are two methods enabled to extract the umi barocode (+/- cell
-barcode). For both methods, the patterns should be provided using the
---bc-pattern and --bc-pattern options. The method is specified using
-the --extract-method option
-
--'string':
-       This should be used where the barcodes are always in the same
-       place in the read.
-
-       - N = UMI position (required)
-       - C = cell barcode position (optional)
-       - X = sample position (optional)
-
-       Bases with Ns and Cs will be extracted and added to the read
-       name. The corresponding sequence qualities will be removed from
-       the read. Bases with an X will be reattached to the read.
-
-       E.g. If the pattern is NNNNCC,
-       Then the read:
-       @HISEQ:87:00000000 read1
-       AAGGTTGCTGATTGGATGGGCTAG
-       DA1AEBFGGCG01DFH00B1FF0B
-       +
-       will become:
-       @HISEQ:87:00000000_TT_AAGG read1
-       GCTGATTGGATGGGCTAG
-       1AFGGCG01DFH00B1FF0B
-       +
-
-       where 'TT' is the cell barcode and 'AAGG' is the UMI.
-
--'regex'
-       This method allows for more flexible barcode extraction and
-       should be used where the cell barcodes are variable in
-       length. Alternatively, the regex option can also be used to
-       filter out reads which do not contain an expected adapter
-       sequence.
-
-       The expected groups in the regex are:
-
-       umi_n = UMI positions, where n can be any value (required)
-       cell_n = cell barcode positions, where n can be any value (optional)
-       discard_n = positions to discard, where n can be any value (optional)
-
-       UMI positions and cell barcode positions will be extrated and
-       added to the read name. The corresponding sequence qualities
-       will be removed from the read. Discard bases and the
-       corresponding quality scores will be removed from the read. All
-       bases matched by other groups or componentts of the regex will
-       reattached to the read sequence
-
-       For example, the following regex can be used to extract reads
-       from the Klein et al inDrop data:
-
-       (?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*
-
-       Where only reads with a 3' T-tail and GAGTGATTGCTTGTGACGCCTT in
-       the correct position to yield two cell barcodes of 8-12 and 8bp
-       respectively, and a 6bp UMI will be retained.
-
-       You can also specify fuzzy matching to allow errors. For example if
-       the discard group above was specified as below this would enable
-       matches with up to 2 errors in the discard_1 group.
-
-       (?P<discard_1>GAGTGATTGCTTGTGACGCCTT{s<=2})
-
-       Note that all UMIs must be the same length for downstream
-       processing with dedup, group or count commands
-
-
 Filtering and correcting cell barcodes
 --------------------------------------
 
@@ -121,18 +48,6 @@ option is not used, this column will be ignored. Any additional columns
 in the whitelist input, such as the counts columns from the output of
 umi_tools whitelist, will be ignored.
 
-Options
--------
-
---3prime
-       By default the barcode is assumed to be on the 5' end of the
-       read, but use this option to sepecify that it is on the 3' end
-       instead. This option only works with --extact-method=string
-       since 3' encoding can be specified explicitly with a regex, e.g
-       ".*(?P<umi_1>.{5})$"
-
--L (string, filename)
-       Specify a log file to retain logging information and final statistics
 
 Usage:
 ------
@@ -157,9 +72,6 @@ Using regex and filtering against a whitelist of cell barcodes:
         --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
         -L extract.log [OPTIONS]
 
-Command line options
---------------------
-
 '''
 import sys
 import regex
@@ -175,6 +87,9 @@ except ImportError:
 
 import umi_tools.Utilities as U
 import umi_tools.umi_methods as umi_methods
+
+# add the generic docstring text
+__doc__ = __doc__ + U.GENERIC_DOCSTRING_WE
 
 
 def main(argv=None):
