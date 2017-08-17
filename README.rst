@@ -10,7 +10,7 @@ Identifiers (UMIs)/Random Molecular Tags (RMTs) and single Cell
 RNA-Seq cell barcodes. Currently there are 6
 commands. 
 
-The ```extract``` and ```whitelist``` commands are used to prepare a
+The ``extract`` and ``whitelist`` commands are used to prepare a
 fastq containg UMIs +/- cell barcodes for alignment. 
 
 * whitelist:
@@ -55,7 +55,7 @@ If you want to use UMI-tools in single-cell RNA-Seq data processing,
 see `Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_
 
 
-The ```dedup```, ```group```, and ```count``` / ```count_tab``` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
+The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
 `Genome Research Publication <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_
 
