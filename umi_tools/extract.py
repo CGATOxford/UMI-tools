@@ -116,9 +116,9 @@ def main(argv=None):
                       help="file name for read pairs")
     parser.add_option("--read2-out", dest="read2_out", type="string",
                       help="file to output processed paired read to")
-    parser.add_option("--read2-out-only", dest="read2_out_only",
+    parser.add_option("--read2-stdout", dest="read2_stdout",
                       action="store_true",
-                      help="Paired reads, only output the second read in the pair")
+                      help="Paired reads, send read2 to stdout, discarding read1")
     parser.add_option("--quality-filter-threshold",
                       dest="quality_filter_threshold", type="int",
                       help=("Remove reads where any UMI base quality score "
@@ -170,7 +170,7 @@ def main(argv=None):
                         pattern2=None,
                         read2_in=None,
                         read2_out=False,
-                        read2_out_only=False,
+                        read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,
                         reconcile=False)
@@ -365,11 +365,14 @@ def main(argv=None):
             else:
                 new_read1, new_read2 = reads
 
-            if not options.read2_out_only:
+            if options.read2_stdout:
+                options.stdout.write(str(new_read2) + "\n")
+            else:
                 options.stdout.write(str(new_read1) + "\n")
 
-            if options.read2_out:
-                read2_out.write(str(new_read2) + "\n")
+                if options.read2_out:
+                    read2_out.write(str(new_read2) + "\n")
+                    
 
     if options.read2_out:
         read2_out.close()
