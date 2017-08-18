@@ -24,36 +24,36 @@ extract_quality:
 
 extract_scrb_seq:
       stdin: scrb_seq_fastq.1.gz
-      outputs: [scrb_extract.fastq]
+      outputs: [stdout]
       references: [scrb_extract.fastq]
-      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern="^(?P<cell_1>.{6})(?P<umi_1>.{10})" --filter-cell-barcode --read2-stdout  -L test.log --whitelist=<DIR>/scrb_seq_barcodes
 
 extract_scrb_seq_string:
       skip_python:
       stdin: scrb_seq_fastq.1.gz
-      outputs: [scrb_extract.fastq]
+      outputs: [stdout]
       references: [scrb_extract.fastq]
-      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-out-only  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read2-out=scrb_extract.fastq
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-stdout  -L test.log --whitelist=<DIR>/scrb_seq_barcodes
 
 extract_indrop_fuzzy:
       stdin: indrop.fastq.1.gz
-      outputs: [indrop_extract_fuzzy.fastq]
+      outputs: [stdout]
       references: [indrop_extract_fuzzy.fastq]
-      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_fuzzy.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-stdout --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv
 
 
 extract_indrop_blacklist:
       stdin: indrop.fastq.1.gz
-      outputs: [indrop_extract_blacklist.fastq]
+      outputs: [stdout]
       references: [indrop_extract_blacklist.fastq]
-      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-out-only --read2-out=indrop_extract_blacklist.fastq  --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv --blacklist=<DIR>/indrop_blacklist.tsv
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --read2-stdout --filter-cell-barcode --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv --blacklist=<DIR>/indrop_blacklist.tsv
 
 extract_scrb_seq_prefiltered:
       skip_python:
       stdin: scrb_filtered_fastq.1.gz
-      outputs: [scrb_extract_prefiltered_test.fastq]
+      outputs: [stdout]
       references: [scrb_extract.fastq]
-      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-out-only  -L test.log  --read2-out=scrb_extract_prefiltered_test.fastq --reconcile-pairs
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-stdout  -L test.log  --reconcile-pairs
 
 whitelist_scrb_seq:
       stdin: scrb_seq_fastq.1.gz

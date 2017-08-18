@@ -266,6 +266,7 @@ class DefaultOptions:
     stdin = sys.stdin
     loglevel = 2
     timeit_file = None
+    compresslevel = 6
 
 global_starting_time = time.time()
 global_options = DefaultOptions()
@@ -506,12 +507,15 @@ def openFile(filename, mode="r", create_dir=False):
             if mode == "r":
                 return gzip.open(filename, 'rt', encoding="ascii")
             elif mode == "w":
-                return gzip.open(filename, 'wt', encoding="ascii")
+                return gzip.open(filename, 'wt',
+                                 compresslevel=global_options.compresslevel,
+                                 encoding="ascii")
             else:
                 raise NotImplementedError(
                     "mode '{}' not implemented".format(mode))
         else:
-            return gzip.open(filename, mode)
+            return gzip.open(filename, mode,
+                             compresslevel=global_options.compresslevel)
     else:
         return open(filename, mode)
 
@@ -873,12 +877,16 @@ def Start(parser=None,
         group.add_option("--log2stderr", dest="log2stderr",
                          action="store_true", help="send logging information"
                          " to stderr [default = False].")
+        group.add_option("--compresslevel", dest="compresslevel", type="int",
+                         help="Level of Gzip compression to use. Default (6) matches"
+                         "GNU gzip rather than python gzip default (which is 9)")
 
         parser.set_defaults(stderr=sys.stderr)
         parser.set_defaults(stdout=sys.stdout)
         parser.set_defaults(stdlog=sys.stdout)
         parser.set_defaults(stdin=sys.stdin)
         parser.set_defaults(log2stderr=False)
+        parser.set_defaults(compresslevel=6)
 
     parser.add_option_group(group)
 
