@@ -1,6 +1,13 @@
 language: python
 sudo: required
 
+os:
+  - linux
+  - osx
+
+
+osx_image: xcode6.4
+
 env:
   matrix:
     - TEST_STYLE=1
