@@ -6,16 +6,18 @@ matrix:
         - os: linux
           sudo: required
           python: 2.7
+	  env: TEST_STYLE=1
+        - os: linux
+          sudo: required
+          python: 2.7
+	  env: TEST_FUNCTIONALITY=1
         - os: linux
           sudo: required
           python: 3.5
+	  env: TEST_FUNCTIONALITY=1
         - os: osx
           language: generic
-
-env:
-  matrix:
-    - TEST_STYLE=1
-    - TEST_FUNCTIONALITY=1
+	  env: TEST_FUNCTIONALITY=1
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
