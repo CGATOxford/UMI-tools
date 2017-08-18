@@ -138,6 +138,10 @@ You can install gcc via homebrew by following `these instructions`_::
     
     $ brew install gcc48
 
+You may also need to install ``freetype``::
+
+    $ brew install freetype
+
 
 **Install UMI-tools**: You should now have everything you need to
 install ``UMI-tools``::
