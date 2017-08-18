@@ -48,11 +48,11 @@ _directional_.
 * count_tab:
    **As per count except input is a flatfile**
 
-See `QUICK_START.md <./doc/QUICK_START.md>`_ for a quick tutorial on
+See `QUICK_START.md <./docs/QUICK_START.md>`_ for a quick tutorial on
 the most common usage pattern.
 
 If you want to use UMI-tools in single-cell RNA-Seq data processing,
-see `Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_
+see `Single_cell_tutorial.md <./docs/Single_cell_tutorial.md>`_
 
 
 The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
@@ -90,13 +90,13 @@ Enter repository and run:
 
    $ python setup.py install
 
-For more detail see `INSTALL.rst <./doc/INSTALL.rst>`_
+For more detail see `INSTALL.rst <./docs/INSTALL.rst>`_
 
 Help
 ----- 
 
-See `QUICK_START.md <./doc/QUICK_START.md>`_ and
-`Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_ for tutorials on the most common usage patterns.
+See `QUICK_START.md <./docs/QUICK_START.md>`_ and
+`Single_cell_tutorial.md <./docs/Single_cell_tutorial.md>`_ for tutorials on the most common usage patterns.
 
 To get detailed help on umi_tools run
 
