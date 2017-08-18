@@ -372,7 +372,6 @@ def main(argv=None):
 
                 if options.read2_out:
                     read2_out.write(str(new_read2) + "\n")
-                    
 
     if options.read2_out:
         read2_out.close()
