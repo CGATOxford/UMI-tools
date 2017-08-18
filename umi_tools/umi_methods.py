@@ -163,10 +163,10 @@ def getKneeEstimate(cell_barcode_counts,
     counts_thresh = [x for x in counts if x > threshold]
     log_counts = np.log10(counts_thresh)
 
-    # guassian density with default optimal bw estimation
-    density = gaussian_kde(log_counts)
+    # guassian density with hardcoded bw
+    density = gaussian_kde(log_counts, bw_method=0.1)
 
-    xx_values = 1000  # how many x values for density plot
+    xx_values = 10000  # how many x values for density plot
     xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
 
     if cell_number:  # we have a prior hard expectation on the number of cells
@@ -195,7 +195,7 @@ def getKneeEstimate(cell_barcode_counts,
                     # which local minimum to select.
                     # This is very unlikely to be the best way to achieve this!
                     if (poss_local_min >= 0.2 * xx_values and
-                        (log_counts.max() - xx[poss_local_min] > 1 or
+                        (log_counts.max() - xx[poss_local_min] > 0.5 or
                          xx[poss_local_min] < log_counts.max()/2)):
                         local_min = poss_local_min
 
@@ -252,7 +252,7 @@ def getKneeEstimate(cell_barcode_counts,
                               handles=[selected_line, rejected_line],
                               title="Possible thresholds")
 
-        fig.savefig("%s_cell_barcode_count_desnity.png" % plotfile_prefix,
+        fig.savefig("%s_cell_barcode_count_density.png" % plotfile_prefix,
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         # make knee plot
@@ -398,6 +398,8 @@ def getCellWhitelist(cell_barcode_counts,
     cell_whitelist = getKneeEstimate(
         cell_barcode_counts, expect_cells, cell_number, plotfile_prefix)
 
+    U.info("Finished - whitelist determination")
+
     if cell_whitelist is None:
         U.error("No local minima was accepted. Recommend checking the plot "
                 "output and counts per local minima "
@@ -405,9 +407,11 @@ def getCellWhitelist(cell_barcode_counts,
                 "manually selected threshold (`--set-cell-number` option)")
 
     if error_correct_threshold > 0:
+        U.info("Starting - finding putative error cell barcodes")
         true_to_false_map = getErrorCorrectMapping(
             cell_barcode_counts.keys(), cell_whitelist,
             error_correct_threshold)
+        U.info("Finished - finding putative error cell barcodes")
     else:
         true_to_false_map = None
 

@@ -346,7 +346,7 @@ def main(argv=None):
                 if n_reads > options.subset_reads:
                     break
 
-    U.info("Starting whitelist determination")
+    U.info("Starting - whitelist determination")
 
     if options.method == "umis":
         for cell in cell_barcode_umis:
@@ -370,6 +370,7 @@ def main(argv=None):
         options.error_correct_threshold,
         options.plot_prefix)
 
+    U.info("Writing out whitelist")
     for barcode in sorted(list(cell_whitelist)):
 
         if true_to_false_map:
