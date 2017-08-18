@@ -228,7 +228,7 @@ These reads are now ready to map!
 
 
 ### Discarding read 1
-There are many single cell RNA-Seq techniques where read 1 only contains barcodes, as above. If we only want to write out the extracted read 2 file we can supply the `--read2-out-only` option.
+There are many single cell RNA-Seq techniques where read 1 only contains barcodes, as above. If we only want to write out the extracted read 2 file we can supply the `--read2-outstd` option. The extract read 2s will now be sent to the stdout (or whatever file is specified by `-S/--stdout`) and the read 1s will be discarded.
 
 
 Step 4: Mapping reads
