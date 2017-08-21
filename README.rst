@@ -6,7 +6,7 @@ Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
 This repository contains tools for dealing with Unique Molecular
-Identifiers (UMIs)/Random Molecular Tags (RMTs) and single Cell
+Identifiers (UMIs)/Random Molecular Tags (RMTs) and single cell
 RNA-Seq cell barcodes. Currently there are 6
 commands. 
 
