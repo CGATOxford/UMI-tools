@@ -169,12 +169,13 @@ def getKneeEstimate(cell_barcode_counts,
     xx_values = 10000  # how many x values for density plot
     xx = np.linspace(log_counts.min(), log_counts.max(), xx_values)
 
+    local_min = None
+
     if cell_number:  # we have a prior hard expectation on the number of cells
         threshold = counts[cell_number]
 
     else:
         local_mins = argrelextrema(density(xx), np.less)[0]
-        local_min = None
         local_mins_counts = []
 
         for poss_local_min in local_mins[::-1]:
