@@ -1081,7 +1081,8 @@ def get_read_position(read, soft_clip_threshold):
     is_spliced = False
 
     if read.is_reverse:
-        pos = read.aend
+        # aend is the first position PAST the (mapped portion of) the read
+        pos = read.aend - 1
         if read.cigar[-1][0] == 4:
             pos = pos + read.cigar[-1][1]
         start = read.pos
