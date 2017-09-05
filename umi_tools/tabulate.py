@@ -17,6 +17,7 @@ import sys
 import collections
 import re
 import os
+import itertools
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -32,6 +33,12 @@ import umi_tools.umi_methods as umi_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
+
+def most_common(L):
+    groups = itertools.groupby(sorted(L))
+    def _auxfun((item, iterable)):
+        return len(list(iterable)), -L.index(item)
+    return max( groups , key=lambda(x, v): (len(list(v)), -L.index(x)) )[0]
 
 def main(argv=None):
     """script main.
@@ -96,11 +103,17 @@ def main(argv=None):
 
     bundle_iterator = umi_methods.get_bundles(
         options,
-        only_count_reads=True,
+        all_reads=True, return_read2=True,
         metacontig_contig=metacontig2contig)
+
+    read2_stash = dict()
 
     for bundle, key, status in bundle_iterator(inreads):
         if status == "single_read":
+            read = bundle
+            if read.is_read2:
+                U.info("R2: %s" % read.qname)
+                read2_stash[read.qname] = read
             continue
 
         gene, cell = key
@@ -131,8 +144,42 @@ def main(argv=None):
             top_umi = umi_group[0]
             umi_count = len(umi_group)
             read_count = sum(counts[umi] for umi in umi_group)
+
+            # Extract start (and end in paired mode) mapping positions from reads
+            if options.paired:
+                starts, ends = list(), list()
+                for umi in umi_group:
+                    for read in bundle[umi]["read"]:
+                        if read.qname not in read2_stash:
+                            U.info("Missing 2nd read for %s" % read.qname)
+                            continue
+                        else:
+                            read2 = read2_stash[read.qname]
+                            del read2_stash[read.qname]
+
+                        pos = umi_methods.get_read_position(read, float("inf"))[1]
+                        pos2 = umi_methods.get_read_position(read2, float("inf"))[1]
+                        if read.is_reverse:
+                          start, end = pos2, pos
+                        else:
+                          start, end = pos, pos2
+                        starts.append(start)
+                        ends.append(end)
+                start = most_common(starts) if len(starts) > 0 else -1
+                end = most_common(ends) if len(ends) > 0 else -1
+            else:
+                starts = list()
+                for umi in umi_group:
+                    for read in bundle[umi]["read"]:
+                        start, pos, is_spliced = umi_methods.get_read_position(read, float("inf"))
+                        starts.append(start)
+                start = most_common(starts)
+                end = -1
+
+            # We write the positions out in 1-based coordinates, and with the end marking
+            # the last position STILL included in the fragment, not the first one after it!
             tmpfile.write("%s\n" % "\t".join((
-                gene, cell_code, '-1', '-1', top_umi, str(umi_count), str(read_count))))
+                gene, cell_code, str(start+1), str(end+1), top_umi, str(umi_count), str(read_count))))
 
     tmpfile.close()
 
