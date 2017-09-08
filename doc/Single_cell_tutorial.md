@@ -108,7 +108,6 @@ Cell barcodes are short nucleotide sequences, very much like UMIs, except instea
      umi_tools whitelist --stdin hgmm_100_R1.fastq.gz \
                          --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
                          --set-cell-number=100 \
-                         --plot-prefix=100_cells_whitelist \
                          --log2stderr > whitelist.txt
 
 A couple of things about this command: 
@@ -126,7 +125,6 @@ Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI 
                         --bc-pattern='(?P<cell_1>.{16})(?P<umi_1>.{10})' \ 
                         --extract-method=regex \ 
                         --set-cell-number=100 \
-                        --plot-prefix=100_cells_whitelist \
                         --log2stderr > whitelist.txt
                         
 
