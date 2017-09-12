@@ -1476,10 +1476,17 @@ class random_read_generator:
 
         self.umis = collections.defaultdict(int)
         self.barcode_getter = barcode_getter
+        self.random_fill_size = 100000 # Higher = faster, more memory
         self.fill()
 
-    def fill(self):
+    def refill_random(self):
+        ''' refill the list of random_umis '''
+        self.random_umis = np.random.choice(
+            list(self.umis.keys()), self.random_fill_size, self.prob)
+        self.random_ix = 0
 
+    def fill(self):
+        ''' parse the BAM to obtain the frequency for each UMI'''
         self.frequency2umis = collections.defaultdict(list)
 
         for read in self.inbam:
@@ -1494,23 +1501,24 @@ class random_read_generator:
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())
+        U.info("total_umis %i" % total_umis)
+        U.info("#umis %i" % len(self.umis_counter))
 
-        for observed_umi, freq in iteritems(self.umis_counter):
-            self.frequency2umis[freq+0.0/total_umis].append(observed_umi)
-
-        self.frequency_counter = collections.Counter(self.umis_counter.values())
-        self.frequency_prob = [(float(x)/total_umis)*y for x, y in
-                               iteritems(self.frequency_counter)]
+        self.prob = self.umis_counter.values()
+        sum_prob = sum(self.prob)
+        self.prob = [float(x) / sum_prob for x in self.prob]
+        self.refill_random()
 
     def getUmis(self, n):
-        '''get n umis at random'''
-
-        umi_sample = []
-
-        frequency_sample = np.random.choice(
-            list(self.frequency_counter.keys()), n, p=self.frequency_prob)
-
-        for frequency in frequency_sample:
-            umi_sample.append(np.random.choice(self.frequency2umis[frequency]))
-
-        return umi_sample
+        ''' return n umis from the random_umis atr.'''
+        if n < (self.random_fill_size - self.random_ix):
+            self.random_ix += n
+            return self.random_umis[self.random_ix: self.random_ix+n]
+        else:
+            # could use the end of the random_umis but
+            # let's just make a new random_umis
+            if n > self.random_fill_size: # make sure random_umis is long enough
+                self.random_fill_size = n * 2
+            self.refill_random()
+            self.random_ix += n
+            return self.random_umis[self.random_ix: self.random_ix+n]

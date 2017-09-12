@@ -63,6 +63,7 @@ import pysam
 import pandas as pd
 import numpy as np
 
+import umi_tools
 import umi_tools.Utilities as U
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
@@ -245,8 +246,8 @@ def main(argv=None):
 
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
-        while nOutput >= output_reads + 10000:
-            output_reads += 10000
+        while nOutput >= output_reads + 100000:
+            output_reads += 100000
             U.info("Written out %i reads" % output_reads)
 
         while nInput >= input_reads + 1000000:
