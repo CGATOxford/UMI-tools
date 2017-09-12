@@ -483,7 +483,8 @@ class get_bundles:
                     continue
 
             if self.options.mapping_quality:
-                if read.mapq < self.options.mapping_quality:
+                if ((read.mapq < self.options.mapping_quality) or
+                    (read2 is not None and read2.mapq < self.options.mapping_quality)):
                     self.read_events['< MAPQ threshold'] += 1
                     continue
 
