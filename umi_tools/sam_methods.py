@@ -588,8 +588,19 @@ class get_bundles:
                 else:
                     r_length = 0
 
-                key = (read.is_reverse, self.options.spliced and is_spliced,
-                       self.options.paired*read.tlen, r_length)
+                key = (read.is_reverse, self.options.spliced & is_spliced, r_length)
+
+                # In paired mode, we add the 2nd read's properties as well
+                if self.options.paired and (read2 is not None):
+                    start2, pos2, is_spliced2 = get_read_position(
+                        read, self.options.soft_clip_threshold)
+
+                    if self.options.read_length:
+                        r_length2 = read.query_length
+                    else:
+                        r_length2 = 0
+
+                    key = (key, read2.is_reverse, self.options.spliced & is_spliced, r_length2)
 
             # update dictionaries
             key = (key, cell)
