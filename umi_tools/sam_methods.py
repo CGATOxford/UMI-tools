@@ -356,7 +356,6 @@ class get_bundles:
 
                 # if read1 is unmapped, yield immediately or skip read
                 if self.return_unmapped:
-                    self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue
 
