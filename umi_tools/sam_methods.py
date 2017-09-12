@@ -282,7 +282,7 @@ class get_bundles:
         self.read_counts = collections.defaultdict(
             lambda: collections.defaultdict(dict))
 
-    def update_dicts(self, read, pos, key, umi):
+    def update_dicts(self, read, read2, pos, key, umi):
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
@@ -293,9 +293,11 @@ class get_bundles:
                 self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
                 self.reads_dict[pos][key][umi]["read"] = [read]
+                self.reads_dict[pos][key][umi]["read2"] = [read2]
                 self.reads_dict[pos][key][umi]["count"] = 1
             else:
                 self.reads_dict[pos][key][umi]["read"].append(read)
+                self.reads_dict[pos][key][umi]["read2"].append(read2)
 
         elif self.only_count_reads:
             # retain all reads per key
@@ -310,18 +312,25 @@ class get_bundles:
                 self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
                 self.reads_dict[pos][key][umi]["read"] = read
+                self.reads_dict[pos][key][umi]["read2"] = read2
                 self.reads_dict[pos][key][umi]["count"] = 1
                 self.read_counts[pos][key][umi] = 0
             else:
-                if self.reads_dict[pos][key][umi]["read"].mapq > read.mapq:
+                dict_r1 = self.reads_dict[pos][key][umi]["read"]
+                dict_r2 = self.reads_dict[pos][key][umi]["read2"]
+                dict_mapq = dict_r1.mapq + (dict_r2.mapq if dict_r2 is not None else 0)
+                read_mapq = read.mapq + (read2.mapq if read2 is not None else 0)
+                if dict_mapq > read_mapq:
                     return
 
-                if self.reads_dict[pos][key][umi]["read"].mapq < read.mapq:
+                if read_mapq > dict_mapq:
                     self.reads_dict[pos][key][umi]["read"] = read
+                    self.reads_dict[pos][key][umi]["read2"] = read2
                     self.read_counts[pos][key][umi] = 0
                     return
 
                 # TS: implemented different checks for multimapping here
+                # XXX: What to do in paired mode? Probably just complain...
                 if self.options.detection_method in ["NH", "X0"]:
                     tag = self.options.detection_method
                     if (self.reads_dict[pos][key][umi]["read"].opt(tag) <
@@ -344,6 +353,7 @@ class get_bundles:
 
                 if random.random() < prob:
                     self.reads_dict[pos][key][umi]["read"] = read
+                    self.reads_dict[pos][key][umi]["read2"] = read2
 
     def check_output(self):
 
@@ -385,14 +395,19 @@ class get_bundles:
         return do_output, out_keys
 
     def __call__(self, inreads):
+        if self.options.paired:
+            generator = get_readpairs()
+        else:
+            generator = get_singletons()
 
-        for read in inreads:
+        for read, read2 in generator(inreads):
 
-            if read.is_read2:
+            # Unpaired second reads are returned if the return_read2 option is set
+            if read is None:
                 if self.return_read2:
-                    if not read.is_unmapped or (
-                            read.is_unmapped and self.return_unmapped):
-                        yield read, None, "single_read"
+                    if not read2.is_unmapped or (
+                            read2.is_unmapped and self.return_unmapped):
+                        yield read2, None, "single_read"
                 continue
             else:
                 self.read_events['Input Reads'] += 1
@@ -577,7 +592,7 @@ class get_bundles:
 
             # update dictionaries
             key = (key, cell)
-            self.update_dicts(read, pos, key, umi)
+            self.update_dicts(read, read2, pos, key, umi)
 
             if self.metacontig_contig:
                 # keep track of observed contigs for each gene
