@@ -1476,13 +1476,13 @@ class random_read_generator:
 
         self.umis = collections.defaultdict(int)
         self.barcode_getter = barcode_getter
-        self.random_fill_size = 100000 # Higher = faster, more memory
+        self.random_fill_size = 100000  # Higher = faster, more memory
         self.fill()
 
     def refill_random(self):
         ''' refill the list of random_umis '''
         self.random_umis = np.random.choice(
-            list(self.umis.keys()), self.random_fill_size, self.prob)
+            list(self.umis.keys()), self.random_fill_size, p=self.prob)
         self.random_ix = 0
 
     def fill(self):
@@ -1517,7 +1517,7 @@ class random_read_generator:
         else:
             # could use the end of the random_umis but
             # let's just make a new random_umis
-            if n > self.random_fill_size: # make sure random_umis is long enough
+            if n > self.random_fill_size:  # ensure random_umis is long enough
                 self.random_fill_size = n * 2
             self.refill_random()
             self.random_ix += n
