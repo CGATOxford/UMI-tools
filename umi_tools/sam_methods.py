@@ -360,8 +360,7 @@ class get_bundles:
                 continue
 
             if self.options.paired and read.mate_is_unmapped:
-                if not read.is_unmapped:
-                    self.read_events['Read 2 unmapped'] += 1
+                self.read_events['Read 2 unmapped'] += 1
 
                 # if paired end input and read2 is unmapped, skip unless
                 # options.unmapped_reads == "use", in which case TLEN will be 0
