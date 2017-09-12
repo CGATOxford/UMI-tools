@@ -140,6 +140,12 @@ count_tab_single_per_cell:
       references: [count_tab_cell.tsv]
       options: count_tab -L test.log --per-cell
 
+count_paired_wide_contig:
+      stdin: paired_contig.bam
+      outputs: [stdout]
+      references: [count_paired_wide_contig.tsv]
+      options: count -L test.log  --random-seed=123456789 --method=directional --umi-separator="|" --paired --per-contig --wide-format-cell-counts
+
 dedup_single_ignore:
       stdin: chr19.bam
       outputs: [stdout]
