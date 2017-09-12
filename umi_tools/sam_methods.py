@@ -191,6 +191,15 @@ class get_readpairs:
             yield queue_entry
 
 
+class get_singletons:
+    def __call__(self, inreads):
+        for read in inreads:
+            if read.is_read2:
+                yield None, read
+            else:
+                yield read, None
+
+
 class get_bundles:
 
     ''' A functor - When called returns a dictionary of dictionaries,
