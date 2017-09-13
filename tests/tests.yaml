@@ -423,9 +423,9 @@ group_unsorted_py3:
 
 
 
-### Tests to implement ####
+## Tests to implement ####
 
-# ## dedup ##
-# # mapping-quality (Need a BAM with meaningful MAPQ)
-# # paired end (obv. need a paired end BAM)
-# # read-length (ideally with sRNA-Seq BAM?!)
+## dedup ##
+# mapping-quality (Need a BAM with meaningful MAPQ)
+# paired end (obv. need a paired end BAM)
+# read-length (ideally with sRNA-Seq BAM?!)
