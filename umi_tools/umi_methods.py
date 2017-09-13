@@ -1512,13 +1512,14 @@ class random_read_generator:
     def getUmis(self, n):
         ''' return n umis from the random_umis atr.'''
         if n < (self.random_fill_size - self.random_ix):
-            self.random_ix += n
-            return self.random_umis[self.random_ix: self.random_ix+n]
+            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
         else:
             # could use the end of the random_umis but
             # let's just make a new random_umis
             if n > self.random_fill_size:  # ensure random_umis is long enough
                 self.random_fill_size = n * 2
             self.refill_random()
-            self.random_ix += n
-            return self.random_umis[self.random_ix: self.random_ix+n]
+            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
+
+        self.random_ix += n
+        return barcodes
