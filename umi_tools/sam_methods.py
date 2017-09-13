@@ -127,28 +127,33 @@ def get_barcode_umis(read, cell_barcode=False):
 
 
 class get_readpairs:
-    # Used in place of a real read as the mate of reads that aren't properly paired
-    NoMate = object()
+    # Used in place of a real read in incomplete pairs before they are completed
+    PendingMate = object()
 
-    def incomplete_pair_to_singleton(self, queue_entry):
-        for i in [i for i, v in enumerate(queue_entry) if v is get_readpairs.NoMate]:
-            queue_entry[i] = None
-
-    def incomplete_pairs_as_singletons(self):
-        self.incomplete_queue_entries.clear()
+    def drain_queue_forcibly(self):
+        # Forcibly convert incomplete queued pairs into singletons.
+        # These necessarily contains only a read1, but not read2, since we
+        # only queue a pair once we've observed read1.
         while self.queue:
-            queue_entry = self.queue.popleft()
-            if get_readpairs.NoMate in queue_entry:
-                # Incomplete entry. Turn into singleton entry
-                read = next(r for r in queue_entry if r is not get_readpairs.NoMate)
-                U.warn("inconsistent BAM file: only one of the two mates of proper pair %s found on chromosome %s, treating as unpaired" %
-                       (read.qname, read.reference_name))
-                incomplete_pair_to_singleton(queue_entry)
-            yield queue_entry
+            pair = self.queue.popleft()
+            if pair[1] is get_readpairs.PendingMate:
+                pair[1] = None
+                U.warn("inconsistent BAM file: only read1 of proper pair %s found on chromosome %s, treating as unpaired" %
+                       (pair[0].qname, pair[0].reference_name))
+            yield pair
+        # Forcibly convert also incomplete unqueued pairs into singletons.
+        # These are the ones that contain only a read2 but no read1
+        for pair in self.incomplete_pairs.values():
+            if pair[0] is get_readpairs.PendingMate:
+                pair[0] = None
+                U.warn("inconsistent BAM file: only read2 of proper pair %s found on chromosome %s, treating as unpaired" %
+                       (pair[1].qname, pair[1].reference_name))
+                yield pair
+        self.incomplete_pairs.clear()
 
     def __call__(self, inreads):
         self.queue = collections.deque()
-        self.incomplete_queue_entries = dict()
+        self.incomplete_pairs = dict()
         self.current_chr = None
 
         for read in inreads:
@@ -157,37 +162,40 @@ class get_readpairs:
 
             # Output leftover incomplete read pairs if the chrosomome changes
             if self.current_chr is not None and self.current_chr != read_chr:
-                for queue_entry in self.incomplete_pairs_as_singletons():
+                for queue_entry in self.drain_queue_forcibly():
                     yield queue_entry
             self.current_chr = read_chr
 
             # Queue read, either as a singleton, or as part of a read pair
             if read.is_unmapped or read.mate_is_unmapped or not read.is_proper_pair:
-                # Read is not part of a proper pair. Set mate to None
-                queue_entry = [None, None]
-                queue_entry[read_i] = read
-                self.queue.append(queue_entry)
-            elif read.qname in self.incomplete_queue_entries:
-                # Read is part of an already queued (incomplete) read pair. Complete it.
-                queue_entry = self.incomplete_queue_entries.pop(read.qname)
-                if queue_entry[read_i] is not get_readpairs.NoMate:
-                    U.warn("inconsistent BAM file: both mates %s flagged to be read%d" %
-                           (read.qname, read_i+1))
-                    read_i = 1 - read_i
-                queue_entry[read_i] = read
+                # Read is not part of a proper pair. Enqueue as singleton
+                pair = [None, None]
+                pair[read_i] = read
+                self.queue.append(pair)
             else:
-                # Read is part of a new read pair. Create & queue incomplete pair.
-                queue_entry = [get_readpairs.NoMate, get_readpairs.NoMate]
-                queue_entry[read_i] = read
-                self.queue.append(queue_entry)
-                self.incomplete_queue_entries[read.qname] = queue_entry
+                if read.qname in self.incomplete_pairs:
+                    # Read is part of an already queued (incomplete) read pair. Complete it.
+                    pair = self.incomplete_pairs.pop(read.qname)
+                    if pair[read_i] is not get_readpairs.PendingMate:
+                        U.warn("inconsistent BAM file: both mates %s flagged to be read%d" %
+                               (read.qname, read_i+1))
+                        read_i = 1 - read_i
+                    pair[read_i] = read
+                else:
+                    # Read is part of a new read pair. Create incomplete pair
+                    pair = [get_readpairs.PendingMate, get_readpairs.PendingMate]
+                    pair[read_i] = read
+                    self.incomplete_pairs[read.qname] = pair
+                # Enqueue pair in the correct place for its 1st read
+                if read_i == 0:
+                    self.queue.append(pair)
 
             # Output queued reads and readpairs up to the first incomplete pair
-            while self.queue and sum(1 for r in self.queue[0] if r is get_readpairs.NoMate) == 0:
+            while self.queue and sum(1 for r in self.queue[0] if r is get_readpairs.PendingMate) == 0:
                 yield self.queue.popleft()
 
         # Output leftover incomplete read pairs at the end of the input
-        for queue_entry in self.incomplete_pairs_as_singletons():
+        for queue_entry in self.drain_queue_forcibly():
             yield queue_entry
 
 
