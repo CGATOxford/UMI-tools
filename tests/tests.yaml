@@ -235,7 +235,7 @@ dedup_paired_contig:
       sort: True
       stdin: paired_contig.bam
       outputs: [stdout]
-      references: [dedup_paired_contig.sam]
+      references: [dedup_paired_contig_py3.sam]
       options: dedup -L test.log  --out-sam --random-seed=123456789 --method=directional --umi-separator="|" --paired
 
 group_gene_tag:
@@ -247,9 +247,9 @@ group_gene_tag:
 group_paired_contig:
       sort: True
       stdin: paired_contig.bam
-      outputs: [stdout, group_paired_contig.tsv]
-      references: [group_paired_contig.sam, group_paired_contig.tsv]
-      options: group -L test.log --random-seed=123456789 --umi-separator="|" --paired --output-bam --out-sam --group-out=group_paired_contig.tsv
+      outputs: [stdout, group_paired_contig_py3.tsv]
+      references: [group_paired_contig_py3.sam, group_paired_contig_py3.tsv]
+      options: group -L test.log --random-seed=123456789 --umi-separator="|" --paired --output-bam --out-sam --group-out=group_paired_contig_py3.tsv
 
 group_unique:
       stdin: chr19.bam
