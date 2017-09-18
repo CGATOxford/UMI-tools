@@ -41,6 +41,15 @@ def main(argv=None):
 
         return
 
+    elif len(argv) == 1 or argv[1] == "--version" or argv[1] == "-v":
+        # collect umi_tools version
+        sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+        import version
+
+        print("UMI-tools version: %s" % version.__version__)
+
+        return
+
     command = argv[1]
 
     (file, pathname, description) = imp.find_module(command, [path, ])
