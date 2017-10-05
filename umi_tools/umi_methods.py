@@ -1076,6 +1076,34 @@ def metafetcher(bamfile, metacontig2contig, metatag):
                 yield read
 
 
+def find_splice(cigar):
+    '''Takes a cigar string and finds the first splice position as
+    an offset from the start. To find the 5' end (read coords) of
+    the junction for a reverse read, pass in the reversed cigar tuple'''
+
+    offset = 0
+    # a soft clip at the end of the read is taken as splicing
+    # where as a soft clip at the start is not.
+    if cigar[0][0] == 4:
+        offset = cigar[0][1]
+        cigar = cigar[1:]
+
+    for op, bases in cigar:
+        if op in (3, 4):
+            # N or S: found the splice
+            return offset
+        elif op in (0, 2, 7, 8):
+            # M, D, = or X: reference consuming
+            offset += bases
+        elif op in (1, 5, 6):
+            # I, H, P: non-reference consuming
+            continue
+        else:
+            raise ValueError("Bad Cigar operation: %i" % op)
+
+    return False
+
+
 def get_read_position(read, soft_clip_threshold):
     ''' get the read position (taking account of clipping) '''
     is_spliced = False
@@ -1089,7 +1117,9 @@ def get_read_position(read, soft_clip_threshold):
         if ('N' in read.cigarstring or
             (read.cigar[0][0] == 4 and
              read.cigar[0][1] > soft_clip_threshold)):
-            is_spliced = True
+
+            cigar = read.cigar[::-1]
+            is_spliced = find_splice(cigar)
     else:
         pos = read.pos
         if read.cigar[0][0] == 4:
@@ -1099,7 +1129,7 @@ def get_read_position(read, soft_clip_threshold):
         if ('N' in read.cigarstring or
             (read.cigar[-1][0] == 4 and
              read.cigar[-1][1] > soft_clip_threshold)):
-            is_spliced = True
+            is_spliced = find_splice(read.cigar)
 
     return start, pos, is_spliced
 
