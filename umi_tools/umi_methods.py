@@ -1432,7 +1432,11 @@ class get_bundles:
 
             # get the umi +/- cell barcode and update dictionaries
             if self.options.ignore_umi:
-                umi, cell = "", ""
+                if self.options.per_cell:
+                    umi, cell = self.barcode_getter(read)
+                    umi = ""
+                else:
+                    umi, cell = "", ""
             else:
                 umi, cell = self.barcode_getter(read)
 
