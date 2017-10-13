@@ -387,12 +387,12 @@ def main(argv=None):
     if not options.ignore_umi:  # otherwise processor has not been used
         U.info("Total number of positions deduplicated: %i" %
                processor.UMIClusterer.positions)
-        U.info("Mean number of unique UMIs per position: %.2f" %
-               (float(processor.UMIClusterer.total_umis_per_position) /
-                processor.UMIClusterer.positions))
-        U.info("Max. number of unique UMIs per position: %i" %
-               processor.UMIClusterer.max_umis_per_position)
-
+        if processor.UMIClusterer.positions > 0:
+            U.info("Mean number of unique UMIs per position: %.2f" %
+                   (float(processor.UMIClusterer.total_umis_per_position) /
+                    processor.UMIClusterer.positions))
+            U.info("Max. number of unique UMIs per position: %i" %
+                   processor.UMIClusterer.max_umis_per_position)
     U.Stop()
 
 if __name__ == "__main__":
