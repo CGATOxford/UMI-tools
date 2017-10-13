@@ -393,6 +393,10 @@ def main(argv=None):
                     processor.UMIClusterer.positions))
             U.info("Max. number of unique UMIs per position: %i" %
                    processor.UMIClusterer.max_umis_per_position)
+        else:
+            U.info("The BAM did not contain any valid "
+                   "reads/read pairs for deduplication")
+
     U.Stop()
 
 if __name__ == "__main__":
