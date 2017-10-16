@@ -137,9 +137,9 @@ def main(argv=None):
         gene_count = len(groups)
 
         if options.per_cell:
-            tmpfile.write("%s\n" % ":".join((gene, cell.decode(), str(gene_count))))
+            tmpfile.write("%s\n" % "\t".join((gene, cell.decode(), str(gene_count))))
         else:
-            tmpfile.write("%s\n" % ":".join((gene, str(gene_count))))
+            tmpfile.write("%s\n" % "\t".join((gene, str(gene_count))))
 
         nOutput += gene_count
 
@@ -148,7 +148,7 @@ def main(argv=None):
     if options.per_cell:
 
         if options.wide_format_cell_counts:  # pivot the counts table and write out
-            counts_df = pd.read_table(tmpfilename, sep=":", header=None)
+            counts_df = pd.read_table(tmpfilename, sep="\t", header=None)
             counts_df.columns = ["gene", "cell", "count"]
             counts_df = pd.pivot_table(counts_df, values='count',
                                        index='gene', columns='cell')  # pivot
@@ -161,7 +161,7 @@ def main(argv=None):
             options.stdout.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
             with U.openFile(tmpfilename, mode="r") as inf:
                 for line in inf:
-                    gene, cell, gene_count = line.strip().split(":")
+                    gene, cell, gene_count = line.strip().split("\t")
                     gene_counts_dict[gene][cell] = gene_count
                 for gene in sorted(list(gene_counts_dict.keys())):
                     for cell in sorted(list(gene_counts_dict[gene].keys())):
@@ -176,7 +176,7 @@ def main(argv=None):
         with U.openFile(tmpfilename, mode="r") as inf:
 
             for line in inf:
-                gene, gene_count = line.strip().split(":")
+                gene, gene_count = line.strip().split("\t")
                 gene_counts_dict[gene] = gene_count
             for gene in sorted(list(gene_counts_dict.keys())):
                 gene_count = gene_counts_dict[gene]
