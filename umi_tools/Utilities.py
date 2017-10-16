@@ -762,11 +762,15 @@ def Start(parser=None,
                          action="store_true", default=False,
                          help="Don't Sort the output")
 
-        group.add_option("--whole-contig", dest="whole_contig",
+        group.add_option("--buffer-whole-contig", dest="whole_contig",
                          action="store_true", default=False,
                          help="Read whole contig before outputting bundles: "
                          "guarantees that no reads are missed, but increases "
                          "memory usage")
+
+        group.add_option("--whole-contig", dest="whole_contig",
+                         action="store_true", default=False,
+                         help=optparse.SUPPRESS_HELP)
 
         group.add_option("--multimapping-detection-method",
                          dest="detection_method", type="choice",
@@ -1459,7 +1463,7 @@ i
 --read-length
       Use the read length as as a criteria when deduping, for e.g sRNA-Seq
 
---whole-contig (string)
+--buffer-whole-contig
       forces dedup to parse an entire contig before yielding any reads
       for deduplication. This is the only way to absolutely guarantee
       that all reads with the same start position are grouped together
