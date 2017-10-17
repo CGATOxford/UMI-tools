@@ -54,6 +54,10 @@ import sys
 import collections
 import re
 import os
+import threading
+import multiprocessing
+from queue import Queue
+import time
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -129,6 +133,10 @@ def main(argv=None):
                      default=False,
                      help="Specify location to output stats")
 
+    group.add_option("--threads", dest="num_threads", type="int",
+                     default=1,
+                     help="Use n threads")
+
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
@@ -179,12 +187,16 @@ def main(argv=None):
         raise ValueError("'--output-stats' and '--ignore-umi' options"
                          " cannot be used together")
 
+    global nOutput
+    global outfile
+
     infile = pysam.Samfile(in_name, in_mode)
+    
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
 
     if options.paired:
         outfile = umi_methods.TwoPassPairWriter(infile, outfile)
-
+            
     nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
     if options.detection_method:
@@ -220,10 +232,6 @@ def main(argv=None):
         else:
             inreads = infile.fetch()
 
-    # set up ReadCluster functor with methods specific to
-    # specified options.method
-    processor = network.ReadDeduplicator(options.method)
-
     bundle_iterator = umi_methods.get_bundles(
         options,
         metacontig_contig=metacontig2contig)
@@ -242,160 +250,203 @@ def main(argv=None):
             infile.filename, chrom=options.chrom,
             barcode_getter=bundle_iterator.barcode_getter)
 
-    for bundle, key, status in bundle_iterator(inreads):
+    processor = network.ReadDeduplicator(options.method)
 
-        nInput += sum([bundle[umi]["count"] for umi in bundle])
+    if options.num_threads > 1:
+        write_lock = multiprocessing.Lock()
+        bundle_queue = multiprocessing.JoinableQueue(options.num_threads) # limit size of queue
+        reads_queue = multiprocessing.JoinableQueue(options.num_threads) # limit size of queue
 
-        while nOutput >= output_reads + 100000:
-            output_reads += 100000
-            U.info("Written out %i reads" % output_reads)
+        def worker_main(b_queue, r_queue):
+            while True:
+                item = b_queue.get(True)
+                reads, umis, umi_counts = processor(
+                    bundle=item,
+                    threshold=options.threshold)
 
-        while nInput >= input_reads + 1000000:
-            input_reads += 1000000
-            U.info("Parsed %i input reads" % input_reads)
+                for read in reads:
+                    r_queue.put(read)
+                b_queue.task_done()
 
-        if options.stats:
-            # generate pre-dudep stats
-            average_distance = umi_methods.get_average_umi_distance(bundle.keys())
-            pre_cluster_stats.append(average_distance)
-            cluster_size = len(bundle)
-            random_umis = read_gn.getUmis(cluster_size)
-            average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-            pre_cluster_stats_null.append(average_distance_null)
+        def worker_writer(r_queue, outfile):
+            while True:
+                item = r_queue.get(True)                
+                outfile.write(item)
+                r_queue.task_done()
 
-        if options.ignore_umi:
-            for umi in bundle:
-                nOutput += 1
-                outfile.write(bundle[umi]["read"])
+        reads_pool = multiprocessing.Pool(
+            1, worker_writer, (reads_queue, outfile))
 
-        else:
+        bundle_pool = multiprocessing.Pool(
+            options.num_threads, worker_main, (bundle_queue, reads_queue))
 
-            # dedup using umis and write out deduped bam
-            reads, umis, umi_counts = processor(
-                bundle=bundle,
-                threshold=options.threshold)
+        for bundle, key, status in bundle_iterator(inreads):
+            bundle_queue.put(bundle)
 
-            for read in reads:
-                outfile.write(read)
-                nOutput += 1
+        outfile.close()
+
+    else:
+        # set up ReadCluster functor with methods specific to
+        # specified options.method
+        processor = network.ReadDeduplicator(options.method)
+
+        for bundle, key, status in bundle_iterator(inreads):
+
+            nInput += sum([bundle[umi]["count"] for umi in bundle])
+
+            while nOutput >= output_reads + 100000:
+                output_reads += 100000
+                U.info("Written out %i reads" % output_reads)
+
+            while nInput >= input_reads + 1000000:
+                input_reads += 1000000
+                U.info("Parsed %i input reads" % input_reads)
 
             if options.stats:
-
-                # collect pre-dudupe stats
-                stats_pre_df_dict['UMI'].extend(bundle)
-                stats_pre_df_dict['counts'].extend(
-                    [bundle[UMI]['count'] for UMI in bundle])
-
-                # collect post-dudupe stats
-                post_cluster_umis = [bundle_iterator.barcode_getter(x)[0] for x in reads]
-                stats_post_df_dict['UMI'].extend(umis)
-                stats_post_df_dict['counts'].extend(umi_counts)
-
-                average_distance = umi_methods.get_average_umi_distance(post_cluster_umis)
-                post_cluster_stats.append(average_distance)
-
-                cluster_size = len(post_cluster_umis)
+                # generate pre-dudep stats
+                average_distance = umi_methods.get_average_umi_distance(bundle.keys())
+                pre_cluster_stats.append(average_distance)
+                cluster_size = len(bundle)
                 random_umis = read_gn.getUmis(cluster_size)
                 average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-                post_cluster_stats_null.append(average_distance_null)
+                pre_cluster_stats_null.append(average_distance_null)
 
-    outfile.close()
+            if options.ignore_umi:
+                for umi in bundle:
+                    nOutput += 1
+                    outfile.write(bundle[umi]["read"])
+
+            else:
+
+                # dedup using umis and write out deduped bam
+                reads, umis, umi_counts = processor(
+                    bundle=bundle,
+                    threshold=options.threshold)
+
+                for read in reads:
+                    outfile.write(read)
+                    nOutput += 1
+
+                if options.stats:
+
+                    # collect pre-dudupe stats
+                    stats_pre_df_dict['UMI'].extend(bundle)
+                    stats_pre_df_dict['counts'].extend(
+                        [bundle[UMI]['count'] for UMI in bundle])
+
+                    # collect post-dudupe stats
+                    post_cluster_umis = [
+                        bundle_iterator.barcode_getter(x)[0] for x in reads]
+                    stats_post_df_dict['UMI'].extend(umis)
+                    stats_post_df_dict['counts'].extend(umi_counts)
+
+                    average_distance = umi_methods.get_average_umi_distance(
+                        post_cluster_umis)
+                    post_cluster_stats.append(average_distance)
+
+                    cluster_size = len(post_cluster_umis)
+                    random_umis = read_gn.getUmis(cluster_size)
+                    average_distance_null = umi_methods.get_average_umi_distance(
+                        random_umis)
+                    post_cluster_stats_null.append(average_distance_null)
+
+        outfile.close()
+
+        if options.stats:
+
+            # generate the stats dataframe
+            stats_pre_df = pd.DataFrame(stats_pre_df_dict)
+            stats_post_df = pd.DataFrame(stats_post_df_dict)
+
+            # tally the counts per umi per position
+            pre_counts = collections.Counter(stats_pre_df["counts"])
+            post_counts = collections.Counter(stats_post_df["counts"])
+            counts_index = list(set(pre_counts.keys()).union(set(post_counts.keys())))
+            counts_index.sort()
+            with U.openFile(options.stats + "_per_umi_per_position.tsv", "w") as outf:
+                outf.write("counts\tinstances_pre\tinstances_post\n")
+                for count in counts_index:
+                    values = (count, pre_counts[count], post_counts[count])
+                    outf.write("\t".join(map(str, values)) + "\n")
+
+            # aggregate stats pre/post per UMI
+            agg_pre_df = aggregateStatsDF(stats_pre_df)
+            agg_post_df = aggregateStatsDF(stats_post_df)
+
+            agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
+                              left_index=True, right_index=True,
+                              sort=True, suffixes=["_pre", "_post"])
+
+            # TS - if count value not observed either pre/post-dedup,
+            # merge will leave an empty cell and the column will be cast as a float
+            # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+            # --> Missing data casting rules and indexing
+            # so, back fill with zeros and convert back to int
+            agg_df = agg_df.fillna(0).astype(int)
+
+            agg_df.index = [x.decode() for x in agg_df.index]
+            agg_df.index.name = 'UMI'
+            agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
+
+            # bin distances into integer bins
+            max_ed = int(max(map(max, [pre_cluster_stats,
+                                       post_cluster_stats,
+                                       pre_cluster_stats_null,
+                                       post_cluster_stats_null])))
+
+            cluster_bins = range(-1, int(max_ed) + 2)
+
+            def bin_clusters(cluster_list, bins=cluster_bins):
+                ''' take list of floats and return bins'''
+                return np.digitize(cluster_list, bins, right=True)
+
+            def tallyCounts(binned_cluster, max_edit_distance):
+                ''' tally counts per bin '''
+                return np.bincount(binned_cluster,
+                                   minlength=max_edit_distance + 3)
+
+            pre_cluster_binned = bin_clusters(pre_cluster_stats)
+            post_cluster_binned = bin_clusters(post_cluster_stats)
+            pre_cluster_null_binned = bin_clusters(pre_cluster_stats_null)
+            post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
+
+            edit_distance_df = pd.DataFrame({
+                "unique": tallyCounts(pre_cluster_binned, max_ed),
+                "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
+                options.method: tallyCounts(post_cluster_binned, max_ed),
+                "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
+                "edit_distance": cluster_bins})
+
+            # TS - set lowest bin (-1) to "Single_UMI"
+            edit_distance_df['edit_distance'][0] = "Single_UMI"
+
+            edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
+                                    index=False, sep="\t")
+
+        # write footer and output benchmark information.
+        U.info(
+            "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
+                                     bundle_iterator.read_events.most_common()]))
+
+        U.info("Number of reads out: %i" % nOutput)
+
+        if not options.ignore_umi:  # otherwise processor has not been used
+            U.info("Total number of positions deduplicated: %i" %
+                   processor.UMIClusterer.positions)
+            if processor.UMIClusterer.positions > 0:
+                U.info("Mean number of unique UMIs per position: %.2f" %
+                       (float(processor.UMIClusterer.total_umis_per_position) /
+                        processor.UMIClusterer.positions))
+                U.info("Max. number of unique UMIs per position: %i" %
+                       processor.UMIClusterer.max_umis_per_position)
+            else:
+                U.warn("The BAM did not contain any valid "
+                       "reads/read pairs for deduplication")
 
     if not options.no_sort_output:
         # sort the output
         pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
         os.unlink(out_name)  # delete the tempfile
-
-    if options.stats:
-
-        # generate the stats dataframe
-        stats_pre_df = pd.DataFrame(stats_pre_df_dict)
-        stats_post_df = pd.DataFrame(stats_post_df_dict)
-
-        # tally the counts per umi per position
-        pre_counts = collections.Counter(stats_pre_df["counts"])
-        post_counts = collections.Counter(stats_post_df["counts"])
-        counts_index = list(set(pre_counts.keys()).union(set(post_counts.keys())))
-        counts_index.sort()
-        with U.openFile(options.stats + "_per_umi_per_position.tsv", "w") as outf:
-            outf.write("counts\tinstances_pre\tinstances_post\n")
-            for count in counts_index:
-                values = (count, pre_counts[count], post_counts[count])
-                outf.write("\t".join(map(str, values)) + "\n")
-
-        # aggregate stats pre/post per UMI
-        agg_pre_df = aggregateStatsDF(stats_pre_df)
-        agg_post_df = aggregateStatsDF(stats_post_df)
-
-        agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
-                          left_index=True, right_index=True,
-                          sort=True, suffixes=["_pre", "_post"])
-
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        agg_df = agg_df.fillna(0).astype(int)
-
-        agg_df.index = [x.decode() for x in agg_df.index]
-        agg_df.index.name = 'UMI'
-        agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
-
-        # bin distances into integer bins
-        max_ed = int(max(map(max, [pre_cluster_stats,
-                                   post_cluster_stats,
-                                   pre_cluster_stats_null,
-                                   post_cluster_stats_null])))
-
-        cluster_bins = range(-1, int(max_ed) + 2)
-
-        def bin_clusters(cluster_list, bins=cluster_bins):
-            ''' take list of floats and return bins'''
-            return np.digitize(cluster_list, bins, right=True)
-
-        def tallyCounts(binned_cluster, max_edit_distance):
-            ''' tally counts per bin '''
-            return np.bincount(binned_cluster,
-                               minlength=max_edit_distance + 3)
-
-        pre_cluster_binned = bin_clusters(pre_cluster_stats)
-        post_cluster_binned = bin_clusters(post_cluster_stats)
-        pre_cluster_null_binned = bin_clusters(pre_cluster_stats_null)
-        post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
-
-        edit_distance_df = pd.DataFrame({
-            "unique": tallyCounts(pre_cluster_binned, max_ed),
-            "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
-            options.method: tallyCounts(post_cluster_binned, max_ed),
-            "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
-            "edit_distance": cluster_bins})
-
-        # TS - set lowest bin (-1) to "Single_UMI"
-        edit_distance_df['edit_distance'][0] = "Single_UMI"
-
-        edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
-                                index=False, sep="\t")
-
-    # write footer and output benchmark information.
-    U.info(
-        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
-                                 bundle_iterator.read_events.most_common()]))
-
-    U.info("Number of reads out: %i" % nOutput)
-
-    if not options.ignore_umi:  # otherwise processor has not been used
-        U.info("Total number of positions deduplicated: %i" %
-               processor.UMIClusterer.positions)
-        if processor.UMIClusterer.positions > 0:
-            U.info("Mean number of unique UMIs per position: %.2f" %
-                   (float(processor.UMIClusterer.total_umis_per_position) /
-                    processor.UMIClusterer.positions))
-            U.info("Max. number of unique UMIs per position: %i" %
-                   processor.UMIClusterer.max_umis_per_position)
-        else:
-            U.warn("The BAM did not contain any valid "
-                   "reads/read pairs for deduplication")
 
     U.Stop()
 
