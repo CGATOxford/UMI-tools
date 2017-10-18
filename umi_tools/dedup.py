@@ -253,37 +253,77 @@ def main(argv=None):
     processor = network.ReadDeduplicator(options.method)
 
     if options.num_threads > 1:
-        write_lock = multiprocessing.Lock()
-        bundle_queue = multiprocessing.JoinableQueue(options.num_threads) # limit size of queue
-        reads_queue = multiprocessing.JoinableQueue(options.num_threads) # limit size of queue
 
-        def worker_main(b_queue, r_queue):
+        def worker_main(b_queue, reads_queue, outfile):
+            ''' processes bundles '''
+            global outf
+            outf = outfile
+
             while True:
                 item = b_queue.get(True)
+                if item is None:
+                    U.info("kill parallel processing")
+                    break
+                U.info("parallel processing bundle")
                 reads, umis, umi_counts = processor(
                     bundle=item,
                     threshold=options.threshold)
 
+                U.info("len(reads): %s" % len(reads))
+
+                ## TS: Write out reads...
                 for read in reads:
-                    r_queue.put(read)
-                b_queue.task_done()
+                    #reads_queue.put(read)
+                    pass
+                    #outf.write(read)
 
-        def worker_writer(r_queue, outfile):
+        def worker_writer(r_queue):
+            ''' writes reads to tmpfile'''
+            out = open("./test", "w")
             while True:
-                item = r_queue.get(True)                
-                outfile.write(item)
-                r_queue.task_done()
+                U.info("parallel processing write read")
+                item = r_queue.get(True)
+                if item is None:
+                    out.close()
+                    break
+                out.write(str(item))
 
+        reads_queue = multiprocessing.Queue(10000) # limit size of queue
         reads_pool = multiprocessing.Pool(
-            1, worker_writer, (reads_queue, outfile))
+             1, worker_writer, (reads_queue, ))
 
+        bundle_queue = multiprocessing.Queue(2) # limit size of queue
         bundle_pool = multiprocessing.Pool(
-            options.num_threads, worker_main, (bundle_queue, reads_queue))
+            options.num_threads, worker_main, (bundle_queue, reads_queue, outfile))
 
         for bundle, key, status in bundle_iterator(inreads):
-            bundle_queue.put(bundle)
+            if len(bundle) > 1000:
+                U.info("long bundle: %i" % len(bundle))
+                #U.info(bundle)
+                bundle_queue.put(bundle)
+            else:
+                print("short bundle: %i\r" % len(bundle), end='')
+                reads, umis, umi_counts = processor(
+                    bundle=bundle,
+                    threshold=options.threshold)
+                for read in reads:
+                    #reads_queue.put(read)
+                    outfile.write(read)
 
+        bundle_pool.close()
+        reads_pool.close()
+
+        U.info("closed...")
+        for process in range(0, options.num_threads):
+            bundle_queue.put(None)
+        reads_queue.put(None)
+        
+        bundle_pool.join()
+        reads_pool.join()
+        
+        U.info("closing outfile")
         outfile.close()
+
 
     else:
         # set up ReadCluster functor with methods specific to
