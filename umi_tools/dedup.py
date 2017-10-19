@@ -296,7 +296,8 @@ def main(argv=None):
 
         def worker_main(contig_queue, outfile, lock):
             ''' processes bundles '''
-
+            global l
+            l = lock
             while True:
                 contig = contig_queue.get(True)
                 if contig is None:
@@ -310,7 +311,7 @@ def main(argv=None):
                 inreads = infile.fetch(reference=contig)
                 for reads, umis, umi_counts in dedupInreads(inreads):
                     for read in reads:
-                        with lock:
+                        with l:
                             outfile.write(read)
 
                 U.info("finished parallel processing contig: %s" % contig)
