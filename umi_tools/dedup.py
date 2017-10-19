@@ -130,7 +130,7 @@ def main(argv=None):
                      help="Specify location to output stats")
 
     group.add_option("--processes", dest="num_processes", type="int",
-                     default=4,
+                     default=1,
                      help="Use n processes")
 
     parser.add_option_group(group)
