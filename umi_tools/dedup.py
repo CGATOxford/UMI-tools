@@ -55,15 +55,11 @@ import collections
 import re
 import os
 import multiprocessing
-from queue import Queue
-import time
-import tempfile
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
 import pysam
-
 import pandas as pd
 import numpy as np
 
@@ -133,9 +129,9 @@ def main(argv=None):
                      default=False,
                      help="Specify location to output stats")
 
-    group.add_option("--threads", dest="num_threads", type="int",
+    group.add_option("--processes", dest="num_processes", type="int",
                      default=1,
-                     help="Use n threads")
+                     help="Use n processes")
 
     parser.add_option_group(group)
 
@@ -186,9 +182,6 @@ def main(argv=None):
     if options.stats and options.ignore_umi:
         raise ValueError("'--output-stats' and '--ignore-umi' options"
                          " cannot be used together")
-
-    global nOutput
-    global outfile
 
     infile = pysam.Samfile(in_name, in_mode)
     
@@ -253,20 +246,8 @@ def main(argv=None):
     processor = network.ReadDeduplicator(options.method)
 
     def dedupInreads(inreads):
-        
-        nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
         for bundle, key, status in bundle_iterator(inreads):
-
-            nInput += sum([bundle[umi]["count"] for umi in bundle])
-
-            while nOutput >= output_reads + 100000:
-                output_reads += 100000
-                U.info("Written out %i reads" % output_reads)
-
-            while nInput >= input_reads + 1000000:
-                input_reads += 1000000
-                U.info("Parsed %i input reads" % input_reads)
 
             if options.stats:
                 # generate pre-dudep stats
@@ -278,9 +259,9 @@ def main(argv=None):
                 pre_cluster_stats_null.append(average_distance_null)
 
             if options.ignore_umi:
-                for umi in bundle:
-                    nOutput += 1
-                    outfile.write(bundle[umi]["read"])
+                yield ([bundle[umi]["read"] for umi in bundle],
+                       [umi for umi in bundle],
+                       [bundle[umi]["count"] for umi in bundle])
 
             else:
 
@@ -288,41 +269,27 @@ def main(argv=None):
                 reads, umis, umi_counts = processor(
                     bundle=bundle,
                     threshold=options.threshold)
+            yield reads, umis, umi_counts
 
-                for read in reads:
-                    outfile.write(read)
-                    nOutput += 1
+    if options.num_processes == 1: # no parallel processing
+        nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
-                if options.stats:
+        for reads, umis, umi_counts in dedupInreads(inreads):
 
-                    # collect pre-dudupe stats
-                    stats_pre_df_dict['UMI'].extend(bundle)
-                    stats_pre_df_dict['counts'].extend(
-                        [bundle[UMI]['count'] for UMI in bundle])
+            nInput += sum(umi_counts)
+            nOutput += len(reads)
 
-                    # collect post-dudupe stats
-                    post_cluster_umis = [
-                        bundle_iterator.barcode_getter(x)[0] for x in reads]
-                    stats_post_df_dict['UMI'].extend(umis)
-                    stats_post_df_dict['counts'].extend(umi_counts)
+            while nOutput >= output_reads + 100000:
+                output_reads += 100000
+                U.info("Written out %i reads" % output_reads)
 
-                    average_distance = umi_methods.get_average_umi_distance(
-                        post_cluster_umis)
-                    post_cluster_stats.append(average_distance)
+            while nInput >= input_reads + 1000000:
+                input_reads += 1000000
+                U.info("Parsed %i input reads" % input_reads)
 
-                    cluster_size = len(post_cluster_umis)
-                    random_umis = read_gn.getUmis(cluster_size)
-                    average_distance_null = umi_methods.get_average_umi_distance(
-                        random_umis)
-                    post_cluster_stats_null.append(average_distance_null)
+    else: # parallel processing of contigs
 
-        outfile.close()
-
-        return(nInput, nOutput)
-
-    if options.num_threads > 1:
-
-        def worker_main(contig_queue, tmpdir):
+        def worker_main(contig_queue, outfile, lock):
             ''' processes bundles '''
 
             while True:
@@ -335,68 +302,39 @@ def main(argv=None):
 
                 infile = pysam.Samfile(in_name, in_mode)
 
-                outfile = pysam.Samfile(U.getTempFilename(tmpdir),
-                                        out_mode, template=infile)
-
-                if options.paired:
-                    outfile = umi_methods.TwoPassPairWriter(infile, outfile)
-
                 inreads = infile.fetch(reference=contig)
-                nInput, nOutput = dedupInreads(inreads)
+                for reads, umis, umi_counts in dedupInreads(inreads):
+                    for read in reads:
+                        with lock:
+                            outfile.write(read)
+
                 U.info("finished parallel processing contig: %s" % contig)
 
-        ordered_contigs = [x for _,x in sorted(zip(infile.lengths,infile.references), reverse=True)]
-        U.info(ordered_contigs)
-        
-        tmpdir = tempfile.mkdtemp()
+        lock = multiprocessing.Lock() # outfile.write() lock
 
-        contig_queue = multiprocessing.Queue()
+        ordered_contigs = [x for _,x in sorted(zip(
+            infile.lengths, infile.references), reverse=True)]
+
+        contig_queue = multiprocessing.Queue() # no need to limit size?
         contig_pool = multiprocessing.Pool(
-            options.num_threads, worker_main, (contig_queue, tmpdir))
+            options.num_processes, worker_main, (contig_queue, outfile, lock))
 
         for contig in ordered_contigs:
+            if "Un" in contig or "random" in contig or "alt" in contig:
+                continue
+            U.info("queueing contig: %s" % contig)
             contig_queue.put(contig)
 
         contig_pool.close()
 
         U.info("closed...")
-        for process in range(0, options.num_threads):
-            U.info("queueing contig: %s" % contig)
+        for process in range(0, options.num_processes):
             contig_queue.put(None)
         
         contig_pool.join()
-        
-    else:
-        nInput, nOutput = dedupInreads(inreads)
+        outfile.close()
 
-
-    if options.num_threads > 1 and False:
-
-        def worker_main(contig_queue):
-            ''' processes bundles '''
-
-            while True:
-                item = contig.get(True)
-                if item is None:
-                    U.info("kill parallel processing")
-                    break
-                U.info("parallel processing bundle")
-
-        contig_queue = multiprocessing.Queue(2) # limit size of queue
-        contig_pool = multiprocessing.Pool(
-            options.num_threads, worker_main, (contig_queue))
-
-        contig_pool.close()
-
-        U.info("closed...")
-        for process in range(0, options.num_threads):
-            contig_queue.put(None)
-        
-        contig_pool.join()
-
-
-
-    if options.stats and not options.num_threads > 1:
+    if options.stats and options.num_processes == 1:
 
         # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
@@ -467,12 +405,13 @@ def main(argv=None):
         edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
                                 index=False, sep="\t")
 
-    # write footer and output benchmark information.
-    U.info(
-        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
-                                 bundle_iterator.read_events.most_common()]))
+    if options.num_processes == 1:
+        # write footer and output benchmark information.
+        U.info(
+            "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
+                                     bundle_iterator.read_events.most_common()]))
 
-    U.info("Number of reads out: %i" % nOutput)
+        U.info("Number of reads out: %i" % nOutput)
 
     if not options.ignore_umi:  # otherwise processor has not been used
         U.info("Total number of positions deduplicated: %i" %
