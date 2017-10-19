@@ -698,7 +698,7 @@ class ExtractFilterAndUpdate:
             cell, umi, umi_quals, new_seq, new_quals = ("",)*5
 
         if self.pattern2:
-            bc2, sequence2 = self.extract(read2.seq)
+            bc2, sequence2 = self.extract(read2.seq, read=2)
             bc_qual2, seq_qual2 = self.extract(read2.quals)
             umi_quals2 = [bc_qual2[x] for x in self.umi_bases2]
 
