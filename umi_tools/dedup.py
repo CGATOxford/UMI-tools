@@ -130,7 +130,7 @@ def main(argv=None):
                      help="Specify location to output stats")
 
     group.add_option("--processes", dest="num_processes", type="int",
-                     default=1,
+                     default=4,
                      help="Use n processes")
 
     parser.add_option_group(group)
@@ -269,15 +269,19 @@ def main(argv=None):
                 reads, umis, umi_counts = processor(
                     bundle=bundle,
                     threshold=options.threshold)
+            
             yield reads, umis, umi_counts
 
     if options.num_processes == 1: # no parallel processing
         nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
         for reads, umis, umi_counts in dedupInreads(inreads):
-
+            
             nInput += sum(umi_counts)
             nOutput += len(reads)
+
+            for read in reads:
+                outfile.write(read)
 
             while nOutput >= output_reads + 100000:
                 output_reads += 100000
@@ -286,6 +290,7 @@ def main(argv=None):
             while nInput >= input_reads + 1000000:
                 input_reads += 1000000
                 U.info("Parsed %i input reads" % input_reads)
+        outfile.close()
 
     else: # parallel processing of contigs
 
@@ -330,7 +335,7 @@ def main(argv=None):
         U.info("closed...")
         for process in range(0, options.num_processes):
             contig_queue.put(None)
-        
+
         contig_pool.join()
         outfile.close()
 
