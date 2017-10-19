@@ -217,10 +217,10 @@ def main(argv=None):
 
         if options.pattern2:
             try:
-                options.pattern2 = regex.compile(options.barcode_regex2)
+                options.pattern2 = regex.compile(options.pattern2)
             except regex.Error:
                 U.error("barcode_regex2 '%s' is not a "
-                        "valid regex" % options.barcode_regex2)
+                        "valid regex" % options.barcode_pattern2)
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
