@@ -290,6 +290,7 @@ def main(argv=None):
             while nInput >= input_reads + 1000000:
                 input_reads += 1000000
                 U.info("Parsed %i input reads" % input_reads)
+        
         outfile.close()
 
     else: # parallel processing of contigs
@@ -326,6 +327,9 @@ def main(argv=None):
             options.num_processes, worker_main, (contig_queue, outfile, lock))
 
         for contig in ordered_contigs:
+            # TS: This is here for testing. Otherwise, with a small
+            # BAM with lots of contigs with very few/no reads the run
+            # time expands massively. Remove below for release version
             if "Un" in contig or "random" in contig or "alt" in contig:
                 continue
             U.info("queueing contig: %s" % contig)
