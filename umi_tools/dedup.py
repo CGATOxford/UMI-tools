@@ -59,6 +59,7 @@ import multiprocessing
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
 
+import tempfile
 import pysam
 import pandas as pd
 import numpy as np
@@ -270,7 +271,7 @@ def main(argv=None):
                     bundle=bundle,
                     threshold=options.threshold)
             
-            yield reads, umis, umi_counts
+                yield reads, umis, umi_counts
 
     if options.num_processes == 1: # no parallel processing
         nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
@@ -292,13 +293,12 @@ def main(argv=None):
                 U.info("Parsed %i input reads" % input_reads)
         
         outfile.close()
-
+        
     else: # parallel processing of contigs
+        lock = multiprocessing.Lock() # outfile.write() lock
 
-        def worker_main(contig_queue, outfile, lock):
+        def worker_main(contig_queue, tmpdir):
             ''' processes bundles '''
-            global l
-            l = lock
             while True:
                 contig = contig_queue.get(True)
                 if contig is None:
@@ -308,23 +308,25 @@ def main(argv=None):
                 U.info("parallel processing contig: %s" % contig)
 
                 infile = pysam.Samfile(in_name, in_mode)
+                tmpoutname = os.path.join(tmpdir, contig)
+                outfile = pysam.Samfile(tmpoutname, "wh", template=infile)
 
                 inreads = infile.fetch(reference=contig)
                 for reads, umis, umi_counts in dedupInreads(inreads):
                     for read in reads:
-                        with l:
-                            outfile.write(read)
+                        outfile.write(read)
 
                 U.info("finished parallel processing contig: %s" % contig)
-
-        lock = multiprocessing.Lock() # outfile.write() lock
 
         ordered_contigs = [x for _,x in sorted(zip(
             infile.lengths, infile.references), reverse=True)]
 
+        tmpdir = tempfile.mkdtemp(prefix="ctmp")
+        U.info(tmpdir)
+
         contig_queue = multiprocessing.Queue() # no need to limit size?
         contig_pool = multiprocessing.Pool(
-            options.num_processes, worker_main, (contig_queue, outfile, lock))
+            options.num_processes, worker_main, (contig_queue, tmpdir))
 
         for contig in ordered_contigs:
             # TS: This is here for testing. Otherwise, with a small
@@ -343,6 +345,26 @@ def main(argv=None):
 
         contig_pool.join()
         outfile.close()
+
+        first_tmp = os.path.join(tmpdir, ordered_contigs[0])
+        U.info(out_name)
+
+        if options.out_sam:
+            merged_out = out_name
+        else:
+            merged_out = P.getTempFilename()
+        
+        command = """samtools view -H %(first_tmp)s > %(merged_out)s;
+        for file in %(tmpdir)s/*; do grep -v '@' $file >> %(merged_out)s; done ;
+        rm -rf %(tmpdir)s; 
+        """ % locals()
+        
+        if not options.out_sam: # need to output BAM
+            command += """samtools view -b %(merged_out)s > %(out_name)s;
+            rm -f %(merged_out)s
+            """
+
+        os.system(command)
 
     if options.stats and options.num_processes == 1:
 
