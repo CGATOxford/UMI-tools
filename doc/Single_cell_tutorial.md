@@ -23,7 +23,7 @@ Outline of the process:
 | Extract CB/UMIs and filter CBs | R1 + R2 fastqs + whitelist.txt | extracted fastqs |
 | Map reads | extracted fastqs  | BAM |
 | Assign reads to genes | BAM + transcriptome GTF | BAM
-| Count unqiue reads per genes per cell | BAM | Counts.txt
+| Count unique reads per genes per cell | BAM | Counts.txt
 
 TL;DR
 -----
@@ -85,7 +85,7 @@ out of the archive you will get a directory called `fastqs` that will contain da
     $ cat fastqs/hgmm_100_S1_L00?_R2_001.fastq.gz > hgmm_100_R2.fastq.gz
 
 
-If we look at the content of of the files we will see that the first read in the pair contains 26nt, which correspond to a 16nt Cell barcode (CB) and 10nt the Unique Molecular Indentifier (UMI):
+If we look at the content of of the files we will see that the first read in the pair contains 26nt, which correspond to a 16nt Cell barcode (CB) and 10nt the Unique Molecular Identifier (UMI):
 
 
     $ zcat hgmm_100_R1.fastq.gz | head -n2
@@ -101,7 +101,7 @@ We will need to remember this for the next two steps
 Step 2: Identifying the real cells
 ---------------------------------
 
-Cell barcodes are short nucleotide sequences, very much like UMIs, except instead of identifying independent molecules, they identify independent cells. We generally observe more of them in an experiment than there were cells. This could be for several reasons, including sequencing or PCR errors and the sequencing of empty droplets or those containing comtaminants. Thus we must identify which cell barcodes we wish to use downstream. UMI-Tools `whitelist` command is used to produce a list of CB to use downstream. 
+Cell barcodes are short nucleotide sequences, very much like UMIs, except instead of identifying independent molecules, they identify independent cells. We generally observe more of them in an experiment than there were cells. This could be for several reasons, including sequencing or PCR errors and the sequencing of empty droplets or those containing contaminants. Thus we must identify which cell barcodes we wish to use downstream. UMI-Tools `whitelist` command is used to produce a list of CB to use downstream. 
 
 `whitelist` currently allows the common method of taking the top X most abundant barcodes. X can be estimated automatically from the data using the `knee` method (for more detail see this [blog post](https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/)). However, it is just an estimate and for this data we've been told that there were 100 cells, so we can just supply that number (see variations section for performing the estimation for data sets where cell number is unknown).
  
@@ -129,11 +129,11 @@ Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI 
                         
 
          
-This interface is very powerful and flexible and allows for the specification of all sorts of intersting things, like variable length CBs (UMIs do have to be a fixed length) and tolerant linker sequences (see the inDrop example in [Variations](#Barcode-extraction-for-inDrop)).
+This interface is very powerful and flexible and allows for the specification of all sorts of interesting things, like variable length CBs (UMIs do have to be a fixed length) and tolerant linker sequences (see the inDrop example in [Variations](#Barcode-extraction-for-inDrop)).
 
 ### Specifying outputs
 
-By default UMI-tools outputs everything, final output, logging info and progress report, to the standard out pipe. Downstream sections will take this output just fine, but you might want to put the log somewhere else, like a seperate file, or on the terminal. This can be achieved in one of several ways:
+By default UMI-tools outputs everything, final output, logging info and progress report, to the standard out pipe. Downstream sections will take this output just fine, but you might want to put the log somewhere else, like a separate file, or on the terminal. This can be achieved in one of several ways:
 
 * You could redirect the final output using the `--stdout` or `-S` options. The final output will be directed to a file and the log will continue to come on stdout.
 * You could redirect the log to a file with `--stdlog` or `-L`. The log and progress will be saved to a file and the final output sent to the standard out.
@@ -149,9 +149,9 @@ Many published protocols rank CBs by the number of reads the CBs appear in. Howe
 
 The output of the whitelist command is a table containing the accepted CBs. It has four columns: 
 1. The accepted CB
-2. Comma sperated list of other CBs within an edit distance of the CB in columns 1 and >1 edit away from any other accepted CB.
+2. Comma separated list of other CBs within an edit distance of the CB in columns 1 and >1 edit away from any other accepted CB.
 3. The abundance (read or UMI count) of the accepted.
-4. Comma seperated list of abundances for the CBs in column 2
+4. Comma separated list of abundances for the CBs in column 2
 
 e.g:
 
@@ -189,7 +189,7 @@ umi_tools extract --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
 
 The `--bc-pattern` and `--stdin` options are as before. Note that we send the standard out (which contains the extract Read 1s) to the a file (add `.gz` to the end of the name will trigger automatic compression). `--read2-in` and `--read2-out` specify the output files for read 2. Finally `--filter-cell-barcode` tells `extract` to only output those reads that contain accepted CBs and `--whitelist` passes the list of these sequences generated in the previous step. 
 
-As the end of the log makes cleaer, the command above took about 20 minutes
+As the end of the log makes clear, the command above took about 20 minutes
 
 ```
 2017-08-10 16:29:45,449 INFO Parsed 7100000 reads
@@ -199,7 +199,7 @@ As the end of the log makes cleaer, the command above took about 20 minutes
 # job finished in 1175 seconds at Thu Aug 10 16:30:01 2017 -- 1153.42 24.13  0.00  0.00 -- f5227f66-4f36-4862-9c7a-87caf3f81870
 ```
 
-There should now be two output files in your directory: `hgmm_100_R1_extracted.fastq.gz` and `hgmm_100_R2_extracted.fastq.gz`. Looking at the frist read we see:
+There should now be two output files in your directory: `hgmm_100_R1_extracted.fastq.gz` and `hgmm_100_R2_extracted.fastq.gz`. Looking at the first read we see:
 
 ```
 $ zcat hgmm_100_R1_extracted.fastq.gz | head -n4
@@ -234,7 +234,7 @@ Step 4: Mapping reads
 
 At this point there are two different ways we might proceed. We could map to the transcriptome, where each each contig represents a different transcript. Alternatively we could map to the genome and then assign reads to genes. While transcriptome mapping allows for easier downstream analysis, we recommend mapping to the genome because it doesn't force reads to map to transcripts when a better match outside an annotated gene exists. However, there are cases when transcriptome mapping should be favoured, and we discuss this in the [Variations](#Mapping-to-the-transcriptome-rather-than-genome) section. 
 
-We are going to use STAR here as our mapper, but you can substitute whichever splice-aware aligner you prefer. We are mapping to an index built on the human NCBI38 reference, with the alternate contigs removed (reffered to by NCBI as the "analysis read set") using junctions from ENSEMBL85 and a 99nt overhang. We do not allow multimapping reads. 
+We are going to use STAR here as our mapper, but you can substitute whichever splice-aware aligner you prefer. We are mapping to an index built on the human NCBI38 reference, with the alternate contigs removed (referred to by NCBI as the "analysis read set") using junctions from ENSEMBL85 and a 99nt overhang. We do not allow multimapping reads. 
 
 ```bash
 $ STAR --runThreadN 4 \
@@ -245,7 +245,7 @@ $ STAR --runThreadN 4 \
        --outSAMtype BAM SortedByCoordinate
 ```
 
-If we have a look at the stats for this, we will see that 63.02% of reads mapped (depending on excatly how you've built your STAR index you may get a slightly different number). For 8.1% of these this is because of mapping to more than one location. The rest is probably because the sample contains both mouse and human cells, but we are only aligning to the human genome. In fact, given that, the mapping rate looks a bit on the high side: we are probably mapping some reads to the human genome that actaully came from the mouse genome. Ideally we would perform this mapping using refereces that combined both the mouse and human genomes/transcriptomes. 
+If we have a look at the stats for this, we will see that 63.02% of reads mapped (depending on exactly how you've built your STAR index you may get a slightly different number). For 8.1% of these this is because of mapping to more than one location. The rest is probably because the sample contains both mouse and human cells, but we are only aligning to the human genome. In fact, given that, the mapping rate looks a bit on the high side: we are probably mapping some reads to the human genome that actually came from the mouse genome. Ideally we would perform this mapping using references that combined both the mouse and human genomes/transcriptomes. 
 
 On our systems, using 4 threads, this mapping takes about 7 minutes. 
 
@@ -254,7 +254,7 @@ Step 5: Assigning reads to genes
 
 Many of the single cell techniques that use UMIs are 3' tag count methods. This is important because it means that the UMIs are generally added before PCR and then fragmentation. This means that two reads from the same gene might have different mapping locations and still represent duplicates, as long as they come from the same gene. Therefore, UMI-tools need to know which gene each read came from. When reads are aligned to the transcriptome, this is easy as it is given by the contig (and possibly a gene to transcript look up table). However, with a genome alignment we need to assign reads to genes. 
 
-We can do this with the `featureCounts` tool from the `subread` package. As well as outputting a table of (undeduplicated) counts, we can also instruct `featureCounts` to output a BAM with a new tag containing the identitiy of any gene the read maps to. 
+We can do this with the `featureCounts` tool from the `subread` package. As well as outputting a table of (undeduplicated) counts, we can also instruct `featureCounts` to output a BAM with a new tag containing the identity of any gene the read maps to. 
 
 **warning**: This only works on featureCounts from subread 1.5.3 and above, which was released July 2017. If you already have subread it could well need updating
 
@@ -278,13 +278,13 @@ We now have a sorted, indexed set of alignments assigned to the appropriate gene
 Step 6: Counting molecules
 -------------------------
 
-We are finally ready to process the UMIs aligned to each gene in each cell to find the number of distinct, error corrected UMIs maping to each gene. 
+We are finally ready to process the UMIs aligned to each gene in each cell to find the number of distinct, error corrected UMIs mapping to each gene. 
 
 ```
 $ umi_tools count --per-gene --gene-tag=XT --per-cell -I assigned_sorted.bam -S counts.tsv.gz
 ```
 
-Since we want to count the number of UMIs per gene, and the gene assignment is encoded in the XT tag, we use the `--per-gene --gene-tag=XT` options. `--per-cell` tells UMI-tools to also consider the CB and produce a seperate count for each cell. The counts are ouput in a table with three columns: the gene_id, the cell barcode and the count of deduplicated UMIs. 
+Since we want to count the number of UMIs per gene, and the gene assignment is encoded in the XT tag, we use the `--per-gene --gene-tag=XT` options. `--per-cell` tells UMI-tools to also consider the CB and produce a separate count for each cell. The counts are output in a table with three columns: the gene_id, the cell barcode and the count of deduplicated UMIs. 
 
 Running this command on this input takes 72 seconds on our system. 
 
