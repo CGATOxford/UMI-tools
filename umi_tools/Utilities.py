@@ -1162,9 +1162,9 @@ GENERIC_DOCSTRING_WE = '''
 Barcode extraction
 ------------------
 
-There are two methods enabled to extract the umi barocode (+/- cell
+There are two methods enabled to extract the umi barcode (+/- cell
 barcode). For both methods, the patterns should be provided using the
---bc-pattern and --bc-pattern options. The method is specified using
+--bc-pattern and --bc-pattern2 options. The method is specified using
 the --extract-method option
 
 -'string':
@@ -1206,11 +1206,11 @@ the --extract-method option
        cell_n = cell barcode positions, where n can be any value (optional)
        discard_n = positions to discard, where n can be any value (optional)
 
-       UMI positions and cell barcode positions will be extrated and
+       UMI positions and cell barcode positions will be extracted and
        added to the read name. The corresponding sequence qualities
        will be removed from the read. Discard bases and the
        corresponding quality scores will be removed from the read. All
-       bases matched by other groups or componentts of the regex will
+       bases matched by other groups or components of the regex will be
        reattached to the read sequence
 
        For example, the following regex can be used to extract reads
@@ -1238,7 +1238,7 @@ additional whitelist/extract options
 --3prime
        By default the barcode is assumed to be on the 5' end of the
        read, but use this option to sepecify that it is on the 3' end
-       instead. This option only works with --extact-method=string
+       instead. This option only works with --extract-method=string
        since 3' encoding can be specified explicitly with a regex, e.g
        ".*(?P<umi_1>.{5})$"
 
@@ -1269,15 +1269,15 @@ the 'UM' tag, provide the following options:
 Finally, if you have used umis to extract the UMI +/- cell barcode,
 you can specify --extract-umi-method=umis
 
-The start postion of a read is considered to be the start of its alignment
+The start position of a read is considered to be the start of its alignment
 minus any soft clipped bases. A read aligned at position 500 with
-cigar 2S98M will be assumed to start at postion 498.
+cigar 2S98M will be assumed to start at position 498.
 
 
 Input/Output Options
 -------------
 -i, --in-sam/-o, --out-sam
-      By default, inputs are assumed to be in BAM format and output are output
+      By default, inputs are assumed to be in BAM format and outputs are written
       in BAM format. Use these options to specify the use of SAM format for
       inputs or outputs.
 
@@ -1296,7 +1296,7 @@ Input/Output Options
 
 --paired
        BAM is paired end - output both read pairs. This will also
-       force the Use of the template length to determine reads with
+       force the use of the template length to determine reads with
        the same mapping coordinates.
 
 --extract-umi-method (choice)
@@ -1334,7 +1334,7 @@ UMI grouping options
     returned. All methods start by identifying the reads with the same
     mapping position.
 
-    The simpliest methods, unique and percentile, group reads with
+    The simplest methods, unique and percentile, group reads with
     the exact same UMI. The network-based methods, cluster, adjacency and
     directional, build networks where nodes are UMIs and edges connect UMIs
     with an edit distance <= threshold (usually 1). The groups of reads
@@ -1354,9 +1354,9 @@ UMI grouping options
           threshold). Each network is a read group
 
       "adjacency"
-          Cluster UMIs as above. For each cluster, select the node(UMI)
+          Cluster UMIs as above. For each cluster, select the node (UMI)
           with the highest counts. Visit all nodes one edge away. If all
-          nodes have been visted, stop. Otherise, repeat with remaining
+          nodes have been visited, stop. Otherwise, repeat with remaining
           nodes until all nodes have been visted. Each step
           defines a read group.
 
@@ -1391,7 +1391,7 @@ Single-cell RNA-Seq options
 --skip-tags-regex (string)
       Used in conjunction with the --gene-tag option. Skip any reads
       where the gene tag matches this regex.
-      Defualt matches anything which starts with "__" or "Unassigned":
+      Default matches anything which starts with "__" or "Unassigned":
       ("^[__|Unassigned]")
 
 --per-contig
@@ -1404,7 +1404,7 @@ Single-cell RNA-Seq options
       using the --gene-transcript-map option
 
 --gene-transcript-map (string)
-      File mapping genes to transripts (tab separated), e.g:
+      File mapping genes to transcripts (tab separated), e.g:
 
       gene1   transcript1
       gene1   transcript2
@@ -1435,12 +1435,11 @@ Group/Dedup options
 --no-sort-output
        By default, output is sorted. This involves the
        use of a temporary unsorted file since reads are considered in
-       the order of their start position which is may not be the same
+       the order of their start position which may not be the same
        as their alignment coordinate due to soft-clipping and reverse
        alignments. The temp file will be saved in $TMPDIR and deleted
        when it has been sorted to the outfile. Use this option to turn
        off sorting.
-i
 
 --spliced-is-unique
        Causes two reads that start in the same position on the same
@@ -1449,7 +1448,7 @@ i
        splicing)
 
 --soft-clip-threshold (int)
-       Mappers that soft clip, will sometimes do so rather than mapping a
+       Mappers that soft clip will sometimes do so rather than mapping a
        spliced read if there is only a small overhang over the exon
        junction. By setting this option, you can treat reads with at least
        this many bases soft-clipped at the 3' end as spliced.
@@ -1461,7 +1460,7 @@ i
        with the highest mapping quality will be selected
 
 --read-length
-      Use the read length as as a criteria when deduping, for e.g sRNA-Seq
+      Use the read length as a criteria when deduping, for e.g sRNA-Seq
 
 --buffer-whole-contig
       forces dedup to parse an entire contig before yielding any reads
