@@ -27,11 +27,11 @@ Counts per cell barcode can be performed using either read or unique
 UMI counts. Use --method=[read|umis] to set the counting method.
 
 The process of selecting the "best" local minima is not completely
-fullproof. We recommend users always run whitelist with the
+foolproof. We recommend users always run whitelist with the
 --plot-prefix option to visualise the set of thresholds considered for
 defining cell barcodes. This option will also generate a table
-containing the thresholds which were rejected if you want manually
-adjust the threshold a different threshold.
+containing the thresholds which were rejected if you want to manually
+adjust the threshold.
 
 In addition, if you have some prior expectation on the maximum number
 of cells which may have been sequenced, you can provide this using the
@@ -75,7 +75,7 @@ reads end one from stdin and end two from FASTQIN and outputs to stdin
 Output:
 -------
 
-The whitlist is outputted as 4 tab-separated columns:
+The whitelist is outputted as 4 tab-separated columns:
 
     1. whitelisted cell barcode
     2. Other cell barcode(s) (comma-separated) to correct to the
