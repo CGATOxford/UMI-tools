@@ -544,8 +544,10 @@ def addBarcodesToIdentifier(read, UMI, cell):
     return identifier
 
 
-def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases):
-    '''Remove selected bases from seq and quals'''
+def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases,
+                       retain_umi=False):
+    '''Remove selected bases from seq and quals
+    '''
 
     new_seq = ""
     new_quals = ""
@@ -555,15 +557,24 @@ def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases):
     ix = 0
     for base, qual in zip(seq, quals):
         if ((ix not in discard_bases) and
-            (ix not in cell_bases) and
-            (ix not in umi_bases)):
-            new_quals += qual
-            new_seq += base
+            (ix not in cell_bases)):
+
+            # if we are retaining the umi, this base is both seq and umi
+            if retain_umi: 
+                new_quals += qual
+                new_seq += base
+                umi_quals += qual
+
+            else: # base is either seq or umi
+                if ix not in umi_bases:
+                    new_quals += qual
+                    new_seq += base
+                else:
+                    umi_quals += qual
+
         elif ix in cell_bases:
             cell_quals += qual
-        elif ix in umi_bases:
-            umi_quals += qual
-
+            
         ix += 1
 
     return new_seq, new_quals, umi_quals, cell_quals
@@ -572,7 +583,8 @@ def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases):
 def ExtractBarcodes(read, match,
                     extract_umi=False,
                     extract_cell=False,
-                    discard=False):
+                    discard=False,
+                    retain_umi=False):
     '''Extract the cell and umi barcodes using a regex.match object
 
     inputs:
@@ -581,6 +593,9 @@ def ExtractBarcodes(read, match,
     - match = regex.match object
     - extract_umi and extract_cell = switches to determine whether these
                                      barcodes should be extracted
+    - discard = is there a region(s) of the sequence which should be
+      discarded entirely?
+    - retain_umi = Should UMI sequence be retained on the read sequence
 
     returns:
 
@@ -616,7 +631,7 @@ def ExtractBarcodes(read, match,
             discard_bases.update(range(span[0], span[1]))
 
     new_seq, new_quals, umi_quals, cell_quals = extractSeqAndQuals(
-        read.seq, read.quals, umi_bases, cell_bases, discard_bases)
+        read.seq, read.quals, umi_bases, cell_bases, discard_bases, retain_umi)
 
     return (cell_barcode, cell_barcode_quals,
             umi, umi_quals,
@@ -743,7 +758,7 @@ class ExtractFilterAndUpdate:
              umi, umi_quals,
              new_seq, new_quals) = ExtractBarcodes(
                  read1, match, extract_cell=self.extract_cell,
-                 extract_umi=True, discard=True)
+                 extract_umi=True, discard=True, retain_umi=self.retain_umi)
         else:
             cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
 
@@ -873,7 +888,8 @@ class ExtractFilterAndUpdate:
                  quality_encoding=None,
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
-                 filter_cell_barcode=False):
+                 filter_cell_barcode=False,
+                 retain_umi=False):
 
         self.read_counts = collections.Counter()
         self.method = method
@@ -884,6 +900,7 @@ class ExtractFilterAndUpdate:
         self.quality_filter_threshold = quality_filter_threshold
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
+        self.retain_umi = retain_umi
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
