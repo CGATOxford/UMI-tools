@@ -185,7 +185,7 @@ def main(argv=None):
                               add_group_dedup_options=False,
                               add_sam_options=False)
 
-    if options.retain_umi and not options.extract_method=="regex":
+    if options.retain_umi and not options.extract_method == "regex":
         raise ValueError("option --retain-umi only works with --extract-method=regex")
 
     if options.quality_filter_threshold or options.quality_filter_mask:

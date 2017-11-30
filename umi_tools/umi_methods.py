@@ -560,12 +560,12 @@ def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases,
             (ix not in cell_bases)):
 
             # if we are retaining the umi, this base is both seq and umi
-            if retain_umi: 
+            if retain_umi:
                 new_quals += qual
                 new_seq += base
                 umi_quals += qual
 
-            else: # base is either seq or umi
+            else:  # base is either seq or umi
                 if ix not in umi_bases:
                     new_quals += qual
                     new_seq += base
@@ -574,7 +574,7 @@ def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases,
 
         elif ix in cell_bases:
             cell_quals += qual
-            
+
         ix += 1
 
     return new_seq, new_quals, umi_quals, cell_quals
