@@ -1226,7 +1226,7 @@ the --extract-method option
        the discard group above was specified as below this would enable
        matches with up to 2 errors in the discard_1 group.
 
-       (?P<discard_1>GAGTGATTGCTTGTGACGCCTT{s<=2})
+       (?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}
 
        Note that all UMIs must be the same length for downstream
        processing with dedup, group or count commands

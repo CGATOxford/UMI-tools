@@ -358,7 +358,7 @@ This translates to: 8-12 characters (group="cell_1"), followed by "GAGTGATTGCTTG
 
 The other benefit of using a regex is that we can perform ['fuzzy'](https://pypi.python.org/pypi/regex/) matching. For example, the inDrop adapter sequence is 22bp long so it may sometimes contain base calling errors. We can allow usp to two substituions like so:
 
-`--bc-pattern="(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*"`
+`--bc-pattern="(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*"`
 
 It should be possible to encode any conceivable pattern of barcodes using a regex.
 
