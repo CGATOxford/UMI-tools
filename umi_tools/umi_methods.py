@@ -468,29 +468,38 @@ def get_barcode_tag(read,
                     cell_barcode=False,
                     umi_tag='RX',
                     cell_tag=None,
-                    umi_tag_split="-",
+                    umi_tag_split=None,
                     umi_tag_delim=None,
                     cell_tag_split="-",
                     cell_tag_delim=None):
     ''' extract the umi +/- cell barcode from the specified tag '''
 
     try:
-        # 10X pipelines append a 'GEM' tag to the UMI, e.g
-        # GATAGATACCTAGATA-1, hence default to split by "-
         if cell_barcode:
-            umi = read.get_tag(umi_tag).split(umi_tag_split)[0].encode('utf-8')
-            cell = read.get_tag(cell_tag).split(cell_tag_split)[0].encode('utf-8')
+            umi = read.get_tag(umi_tag)
+            cell = read.get_tag(cell_tag)
         else:
-            umi = read.get_tag(umi_tag).split(umi_tag_split)[0].encode('utf-8')
+            umi = read.get_tag(umi_tag)
             cell = None
+
+        if umi_tag_split:
+            umi = umi.split(umi_tag_split)[0]
 
         if umi_tag_delim:
             umi = "".join(umi.split(umi_tag_delim))
 
+        # 10X pipelines append a 'GEM' tag to the UMI, e.g
+        # GATAGATACCTAGATA-1, hence default to split by "-
+        if cell and cell_tag_split:
+            cell = cell.split(cell_tag_split)[0]
+
         if cell and cell_tag_delim:
             cell = "".join(cell.split(cell_tag_delim))
 
-        return umi, cell
+        if cell:
+            cell = cell.encode('utf-8')
+
+        return umi.encode('utf-8'), cell
 
     except IndexError:
         raise ValueError("Could not extract UMI +/- cell barcode from the "

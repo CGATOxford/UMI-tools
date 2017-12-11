@@ -687,7 +687,7 @@ def Start(parser=None,
         group.add_option("--umi-tag-split", dest="umi_tag_split",
                          type="string",
                          help="split UMI in tag and take the first element",
-                         default='-')
+                         default=None)
 
         group.add_option("--umi-tag-delimiter", dest="umi_tag_delim",
                          type="string",
