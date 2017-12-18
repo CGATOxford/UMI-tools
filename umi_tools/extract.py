@@ -77,6 +77,7 @@ from __future__ import absolute_import
 import sys
 import regex
 import collections
+import optparse
 
 # python 3 doesn't require izip
 try:
@@ -106,6 +107,9 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
+    # (Experimental option) Retain the UMI in the sequence read"
+    parser.add_option("--retain-umi", dest="retain_umi", action="store_true",
+                      help=optparse.SUPPRESS_HELP)
     parser.add_option("-p", "--bc-pattern", dest="pattern", type="string",
                       help="Barcode pattern")
     parser.add_option("--bc-pattern2", dest="pattern2", type="string",
@@ -180,6 +184,9 @@ def main(argv=None):
     (options, args) = U.Start(parser, argv=argv,
                               add_group_dedup_options=False,
                               add_sam_options=False)
+
+    if options.retain_umi and not options.extract_method == "regex":
+        raise ValueError("option --retain-umi only works with --extract-method=regex")
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
@@ -288,7 +295,8 @@ def main(argv=None):
         options.quality_encoding,
         options.quality_filter_threshold,
         options.quality_filter_mask,
-        options.filter_cell_barcode)
+        options.filter_cell_barcode,
+        options.retain_umi)
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = umi_methods.getUserDefinedBarcodes(
