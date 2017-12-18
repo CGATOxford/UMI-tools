@@ -699,7 +699,7 @@ class ExtractFilterAndUpdate:
 
         if self.pattern2:
             bc2, sequence2 = self.extract(read2.seq, read=2)
-            bc_qual2, seq_qual2 = self.extract(read2.quals)
+            bc_qual2, seq_qual2 = self.extract(read2.quals, read=2)
             umi_quals2 = [bc_qual2[x] for x in self.umi_bases2]
 
             umi2 = "".join([bc2[x] for x in self.umi_bases2])
@@ -772,7 +772,7 @@ class ExtractFilterAndUpdate:
             cell = ""
 
         if self.pattern2:
-            bc2, sequence2 = self.extract(read2.seq)
+            bc2, sequence2 = self.extract(read2.seq, read=2)
             cell2 = "".join([bc2[x] for x in self.cell_bases2])
 
             cell += cell2
