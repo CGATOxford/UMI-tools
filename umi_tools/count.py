@@ -25,7 +25,6 @@ from builtins import dict
 
 import pysam
 
-import pandas as pd
 import numpy as np
 
 import umi_tools.Utilities as U
