@@ -25,7 +25,6 @@ from builtins import dict
 
 import pysam
 
-import pandas as pd
 import numpy as np
 
 import umi_tools.Utilities as U
@@ -147,40 +146,49 @@ def main(argv=None):
 
     if options.per_cell:
 
-        if options.wide_format_cell_counts:  # pivot the counts table and write out
-            counts_df = pd.read_table(tmpfilename, sep="\t", header=None)
-            counts_df.columns = ["gene", "cell", "count"]
-            counts_df = pd.pivot_table(counts_df, values='count',
-                                       index='gene', columns='cell')  # pivot
-            counts_df = counts_df.fillna(0).astype(int)  # replace NA with 0
-            counts_df.to_csv(options.stdout, index=True, sep="\t")
+        gene_counts_dict = {}
 
-        else:
-            gene_counts_dict = collections.defaultdict(collections.Counter)
+        with U.openFile(tmpfilename, mode="r") as inf:
+            genes = set()
+            cells = set()
+            for line in inf:
+                gene, cell, gene_count = line.strip().split("\t")
+                if gene not in genes:
+                    genes.add(gene)
+                    gene_counts_dict[gene] = {}
+                    if cell not in cells:
+                        cells.add(cell)
+                        gene_counts_dict[gene][cell] = 0
 
+                gene_counts_dict[gene][cell] = gene_count
+
+        if options.wide_format_cell_counts:  # write out in wide format
+
+            options.stdout.write(
+                "%s\t%s\n" % ("gene", "\t".join(sorted(cells))))
+
+            for gene in sorted(genes):
+                counts = []
+                for cell in sorted(cells):
+                    if cell in gene_counts_dict[gene]:
+                        counts.append(gene_counts_dict[gene][cell])
+                    else:
+                        counts.append(0)
+                options.stdout.write(
+                    "%s\t%s\n" % (gene, "\t".join(map(str, counts))))
+
+        else:  # write out in long format
             options.stdout.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
-            with U.openFile(tmpfilename, mode="r") as inf:
-                for line in inf:
-                    gene, cell, gene_count = line.strip().split("\t")
-                    gene_counts_dict[gene][cell] = gene_count
-                for gene in sorted(list(gene_counts_dict.keys())):
-                    for cell in sorted(list(gene_counts_dict[gene].keys())):
-                        gene_count = gene_counts_dict[gene][cell]
-                        options.stdout.write("%s\t%s\t%s\n" % (
-                            gene, cell, gene_count))
+            for gene in sorted(genes):
+                for cell in sorted(list(gene_counts_dict[gene].keys())):
+                    options.stdout.write("%s\t%s\t%s\n" % (
+                        gene, cell, gene_counts_dict[gene][cell]))
     else:
-        gene_counts_dict = collections.Counter()
-
         options.stdout.write("%s\t%s\n" % ("gene", "count"))
 
         with U.openFile(tmpfilename, mode="r") as inf:
-
             for line in inf:
-                gene, gene_count = line.strip().split("\t")
-                gene_counts_dict[gene] = gene_count
-            for gene in sorted(list(gene_counts_dict.keys())):
-                gene_count = gene_counts_dict[gene]
-                options.stdout.write("%s\t%s\n" % (gene, gene_count))
+                options.stdout.write(line)
 
     os.unlink(tmpfilename)
 
