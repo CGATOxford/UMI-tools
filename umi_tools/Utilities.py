@@ -684,8 +684,29 @@ def Start(parser=None,
                          type="string", help="tag containing umi",
                          default='RX')
 
+        group.add_option("--umi-tag-split", dest="umi_tag_split",
+                         type="string",
+                         help="split UMI in tag and take the first element",
+                         default=None)
+
+        group.add_option("--umi-tag-delimiter", dest="umi_tag_delim",
+                         type="string",
+                         help="concatenate UMI in tag separated by delimiter",
+                         default=None)
+
         group.add_option("--cell-tag", dest="cell_tag",
-                         type="string", help="tag containing cell",
+                         type="string", help="tag containing cell barcode",
+                         default=None)
+
+        group.add_option("--cell-tag-split", dest="cell_tag_split",
+                         type="string",
+                         help=("split cell barcode in tag and take the first element"
+                               "for e.g 10X GEM tags"),
+                         default='-')
+
+        group.add_option("--cell-tag-delimiter", dest="cell_tag_delim",
+                         type="string",
+                         help="concatenate cell barcode in tag separated by delimiter",
                          default=None)
 
         group.add_option("--paired", dest="paired", action="store_true",

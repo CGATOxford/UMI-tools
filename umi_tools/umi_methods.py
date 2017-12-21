@@ -464,19 +464,42 @@ def get_barcode_read_id(read, cell_barcode=False, sep="_"):
             "ID, please check UMI is encoded in the read name")
 
 
-def get_barcode_tag(read, cell_barcode=False, umi_tag='RX', cell_tag=None):
+def get_barcode_tag(read,
+                    cell_barcode=False,
+                    umi_tag='RX',
+                    cell_tag=None,
+                    umi_tag_split=None,
+                    umi_tag_delim=None,
+                    cell_tag_split="-",
+                    cell_tag_delim=None):
     ''' extract the umi +/- cell barcode from the specified tag '''
 
     try:
-        # 10X pipelines append a 'GEM' tag to the UMI, e.g
-        # AGAGSGATAGATA-1
         if cell_barcode:
-            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
-            cell = read.get_tag(cell_tag).split("-")[0].encode('utf-8')
+            umi = read.get_tag(umi_tag)
+            cell = read.get_tag(cell_tag)
         else:
-            umi = read.get_tag(umi_tag).split("-")[0].encode('utf-8')
+            umi = read.get_tag(umi_tag)
             cell = None
-        return umi, cell
+
+        if umi_tag_split:
+            umi = umi.split(umi_tag_split)[0]
+
+        if umi_tag_delim:
+            umi = "".join(umi.split(umi_tag_delim))
+
+        # 10X pipelines append a 'GEM' tag to the UMI, e.g
+        # GATAGATACCTAGATA-1, hence default to split by "-
+        if cell and cell_tag_split:
+            cell = cell.split(cell_tag_split)[0]
+
+        if cell and cell_tag_delim:
+            cell = "".join(cell.split(cell_tag_delim))
+
+        if cell:
+            cell = cell.encode('utf-8')
+
+        return umi.encode('utf-8'), cell
 
     except IndexError:
         raise ValueError("Could not extract UMI +/- cell barcode from the "
@@ -1205,7 +1228,15 @@ class get_bundles:
                 get_barcode_tag,
                 umi_tag=self.options.umi_tag,
                 cell_barcode=self.options.per_cell,
-                cell_tag=self.options.cell_tag)
+                cell_tag=self.options.cell_tag,
+                umi_tag_split=self.options.umi_tag_split,
+                umi_tag_delim=self.options.umi_tag_delim,
+                cell_tag_split=self.options.cell_tag_split,
+                cell_tag_delim=self.options.cell_tag_delim)
+            #umi_tag_split="-",
+            #    umi_tag_delim=None,
+            #    cell_tag_split="-",
+            #    cell_tag_delim=None)
 
         elif self.options.get_umi_method == "umis":
             self.barcode_getter = partial(
