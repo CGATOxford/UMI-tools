@@ -153,12 +153,11 @@ def main(argv=None):
             cells = set()
             for line in inf:
                 gene, cell, gene_count = line.strip().split("\t")
-                if gene not in genes:
-                    genes.add(gene)
+                genes.add(gene)
+                cells.add(cell)
+
+                if gene not in gene_counts_dict:
                     gene_counts_dict[gene] = {}
-                    if cell not in cells:
-                        cells.add(cell)
-                        gene_counts_dict[gene][cell] = 0
 
                 gene_counts_dict[gene][cell] = gene_count
 
