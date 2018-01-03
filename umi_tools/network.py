@@ -106,12 +106,12 @@ def iter_nearest_neighbours(umis, substr_idx):
     use substring dict to get (approximately) all the nearest neighbours to
     each in a set of umis.
     '''
-    for u in umis:
+    for i, u in enumerate(umis, 1):
         neighbours = set()
         for idx, substr_map in substr_idx.items():
             u_sub = u[slice(*idx)]
             neighbours = neighbours.union(substr_map[u_sub])
-        neighbours.remove(u)
+            neighbours.difference_update(umis[:i])
         for nbr in neighbours:
             yield u, nbr
 
