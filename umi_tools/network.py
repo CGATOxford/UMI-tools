@@ -111,7 +111,7 @@ def iter_nearest_neighbours(umis, substr_idx):
         for idx, substr_map in substr_idx.items():
             u_sub = u[slice(*idx)]
             neighbours = neighbours.union(substr_map[u_sub])
-            neighbours.difference_update(umis[:i])
+        neighbours.difference_update(umis[:i])
         for nbr in neighbours:
             yield u, nbr
 
