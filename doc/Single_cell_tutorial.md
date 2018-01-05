@@ -66,7 +66,7 @@ samtools sort Aligned.sortedByCoord.out.bam.featureCounts.bam -o assigned_sorted
 samtools index assigned_sorted.bam;
               
 # Step 6: Count UMIs per gene per cell
-umi_tools count --per-gene --gene-tag=XT --per-cell -I assigned_sorted.bam -S counts.tsv.gz
+umi_tools count --per-gene --gene-tag=XT --assigned_tag=XS --per-cell -I assigned_sorted.bam -S counts.tsv.gz
             
 ```
 
@@ -281,10 +281,10 @@ Step 6: Counting molecules
 We are finally ready to process the UMIs aligned to each gene in each cell to find the number of distinct, error corrected UMIs mapping to each gene. 
 
 ```
-$ umi_tools count --per-gene --gene-tag=XT --per-cell -I assigned_sorted.bam -S counts.tsv.gz
+$ umi_tools count --per-gene --gene-tag=XT --assigned_tag=XS --per-cell -I assigned_sorted.bam -S counts.tsv.gz
 ```
 
-Since we want to count the number of UMIs per gene, and the gene assignment is encoded in the XT tag, we use the `--per-gene --gene-tag=XT` options. `--per-cell` tells UMI-tools to also consider the CB and produce a separate count for each cell. The counts are output in a table with three columns: the gene_id, the cell barcode and the count of deduplicated UMIs. 
+Since we want to count the number of UMIs per gene, and the gene assignment is encoded in the XT tag, we use the `--per-gene --gene-tag=XT` options. FeatureCounts also uses the XS tag to describe the gene assignment so we use the `--assigned_tag=XS` option. Any reads with an assignment matching `^[__|Unassigned]` (default value for `--skip-tags-regex`) will be skipped. `--per-cell` tells UMI-tools to also consider the CB and produce a separate count for each cell. The counts are output in a table with three columns: the gene_id, the cell barcode and the count of deduplicated UMIs. 
 
 Running this command on this input takes 72 seconds on our system. 
 
