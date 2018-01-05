@@ -749,10 +749,16 @@ def Start(parser=None,
                          help="gene is defined by this bam tag [default=%default]",
                          default=None)
 
+        group.add_option("--assigned-tag", dest="assigned_tag",
+                         type="string",
+                         help="The 'assigned' bam tag."
+                         "By defualt, this is set as the same tag as --gene-tag",
+                         default=None)
+
         group.add_option("--skip-tags-regex", dest="skip_regex",
                          type="string",
                          help="Used with --gene-tag. "
-                         "Ignore reads where the gene-tag matches this regex",
+                         "Ignore reads where the assigned-tag matches this regex",
                          default="^[__|Unassigned]")
 
         group.add_option("--per-contig", dest="per_contig", action="store_true",
@@ -1012,6 +1018,9 @@ def validateSamOptions(options):
             raise ValueError("Need to supply the --umi-tag option")
         if options.per_cell and options.cell_tag is None:
             raise ValueError("Need to supply the --cell-tag option")
+
+    if options.assigned_tag is None:
+        options.assigned_tag = options.gene_tag
 
     if options.skip_regex:
         try:
