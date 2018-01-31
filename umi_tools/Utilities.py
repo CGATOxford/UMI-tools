@@ -753,7 +753,7 @@ def Start(parser=None,
                          type="string",
                          help="Used with --gene-tag. "
                          "Ignore reads where the gene-tag matches this regex",
-                         default="^[__|Unassigned]")
+                         default="^(__|Unassigned)")
 
         group.add_option("--per-contig", dest="per_contig", action="store_true",
                          default=False,
