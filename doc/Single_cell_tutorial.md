@@ -122,8 +122,8 @@ The `--plot-prefix` option tells `whitelist` to output summary plots for the fre
 Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI in the read sequence. By default we assume the barcodes are at the 5' end of the read (this can be changed with `--3prime`). We then use `C` characters to show where CB bases are and `N` characters to show were UMI bases are. Thus we have 16 `C`s followed by 10 `N`s to denote that the first 16 bases of the read are CB bases and the second 16 are UMI bases. If this is a bit cumbersome you can also enter the pattern as a regular expression, using named groups. For example we could change the above command to:
     
     umi_tools whitelist --stdin hgmm_100_R1.fastq.gz \
-                        --bc-pattern='(?P<cell_1>.{16})(?P<umi_1>.{10})' \ 
-                        --extract-method=regex \ 
+                        --bc-pattern='(?P<cell_1>.{16})(?P<umi_1>.{10})' \
+                        --extract-method=regex \
                         --set-cell-number=100 \
                         --log2stderr > whitelist.txt
                         
