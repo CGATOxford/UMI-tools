@@ -24,9 +24,9 @@ NS500668:144:H5FCJBGXY:3:23405:3971:19716_CGATG     ENSG00000225972.1
 
 You can perform any required file transformation and pipe the output
 directly to count_tab. For example to pipe output from featureCounts
-with the '-R' option you can do the following:
+with the '-R CORE' option you can do the following:
 
-    awk '$2=="Assigned" {print $1"\t"$3}' my.bam.featureCounts| sort -k2 |
+    awk '$2=="Assigned" {print $1"\t"$4}' my.bam.featureCounts | sort -k2 |
     umi_tools count_tab -S gene_counts.tsv -L count.log
 
 The tab file is assumed to contain each read id once only. For paired
