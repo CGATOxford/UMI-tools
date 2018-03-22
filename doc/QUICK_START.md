@@ -98,7 +98,7 @@ followed by 2 more random bases. Thus the `--bc-pattern` would be
                       library
 
 
-     Processed read: CCGGTTGCCCAATTGCCAAATTTTGGGGCCCCTATGAGCTA
+     Processed read: CCGGTTGCCCAATTGCCAAATTTTGGGGCCCCTATGAGCTAG
                      ^^^^  
 
 The processed reads could then be passed to a demultiplexing tool to
