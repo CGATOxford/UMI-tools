@@ -31,7 +31,8 @@ from builtins import dict
 
 import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
-
+import tqdm
+import pybktree
 
 RANGES = {
     'phred33': (33, 77),
@@ -358,7 +359,7 @@ def getKneeEstimate(cell_barcode_counts,
     return final_barcodes
 
 
-def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
+def getErrorCorrectMapping_old(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
 
@@ -388,6 +389,43 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
             true_to_false[match].add(cell_barcode)
 
     return true_to_false
+
+
+def getErrorCorrectMapping_better_Version(cell_barcodes, whitelist, threshold=1):
+    ''' Find the mappings between true and false cell barcodes based
+    on an edit distance threshold.
+
+    Any cell barcode within the threshold to more than one whitelist
+    barcode will be excluded'''
+
+    true_to_false = collections.defaultdict(set)
+
+    whitelist = set([str(x).encode("utf-8") for x in whitelist]) # convert to bytes for cython compat.
+
+    U.info('building bktree')
+    tree2 = pybktree.BKTree(edit_distance, whitelist)
+    U.info('done building bktree')
+
+    for i, cell_barcode in tqdm.tqdm(enumerate(cell_barcodes)):
+        barcode_in_bytes = cell_barcode.encode('utf-8') # convert to bytes for cython compat.
+
+        if barcode_in_bytes in whitelist:  #if the barcode is already whitelisted, no need to add
+            continue
+        # get all members of whitelist that are at distance 1
+        candidates = [white_cell for d, white_cell in tree2.find(barcode_in_bytes, threshold) if d>0]
+
+        if len(candidates) == 0:  # the cell doesnt match to any whitelisted barcode, hence we have to drop it(as it cannot be asscociated with any frequent barcde)
+            continue
+        elif len(candidates) == 1:
+            white_cell_str = candidates[0].decode("utf-8")
+            true_to_false[white_cell_str].add(cell_barcode)
+        else: # more than on whitelisted candidate: we drop it as its not uniquely assignable
+            # print('multiple candidates')
+            continue
+    return true_to_false
+
+
+getErrorCorrectMapping = getErrorCorrectMapping_better_Version
 
 
 def getCellWhitelist(cell_barcode_counts,
