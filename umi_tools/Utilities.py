@@ -749,9 +749,9 @@ def Start(parser=None,
                          help="gene is defined by this bam tag [default=%default]",
                          default=None)
 
-        group.add_option("--assigned-tag", dest="assigned_tag",
+        group.add_option("--assigned-status-tag", dest="assigned_tag",
                          type="string",
-                         help="The 'assigned' bam tag."
+                         help="Bam tag describing whether read is assigned to a gene"
                          "By defualt, this is set as the same tag as --gene-tag",
                          default=None)
 
@@ -1418,9 +1418,13 @@ Single-cell RNA-Seq options
       Deduplicate per gene. The gene information is encoded in the bam
       read tag specified
 
+--assigned-status-tag (string)
+      BAM tag which describes whether a read is assigned to a
+      gene. Defaults to the same value as given for --gene-tag
+
 --skip-tags-regex (string)
-      Used in conjunction with the --gene-tag option. Skip any reads
-      where the gene tag matches this regex.
+      Used in conjunction with the --assigned-status-tag option. Skip any reads
+      where the tag matches this regex.
       Default matches anything which starts with "__" or "Unassigned":
       ("^[__|Unassigned]")
 
