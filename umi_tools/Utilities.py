@@ -758,8 +758,9 @@ def Start(parser=None,
         group.add_option("--skip-tags-regex", dest="skip_regex",
                          type="string",
                          help="Used with --gene-tag. "
-                         "Ignore reads where the assigned-tag matches this regex",
-                         default="^[__|Unassigned]")
+                         "Ignore reads where the gene-tag matches this regex",
+                         default="^(__|Unassigned)")
+
 
         group.add_option("--per-contig", dest="per_contig", action="store_true",
                          default=False,
