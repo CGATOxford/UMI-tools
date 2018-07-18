@@ -3,9 +3,6 @@ sudo: required
 
 matrix:
     include:
-        - os: osx
-          language: generic
-          env: TEST_HELP=1
         - os: linux
           sudo: required
           python: 2.7
@@ -23,16 +20,16 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype; fi
-  - pip3 install cython
-  - pip3 install pandas==0.19
-  - pip3 install scipy
+  - pip install cython
+  - pip install pandas==0.19
+  - pip install scipy
 install:
   - python setup.py install
 
 before_script:
-  - pip3 install nose
-  - pip3 install pep8
-  - pip3 install pyyaml
+  - pip install nose
+  - pip install pep8
+  - pip install pyyaml
 
 script: 
   - ./test_umi_tools.sh
