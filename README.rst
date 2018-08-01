@@ -69,7 +69,7 @@ If you're using Conda, you can use:
 
 .. code:: bash
 
-   $ conda install -c https://conda.anaconda.org/toms umi_tools
+   $ conda install -c bioconda -c conda-forge umi_tools
 
 Or pip:
 
