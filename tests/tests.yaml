@@ -55,6 +55,12 @@ extract_scrb_seq_prefiltered:
       references: [scrb_extract.fastq]
       options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-stdout  -L test.log  --reconcile-pairs
 
+extract_whitelist:
+      stdin: paired_whitelist.fastq.1.gz
+      outputs: [stdout]
+      references: [processed_paired_whitelist.fastq]
+      options: extract --read2-in=<DIR>/paired_whitelist.fastq.2.gz --extract-method=string --bc-pattern=NNNNNNNN --bc-pattern2=NNNNNNNN --filter-umi --umi-whitelist=<DIR>/umi_whitelist.tsv --umi-whitelist-paired=<DIR>/umi_whitelist.tsv --correct-umi-threshold=1 --umi-correct-log=processed_paired_whitelist.log --log=test.log
+
 whitelist_scrb_seq:
       stdin: scrb_seq_fastq.1.gz
       outputs: [stdout]

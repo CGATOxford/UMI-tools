@@ -29,6 +29,14 @@ from functools import partial
 from future.utils import iteritems
 from builtins import dict
 
+# python 3 doesn't require izip
+try:
+    # Python 2
+    from itertools import izip
+except ImportError:
+    # Python 3
+    izip = zip
+
 import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
 
@@ -419,29 +427,111 @@ def getCellWhitelist(cell_barcode_counts,
     return cell_whitelist, true_to_false_map
 
 
-def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
-    cell_whitelist = []
+def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
+                           getErrorCorrection=False,
+                           deriveErrorCorrection=False,
+                           threshold=1):
+    '''
+    whitelist_tsv: tab-separated file with whitelisted barcodes. First
+    field should be whitelist barcodes. Second field [optional] should
+    be comma-separated barcodes which are to be corrected to the
+    barcode in the first field.
 
-    if getErrorCorrection:
+    whitelist_tsv2: as above but for read2s
+
+    getErrorCorrection: extract the second field and return a map of
+    non-whitelist:whitelist
+
+    deriveErrorCorrection: return a map of non-whitelist:whitelist
+    using a simple edit distance threshold
+    '''
+
+    base2errors = {"A": ["T", "C", "G", "N"],
+                   "T": ["A", "C", "G", "N"],
+                   "C": ["T", "A", "G", "N"],
+                   "G": ["T", "C", "A", "N"]}
+
+    whitelist = []
+
+    if getErrorCorrection or deriveErrorCorrection:
         false_to_true_map = {}
     else:
         false_to_true_map = None
 
-    with U.openFile(whitelist_tsv, "r") as inf:
+    def singleBarcodeGenerator(whitelist_tsv):
+        with U.openFile(whitelist_tsv, "r") as inf:
+            for line in inf:
+                if line.startswith('#'):
+                    continue
+                line = line.strip().split("\t")
+                yield(line[0])
 
-        for line in inf:
-            if line.startswith('#'):
-                continue
+    def pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2):
 
-            line = line.strip().split("\t")
-            whitelist_barcode = line[0]
-            cell_whitelist.append(whitelist_barcode)
+        whitelist1 = []
+        whitelist2 = []
 
-            if getErrorCorrection:
-                for error_barcode in line[1].split(","):
-                    false_to_true_map[error_barcode] = whitelist_barcode
+        with U.openFile(whitelist_tsv, "r") as inf:
+            for line in inf:
+                if line.startswith('#'):
+                    continue
 
-    return set(cell_whitelist), false_to_true_map
+                line = line.strip().split("\t")
+                whitelist1.append(line[0])
+
+        with U.openFile(whitelist_tsv2, "r") as inf2:
+            for line in inf2:
+                if line.startswith('#'):
+                    continue
+
+                line = line.strip().split("\t")
+                whitelist2.append(line[0])
+
+        for w1, w2 in itertools.product(whitelist1, whitelist2):
+            yield(w1 + w2)
+
+    if whitelist_tsv2:
+        whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
+    else:
+        whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
+
+    for whitelist_barcode in whitelist_barcodes:
+        whitelist.append(whitelist_barcode)
+
+        if getErrorCorrection:
+            for error_barcode in line[1].split(","):
+                false_to_true_map[error_barcode] = whitelist_barcode
+
+        elif deriveErrorCorrection:
+
+            for positions in itertools.product(
+                    range(0, len(whitelist_barcode)), repeat=threshold):
+
+                m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
+
+                for m in itertools.product(*m_bases):
+                    error_barcode = list(whitelist_barcode)
+
+                    for pos, m in zip(positions, m):
+                        error_barcode[pos] = m
+
+                    error_barcode = "".join(error_barcode)
+
+                    if error_barcode in false_to_true_map:
+                        # don't report multiple times for the same barcode
+                        if false_to_true_map[error_barcode]:
+                            U.info("Error barcode %s can be assigned to more than "
+                                   "one possible true barcode: %s or %s" % (
+                                       error_barcode,
+                                       false_to_true_map[error_barcode],
+                                       whitelist_barcode))
+                        false_to_true_map[error_barcode] = None
+                    else:
+                        false_to_true_map[error_barcode] = whitelist_barcode
+        else:
+            pass
+
+    return set(whitelist), false_to_true_map
 
 
 def get_barcode_read_id(read, cell_barcode=False, sep="_"):
@@ -885,9 +975,9 @@ class ExtractFilterAndUpdate:
             return None
 
         if cell not in self.cell_whitelist:
-            if self.false_to_true_map:
-                if cell in self.false_to_true_map:
-                    cell = self.false_to_true_map[cell]
+            if self.cell_false_to_true_map:
+                if cell in self.cell_false_to_true_map:
+                    cell = self.cell_false_to_true_map[cell]
                     self.read_counts['False cell barcode. Error-corrected'] += 1
                 else:
                     self.read_counts['Filtered cell barcode. Not correctable'] += 1
@@ -902,6 +992,37 @@ class ExtractFilterAndUpdate:
 
         return cell
 
+    def filterUMIBarcode(self, umi):
+        '''Filter out umi barcodes not in the whitelist, with
+        optional umi barcode error correction'''
+
+        if umi not in self.umi_whitelist:
+            if self.umi_false_to_true_map:
+                if umi in self.umi_false_to_true_map:
+                    umi = self.umi_false_to_true_map[umi]
+                    if umi:  # can be corrected to None
+                        self.read_counts['False UMI barcode. Error-corrected'] += 1
+                        self.umi_whitelist_counts[umi]["error"] += 1
+                    else:
+                        self.read_counts[
+                            ("False UMI barcode. Not correctable - "
+                             "within threshold to more than one whitelisted UMI")] += 1
+
+                else:
+                    self.read_counts[
+                        ("False UMI barcode. Not correctable - not within "
+                         "threshold to whitelisted UMI")] += 1
+
+                    return None
+            else:
+                self.read_counts['Filtered umi barcode'] += 1
+                return None
+
+        else:
+            self.umi_whitelist_counts[umi]["no_error"] += 1
+
+        return umi
+
     def __init__(self,
                  method="string",
                  pattern=None,
@@ -911,6 +1032,7 @@ class ExtractFilterAndUpdate:
                  quality_encoding=None,
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
+                 filter_umi_barcode=False,
                  filter_cell_barcode=False,
                  retain_umi=False):
 
@@ -922,11 +1044,16 @@ class ExtractFilterAndUpdate:
         self.quality_encoding = quality_encoding
         self.quality_filter_threshold = quality_filter_threshold
         self.quality_filter_mask = quality_filter_mask
+        self.filter_umi_barcodes = filter_umi_barcode
         self.filter_cell_barcodes = filter_cell_barcode
         self.retain_umi = retain_umi
 
+        self.umi_whitelist = None  # These will be updated if required
+        self.umi_false_to_true_map = None  # These will be updated if required
+        self.umi_whitelist_counts = None  # These will be updated if required
+
         self.cell_whitelist = None  # These will be updated if required
-        self.false_to_true_map = None  # These will be updated if required
+        self.cell_false_to_true_map = None  # These will be updated if required
         self.cell_blacklist = None  # These will be updated if required
 
         # If the pattern is a string we can identify the position of
@@ -980,6 +1107,11 @@ class ExtractFilterAndUpdate:
 
         if self.quality_filter_mask:
             umi = self.maskQuality(umi, umi_quals)
+
+        if self.filter_umi_barcodes:
+            umi = self.filterUMIBarcode(umi)
+            if umi is None:
+                return None
 
         if self.filter_cell_barcodes:
             cell = self.filterCellBarcode(cell)
@@ -1233,10 +1365,6 @@ class get_bundles:
                 umi_tag_delim=self.options.umi_tag_delim,
                 cell_tag_split=self.options.cell_tag_split,
                 cell_tag_delim=self.options.cell_tag_delim)
-            #umi_tag_split="-",
-            #    umi_tag_delim=None,
-            #    cell_tag_split="-",
-            #    cell_tag_delim=None)
 
         elif self.options.get_umi_method == "umis":
             self.barcode_getter = partial(
