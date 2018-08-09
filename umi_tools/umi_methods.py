@@ -495,41 +495,63 @@ def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
     else:
         whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
 
-    for whitelist_barcode in whitelist_barcodes:
-        whitelist.append(whitelist_barcode)
-
-        if getErrorCorrection:
-            for error_barcode in line[1].split(","):
-                false_to_true_map[error_barcode] = whitelist_barcode
-
-        elif deriveErrorCorrection:
-
-            for positions in itertools.product(
-                    range(0, len(whitelist_barcode)), repeat=threshold):
-
-                m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
-
-                for m in itertools.product(*m_bases):
-                    error_barcode = list(whitelist_barcode)
-
-                    for pos, m in zip(positions, m):
-                        error_barcode[pos] = m
-
-                    error_barcode = "".join(error_barcode)
-
-                    if error_barcode in false_to_true_map:
-                        # don't report multiple times for the same barcode
-                        if false_to_true_map[error_barcode]:
-                            U.info("Error barcode %s can be assigned to more than "
-                                   "one possible true barcode: %s or %s" % (
-                                       error_barcode,
-                                       false_to_true_map[error_barcode],
-                                       whitelist_barcode))
-                        false_to_true_map[error_barcode] = None
-                    else:
-                        false_to_true_map[error_barcode] = whitelist_barcode
+    if deriveErrorCorrection:
+        if whitelist_tsv2:
+            whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
         else:
-            pass
+            whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
+
+        for whitelist_barcode in whitelist_barcodes:
+            whitelist.append(whitelist_barcode)
+
+            if deriveErrorCorrection:
+
+                # for every possible combination of positions for error(s)
+                for positions in itertools.product(
+                        range(0, len(whitelist_barcode)), repeat=threshold):
+
+                    m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
+
+                    # for every possible combination of errors
+                    for m in itertools.product(*m_bases):
+                        error_barcode = list(whitelist_barcode)
+
+                        # add errors
+                        for pos, error_base in zip(positions, m):
+                            error_barcode[pos] = error_base
+
+                        error_barcode = "".join(error_barcode)
+
+                        # if error barcode has already been seen, must be within
+                        # threshold edit distance of >1 whitelisted barcodes
+                        if error_barcode in false_to_true_map:
+                            # don't report multiple times for the same barcode
+                            if false_to_true_map[error_barcode]:
+                                U.info("Error barcode %s can be assigned to more than "
+                                       "one possible true barcode: %s or %s" % (
+                                           error_barcode,
+                                           false_to_true_map[error_barcode],
+                                           whitelist_barcode))
+                            false_to_true_map[error_barcode] = None
+                        else:
+                            false_to_true_map[error_barcode] = whitelist_barcode
+
+    else:
+
+        with U.openFile(whitelist_tsv, "r") as inf:
+
+            for line in inf:
+
+                if line.startswith('#'):
+                    continue
+
+                line = line.strip().split("\t")
+                whitelist_barcode = line[0]
+                whitelist.append(whitelist_barcode)
+
+                if getErrorCorrection:
+                    for error_barcode in line[1].split(","):
+                        false_to_true_map[error_barcode] = whitelist_barcode
 
     return set(whitelist), false_to_true_map
 
