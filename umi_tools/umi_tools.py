@@ -25,6 +25,7 @@ To use a specific tool, type::
     umi_tools <tool> [tool options] [tool arguments]
 '''
 
+from __future__ import absolute_import
 import os
 import sys
 import imp
