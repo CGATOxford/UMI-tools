@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import sys
 import os
 import glob
@@ -6,6 +8,7 @@ from ez_setup import use_setuptools
 use_setuptools("10.0")
 import setuptools
 
+from umi_tools import __version__
 from setuptools import setup, find_packages, Extension
 
 from distutils.version import LooseVersion
@@ -13,14 +16,6 @@ if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
     print ("Version detected:", LooseVersion(setuptools.__version__))
     raise ImportError(
         "umi_tools requires setuptools 1.1 higher")
-
-########################################################################
-########################################################################
-# collect umi_tools version
-sys.path.insert(0, "umi_tools")
-import version
-
-version = version.__version__
 
 ###############################################################
 ###############################################################
@@ -98,7 +93,7 @@ Operating System :: MacOS
 setup(
     # package information
     name='umi_tools',
-    version=version,
+    version=__version__,
     description='umi_tools: Tools for UMI analyses',
     author='Ian Sudbery',
     author_email='i.sudbery@sheffield.ac.uk',
@@ -108,7 +103,7 @@ setup(
     long_description='umi_tools: Tools for UMI analyses',
     classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/CGATOxford/UMI-tools",
-    download_url="https://github.com/CGATOxford/UMI-tools/tarball/%s" % version,
+    download_url="https://github.com/CGATOxford/UMI-tools/tarball/%s" % __version__,
     # package contents
     packages=umi_tools_packages,
     package_dir=umi_tools_package_dirs,

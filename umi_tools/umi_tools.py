@@ -25,9 +25,11 @@ To use a specific tool, type::
     umi_tools <tool> [tool options] [tool arguments]
 '''
 
+from __future__ import absolute_import
 import os
 import sys
 import imp
+from umi_tools import __version__
 
 
 def main(argv=None):
@@ -42,11 +44,7 @@ def main(argv=None):
         return
 
     elif len(argv) == 1 or argv[1] == "--version" or argv[1] == "-v":
-        # collect umi_tools version
-        sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-        import version
-
-        print("UMI-tools version: %s" % version.__version__)
+        print("UMI-tools version: %s" % __version__)
 
         return
 
@@ -57,6 +55,7 @@ def main(argv=None):
     # remove 'umi-tools' from sys.argv
     del sys.argv[0]
     module.main(sys.argv)
+
 
 if __name__ == "__main__":
     sys.exit(main())
