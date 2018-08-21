@@ -5,6 +5,7 @@ import glob
 from ez_setup import use_setuptools
 use_setuptools("10.0")
 import setuptools
+from __future__ import absolute_import
 from umi_tools import __version__
 from setuptools import setup, find_packages, Extension
 
