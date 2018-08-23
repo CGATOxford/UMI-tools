@@ -18,6 +18,8 @@ import numpy as np
 
 from umi_tools._dedup_umi import edit_distance
 import umi_tools.Utilities as U
+import umi_tools.umi_methods as umi_methods
+
 
 sys.setrecursionlimit(10000)
 
@@ -383,11 +385,27 @@ class ReadDeduplicator:
     '''This is a wrapper for applying the UMI methods to bundles of BAM reads.
     It is currently a pretty transparent wrapper on UMIClusterer. Basically
     taking a read bundle, extracting the UMIs and Counts, running UMIClusterer
-    and returning the results along with annotated reads'''
+    and returning the results along with annotated reads
 
-    def __init__(self, cluster_method="directional"):
+    In addition, if UMI whitelist options are provided, the read
+    clusters are filtered against the UMI whitelist
+    '''
 
-        self.UMIClusterer = UMIClusterer(cluster_method=cluster_method)
+    def __init__(self, options):
+
+        self.UMIClusterer = UMIClusterer(cluster_method=options.method)
+
+        if options.filter_umi:
+            self.umi_whitelist = umi_methods.getUserDefinedBarcodes(
+                options.umi_whitelist,
+                options.umi_whitelist_paired,
+                deriveErrorCorrection=False)[0]
+            self.umi_whitelist_counts = collections.Counter()
+
+            U.info("Length of UMI whitelist: %i" % len(self.umi_whitelist))
+
+        else:
+            self.umi_whitelist = None
 
     def __call__(self, bundle, threshold):
         '''Process the the bundled reads according to the method specified
@@ -406,9 +424,28 @@ class ReadDeduplicator:
 
         clusters = self.UMIClusterer(umis, counts, threshold)
 
-        final_umis = [cluster[0] for cluster in clusters]
-        umi_counts = [sum(counts[umi] for umi in cluster)
-                      for cluster in clusters]
+        if self.umi_whitelist:
+            # check the "top" UMI is in the whitelist, if not, discard
+            # the whole group
+
+            final_umis = []
+            umi_counts = []
+
+            for cluster in clusters:
+                cluster_count = sum(counts[x] for x in cluster)
+                if cluster[0].decode() in self.umi_whitelist:
+                    final_umis.append(cluster[0])
+                    umi_counts.append(cluster_count)
+                    self.umi_whitelist_counts[cluster[0].decode()] += cluster_count
+
+                else:
+                    self.umi_whitelist_counts["Non-whitelist UMI"] += cluster_count
+
+        else:
+            final_umis = [cluster[0] for cluster in clusters]
+            umi_counts = [sum(counts[umi] for umi in cluster)
+                          for cluster in clusters]
+
         reads = [bundle[umi]["read"] for umi in final_umis]
 
         return (reads, final_umis, umi_counts)

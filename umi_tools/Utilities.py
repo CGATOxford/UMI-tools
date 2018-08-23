@@ -268,6 +268,7 @@ class DefaultOptions:
     timeit_file = None
     compresslevel = 6
 
+
 global_starting_time = time.time()
 global_options = DefaultOptions()
 global_args = None
@@ -718,6 +719,19 @@ def Start(parser=None,
                          help="Minimum mapping quality for a read to be retained"
                          " [default=%default]",
                          default=0)
+
+        group.add_option("--filter-umi",
+                         dest="filter_umi",
+                         action="store_true",
+                         help="Filter the UMIs")
+
+        group.add_option("--umi-whitelist", dest="umi_whitelist",
+                         type="string", default=None,
+                         help="A whitelist of accepted UMIs [default=%default]")
+
+        group.add_option("--umi-whitelist-paired", dest="umi_whitelist_paired",
+                         type="string", default=None,
+                         help="A whitelist of accepted UMIs for read2[default=%default]")
 
         parser.add_option_group(group)
 
@@ -1176,6 +1190,7 @@ def getTempFilename(dir=None, shared=False, suffix=""):
     tmpfile = getTempFile(dir=dir, shared=shared, suffix=suffix)
     tmpfile.close()
     return tmpfile.name
+
 
 # this is the generic docstring we want to add to the documentation
 # for whitelist/extract
