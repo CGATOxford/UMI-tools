@@ -490,11 +490,6 @@ def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
         for w1, w2 in itertools.product(whitelist1, whitelist2):
             yield(w1 + w2)
 
-    if whitelist_tsv2:
-        whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
-    else:
-        whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
-
     if deriveErrorCorrection:
         if whitelist_tsv2:
             whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
@@ -504,37 +499,35 @@ def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
         for whitelist_barcode in whitelist_barcodes:
             whitelist.append(whitelist_barcode)
 
-            if deriveErrorCorrection:
+            # for every possible combination of positions for error(s)
+            for positions in itertools.product(
+                    range(0, len(whitelist_barcode)), repeat=threshold):
 
-                # for every possible combination of positions for error(s)
-                for positions in itertools.product(
-                        range(0, len(whitelist_barcode)), repeat=threshold):
+                m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
 
-                    m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
+                # for every possible combination of errors
+                for m in itertools.product(*m_bases):
+                    error_barcode = list(whitelist_barcode)
 
-                    # for every possible combination of errors
-                    for m in itertools.product(*m_bases):
-                        error_barcode = list(whitelist_barcode)
+                    # add errors
+                    for pos, error_base in zip(positions, m):
+                        error_barcode[pos] = error_base
 
-                        # add errors
-                        for pos, error_base in zip(positions, m):
-                            error_barcode[pos] = error_base
+                    error_barcode = "".join(error_barcode)
 
-                        error_barcode = "".join(error_barcode)
-
-                        # if error barcode has already been seen, must be within
-                        # threshold edit distance of >1 whitelisted barcodes
-                        if error_barcode in false_to_true_map:
-                            # don't report multiple times for the same barcode
-                            if false_to_true_map[error_barcode]:
-                                U.info("Error barcode %s can be assigned to more than "
-                                       "one possible true barcode: %s or %s" % (
-                                           error_barcode,
-                                           false_to_true_map[error_barcode],
-                                           whitelist_barcode))
-                            false_to_true_map[error_barcode] = None
-                        else:
-                            false_to_true_map[error_barcode] = whitelist_barcode
+                    # if error barcode has already been seen, must be within
+                    # threshold edit distance of >1 whitelisted barcodes
+                    if error_barcode in false_to_true_map:
+                        # don't report multiple times for the same barcode
+                        if false_to_true_map[error_barcode]:
+                            U.info("Error barcode %s can be assigned to more than "
+                                   "one possible true barcode: %s or %s" % (
+                                       error_barcode,
+                                       false_to_true_map[error_barcode],
+                                       whitelist_barcode))
+                        false_to_true_map[error_barcode] = None
+                    else:
+                        false_to_true_map[error_barcode] = whitelist_barcode
 
     else:
 
@@ -1015,35 +1008,45 @@ class ExtractFilterAndUpdate:
         return cell
 
     def filterUMIBarcode(self, umi):
-        '''Filter out umi barcodes not in the whitelist, with
-        optional umi barcode error correction'''
+        ''' Filter out umi barcodes not in the whitelist, with optional
+        umi barcode error correction and update read_counts and
+        umi_whitelist_counts counters'''
 
-        if umi not in self.umi_whitelist:
-            if self.umi_false_to_true_map:
-                if umi in self.umi_false_to_true_map:
-                    umi = self.umi_false_to_true_map[umi]
-                    if umi:  # can be corrected to None
+        if umi not in self.umi_whitelist:  # if umi not in whitelist
+
+            corrected_umi = None  # need to try and correct UMI
+
+            if self.umi_false_to_true_map:  # if there is a error correction map
+
+                if umi in self.umi_false_to_true_map:  # and umi in map
+
+                    # Get corrected UMI
+                    # Will be None if not correctable to single whitelist UMI
+                    corrected_umi = self.umi_false_to_true_map[umi]
+
+                    if corrected_umi:  # if correctable
                         self.read_counts['False UMI barcode. Error-corrected'] += 1
-                        self.umi_whitelist_counts[umi]["error"] += 1
-                    else:
+                        self.umi_whitelist_counts[corrected_umi]["error"] += 1
+
+                    else:  # Not correctable to single whitelist UMI
                         self.read_counts[
                             ("False UMI barcode. Not correctable - "
                              "within threshold to more than one whitelisted UMI")] += 1
 
-                else:
+                else:  # Not correctable to any whitelist UMI
                     self.read_counts[
                         ("False UMI barcode. Not correctable - not within "
                          "threshold to whitelisted UMI")] += 1
 
-                    return None
-            else:
+            else:  # no error correction map so log simply as filtered
                 self.read_counts['Filtered umi barcode'] += 1
-                return None
 
-        else:
+            return corrected_umi
+
+        else:  # umi in whitelist
             self.umi_whitelist_counts[umi]["no_error"] += 1
 
-        return umi
+            return umi
 
     def __init__(self,
                  method="string",
