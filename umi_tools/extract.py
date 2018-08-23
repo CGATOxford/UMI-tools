@@ -225,8 +225,8 @@ def main(argv=None):
 
     if options.umi_whitelist:
         if options.correct_umi_threshold > 1:
-            info("Warning, generating the object to map false to true barcode "
-                 "with a threshold over 1 may require a large amount of memory")
+            U.info("Warning, generating the object to map false to true barcode "
+                   "with a threshold over 1 may require a large amount of memory")
 
     extract_cell = False
     extract_umi = False
