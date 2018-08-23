@@ -490,12 +490,12 @@ def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
         for w1, w2 in itertools.product(whitelist1, whitelist2):
             yield(w1 + w2)
 
-    if whitelist_tsv2:
-        whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
-    else:
-        whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
-
     if deriveErrorCorrection:
+
+        if whitelist_tsv2:
+            whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
+        else:
+            whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
 
         for whitelist_barcode in whitelist_barcodes:
             whitelist.append(whitelist_barcode)
@@ -530,7 +530,30 @@ def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
                     else:
                         false_to_true_map[error_barcode] = whitelist_barcode
 
-    else:
+    elif getErrorCorrection:
+        assert not whitelist_tsv2, ("Can only extract errors from the whitelist "
+                                    "if a single whitelist is given")
+        with U.openFile(whitelist_tsv, "r") as inf:
+
+            for line in inf:
+
+                if line.startswith('#'):
+                    continue
+
+                line = line.strip().split("\t")
+                whitelist_barcode = line[0]
+                whitelist.append(whitelist_barcode)
+
+                if getErrorCorrection:
+                    for error_barcode in line[1].split(","):
+                        false_to_true_map[error_barcode] = whitelist_barcode
+
+    else:  # no error correction
+        if whitelist_tsv2:
+            whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
+        else:
+            whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
+
         whitelist = [x for x in whitelist_barcodes]
 
     return set(whitelist), false_to_true_map
