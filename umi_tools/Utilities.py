@@ -749,11 +749,18 @@ def Start(parser=None,
                          help="gene is defined by this bam tag [default=%default]",
                          default=None)
 
+        group.add_option("--assigned-status-tag", dest="assigned_tag",
+                         type="string",
+                         help="Bam tag describing whether read is assigned to a gene"
+                         "By defualt, this is set as the same tag as --gene-tag",
+                         default=None)
+
         group.add_option("--skip-tags-regex", dest="skip_regex",
                          type="string",
                          help="Used with --gene-tag. "
                          "Ignore reads where the gene-tag matches this regex",
                          default="^(__|Unassigned)")
+
 
         group.add_option("--per-contig", dest="per_contig", action="store_true",
                          default=False,
@@ -1012,6 +1019,9 @@ def validateSamOptions(options):
             raise ValueError("Need to supply the --umi-tag option")
         if options.per_cell and options.cell_tag is None:
             raise ValueError("Need to supply the --cell-tag option")
+
+    if options.assigned_tag is None:
+        options.assigned_tag = options.gene_tag
 
     if options.skip_regex:
         try:
@@ -1409,9 +1419,13 @@ Single-cell RNA-Seq options
       Deduplicate per gene. The gene information is encoded in the bam
       read tag specified
 
+--assigned-status-tag (string)
+      BAM tag which describes whether a read is assigned to a
+      gene. Defaults to the same value as given for --gene-tag
+
 --skip-tags-regex (string)
-      Used in conjunction with the --gene-tag option. Skip any reads
-      where the gene tag matches this regex.
+      Used in conjunction with the --assigned-status-tag option. Skip any reads
+      where the tag matches this regex.
       Default matches anything which starts with "__" or "Unassigned":
       ("^[__|Unassigned]")
 
