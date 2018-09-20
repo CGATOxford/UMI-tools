@@ -1430,8 +1430,15 @@ class get_bundles:
                         self.read_events['Read skipped, no tag'] += 1
                         continue
 
+                    if gene == "":
+                        if self.read_events['Gene skipped - gene string is empty'] == 0:
+                            U.warn("Assigned gene is empty string. First such "
+                                   "read:\n%s" % read.to_string())
+                        self.read_events['Gene skipped - gene string is empty'] += 1
+                        continue
+
                     if re.search(self.options.skip_regex, assigned):
-                        self.read_events['Gene skipped - assigned matches skip_regex'] += 1
+                        self.read_events['Gene skipped - assigned tag matches skip_regex'] += 1
                         continue
 
                 pos = gene
