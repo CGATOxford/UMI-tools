@@ -23,6 +23,7 @@ before_install:
   - pip install cython
   - pip install pandas==0.19
   - pip install scipy
+  - pip install matplotlib==2.2.3  # can remove once py2 support dropped
 install:
   - python setup.py install
 
