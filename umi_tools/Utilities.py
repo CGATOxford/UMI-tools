@@ -1020,6 +1020,12 @@ def validateSamOptions(options):
             raise ValueError("skip-regex '%s' is not a "
                              "valid regex" % options.skip_regex)
 
+    command = " ".join(sys.argv)
+    if "--umi-tag" in command or "--cell-tag" in command:
+        if options.get_umi_method != "tag":
+            raise ValueError("--umi-tag and/or --cell-tag options provided. "
+                             "Need to set --extract-umi-method=tag")
+
 
 def Stop():
     """stop the experiment.
