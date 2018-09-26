@@ -1424,13 +1424,21 @@ class get_bundles:
                 elif self.options.gene_tag:
 
                     try:
+                        assigned = read.get_tag(self.options.assigned_tag)
                         gene = read.get_tag(self.options.gene_tag)
                     except KeyError:
                         self.read_events['Read skipped, no tag'] += 1
                         continue
 
-                    if re.search(self.options.skip_regex, gene):
-                        self.read_events['Gene skipped - matches regex'] += 1
+                    if gene == "":
+                        if self.read_events['Read skipped - gene string is empty'] == 0:
+                            U.warn("Assigned gene is empty string. First such "
+                                   "read:\n%s" % read.to_string())
+                        self.read_events['Read skipped - gene string is empty'] += 1
+                        continue
+
+                    if re.search(self.options.skip_regex, assigned):
+                        self.read_events['Read skipped - assigned tag matches skip_regex'] += 1
                         continue
 
                 pos = gene
@@ -1512,8 +1520,7 @@ def get_gene_count_tab(infile,
     TODO: ADD FOLLOWING OPTION
 
     skip_regex: skip genes matching this regex. Useful to ignore
-                unassigned reads where the 'gene' is a descriptive tag
-                such as "Unassigned"
+                unassigned reads (as per get_bundles class above)
 
     '''
 
