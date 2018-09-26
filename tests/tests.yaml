@@ -344,6 +344,14 @@ dedup_single_tag_py3:
       references: [single_tag_py3.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
 
+dedup_single_tag_missing:
+      skip_python: 2
+      sort: True
+      stdin: chr19_tag_missing.bam
+      outputs: [stdout]
+      references: [single_tag_missing.sam]
+      options: dedup -L test_missing.log --out-sam --random-seed=123456789 --method=directional --umi-tag=RX --extract-umi-method=tag
+
 dedup_single_gene_tag_py3:
       skip_python: 2
       sort: True
