@@ -219,15 +219,15 @@ def main(argv=None):
             try:
                 options.pattern = regex.compile(options.pattern)
             except regex.error:
-                U.error("barcode_regex '%s' is not a "
+                U.error("--bc-pattern '%s' is not a "
                         "valid regex" % options.pattern)
 
         if options.pattern2:
             try:
-                options.pattern2 = regex.compile(options.barcode_regex2)
+                options.pattern2 = regex.compile(options.pattern2)
             except regex.Error:
-                U.error("barcode_regex2 '%s' is not a "
-                        "valid regex" % options.barcode_regex2)
+                U.error("--bc-pattern2 '%s' is not a "
+                        "valid regex" % options.pattern2)
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
