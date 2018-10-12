@@ -1112,7 +1112,7 @@ def metafetcher(bamfile, metacontig2contig, metatag):
     for metacontig in metacontig2contig:
         for contig in metacontig2contig[metacontig]:
             for read in bamfile.fetch(contig):
-                read.tags += [(metatag, metacontig)]
+                read.set_tag(metatag, metacontig)
                 yield read
 
 

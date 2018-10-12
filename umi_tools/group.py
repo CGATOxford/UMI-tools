@@ -256,8 +256,8 @@ def main(argv=None):
                 for read in reads:
                     if outfile:
                         # Add the 'UG' tag to the read
-                        read.tags += [('UG', unique_id)]
-                        read.tags += [(options.umi_group_tag, top_umi)]
+                        read.set_tag('UG', unique_id)
+                        read.set_tag(options.umi_group_tag, top_umi)
                         outfile.write(read)
 
                     if options.tsv:
