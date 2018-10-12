@@ -1233,10 +1233,6 @@ class get_bundles:
                 umi_tag_delim=self.options.umi_tag_delim,
                 cell_tag_split=self.options.cell_tag_split,
                 cell_tag_delim=self.options.cell_tag_delim)
-            #umi_tag_split="-",
-            #    umi_tag_delim=None,
-            #    cell_tag_split="-",
-            #    cell_tag_delim=None)
 
         elif self.options.get_umi_method == "umis":
             self.barcode_getter = partial(
@@ -1409,6 +1405,24 @@ class get_bundles:
                     self.read_events['< MAPQ threshold'] += 1
                     continue
 
+            # get the umi +/- cell barcodes
+            if self.options.ignore_umi:
+                if self.options.per_cell:
+                    umi, cell = self.barcode_getter(read)
+                    umi = ""
+                else:
+                    umi, cell = "", ""
+            else:
+                try:
+                    umi, cell = self.barcode_getter(read)
+                except KeyError:
+                    error_msg = "Read skipped, missing umi and/or cell tag"
+                    if self.read_events[error_msg] == 0:
+                        U.warn("At least one read is missing UMI and/or "
+                               "cell tag(s): %s" % read.to_string())
+                    self.read_events[error_msg] += 1
+                    continue
+
             self.current_chr = read.reference_name
 
             if self.options.per_gene:
@@ -1486,16 +1500,7 @@ class get_bundles:
                 key = (read.is_reverse, self.options.spliced & is_spliced,
                        self.options.paired*read.tlen, r_length)
 
-            # get the umi +/- cell barcode and update dictionaries
-            if self.options.ignore_umi:
-                if self.options.per_cell:
-                    umi, cell = self.barcode_getter(read)
-                    umi = ""
-                else:
-                    umi, cell = "", ""
-            else:
-                umi, cell = self.barcode_getter(read)
-
+            # update dictionaries
             key = (key, cell)
             self.update_dicts(read, pos, key, umi)
 
