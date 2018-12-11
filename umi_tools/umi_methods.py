@@ -31,7 +31,6 @@ from builtins import dict
 
 import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
-import tqdm
 import pybktree
 
 RANGES = {
@@ -391,7 +390,7 @@ def getErrorCorrectMapping_old(cell_barcodes, whitelist, threshold=1):
     return true_to_false
 
 
-def getErrorCorrectMapping_better_Version(cell_barcodes, whitelist, threshold=1):
+def getErrorCorrectMapping_bktree(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
 
@@ -400,32 +399,40 @@ def getErrorCorrectMapping_better_Version(cell_barcodes, whitelist, threshold=1)
 
     true_to_false = collections.defaultdict(set)
 
-    whitelist = set([str(x).encode("utf-8") for x in whitelist]) # convert to bytes for cython compat.
+    # convert to bytes for cython compat.
+    whitelist_bytes = set([str(x).encode("utf-8") for x in whitelist])
 
     U.info('building bktree')
-    tree2 = pybktree.BKTree(edit_distance, whitelist)
+    tree2 = pybktree.BKTree(edit_distance, whitelist_bytes)
     U.info('done building bktree')
 
-    for i, cell_barcode in tqdm.tqdm(enumerate(cell_barcodes)):
-        barcode_in_bytes = cell_barcode.encode('utf-8') # convert to bytes for cython compat.
+    for i, cell_barcode in enumerate(cell_barcodes):
+        # convert to bytes for cython compat.
+        barcode_in_bytes = cell_barcode.encode('utf-8')
 
-        if barcode_in_bytes in whitelist:  #if the barcode is already whitelisted, no need to add
+        if barcode_in_bytes in whitelist_bytes:
+            # if the barcode is already whitelisted, no need to add
             continue
         # get all members of whitelist that are at distance 1
-        candidates = [white_cell for d, white_cell in tree2.find(barcode_in_bytes, threshold) if d>0]
+        candidates = [white_cell for d, white_cell in tree2.find(barcode_in_bytes, threshold) if d > 0]
 
-        if len(candidates) == 0:  # the cell doesnt match to any whitelisted barcode, hence we have to drop it(as it cannot be asscociated with any frequent barcde)
+        if len(candidates) == 0:
+            # the cell doesnt match to any whitelisted barcode,
+            # hence we have to drop it
+            # (as it cannot be asscociated with any frequent barcde)
             continue
         elif len(candidates) == 1:
             white_cell_str = candidates[0].decode("utf-8")
             true_to_false[white_cell_str].add(cell_barcode)
-        else: # more than on whitelisted candidate: we drop it as its not uniquely assignable
-            # print('multiple candidates')
+        else:
+            # more than on whitelisted candidate:
+            # we drop it as its not uniquely assignable
             continue
     return true_to_false
 
 
-getErrorCorrectMapping = getErrorCorrectMapping_better_Version
+getErrorCorrectMapping = getErrorCorrectMapping_bktree
+# getErrorCorrectMapping = getErrorCorrectMapping_old
 
 
 def getCellWhitelist(cell_barcode_counts,
