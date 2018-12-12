@@ -399,22 +399,28 @@ def getErrorCorrectMapping_bktree(cell_barcodes, whitelist, threshold=1):
 
     true_to_false = collections.defaultdict(set)
 
-    # convert to bytes for cython compat.
-    whitelist_bytes = set([str(x).encode("utf-8") for x in whitelist])
+    # the cython distance function has some weird bugs, lets use a native python
+    # distance function, no bytes etc
+    def hamming_distance(first, second):
+        ''' returns the edit distance/hamming distances between
+        its two arguements '''
+
+        dist = sum([not a == b for a, b in zip(first, second)])
+        return dist
+
+    whitelist = set([str(x) for x in whitelist])
 
     U.info('building bktree')
-    tree2 = pybktree.BKTree(edit_distance, whitelist_bytes)
+    tree2 = pybktree.BKTree(hamming_distance, whitelist)
     U.info('done building bktree')
 
     for i, cell_barcode in enumerate(cell_barcodes):
-        # convert to bytes for cython compat.
-        barcode_in_bytes = cell_barcode.encode('utf-8')
 
-        if barcode_in_bytes in whitelist_bytes:
+        if cell_barcode in whitelist:
             # if the barcode is already whitelisted, no need to add
             continue
         # get all members of whitelist that are at distance 1
-        candidates = [white_cell for d, white_cell in tree2.find(barcode_in_bytes, threshold) if d > 0]
+        candidates = [white_cell for d, white_cell in tree2.find(cell_barcode, threshold) if d > 0]
 
         if len(candidates) == 0:
             # the cell doesnt match to any whitelisted barcode,
@@ -422,7 +428,7 @@ def getErrorCorrectMapping_bktree(cell_barcodes, whitelist, threshold=1):
             # (as it cannot be asscociated with any frequent barcde)
             continue
         elif len(candidates) == 1:
-            white_cell_str = candidates[0].decode("utf-8")
+            white_cell_str = candidates[0]
             true_to_false[white_cell_str].add(cell_barcode)
         else:
             # more than on whitelisted candidate:
