@@ -43,7 +43,8 @@ install_requires = [
     "future",
     "regex",
     "scipy",
-    "matplotlib"]
+    "matplotlib",
+    "pybktree"]
 
 # This is a hack. When Pysam is installed from source, the recorded
 # version is 0.2.3, even though a more recent version is actaully
