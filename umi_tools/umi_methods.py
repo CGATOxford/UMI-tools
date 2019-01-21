@@ -358,39 +358,7 @@ def getKneeEstimate(cell_barcode_counts,
     return final_barcodes
 
 
-def getErrorCorrectMapping_old(cell_barcodes, whitelist, threshold=1):
-    ''' Find the mappings between true and false cell barcodes based
-    on an edit distance threshold.
-
-    Any cell barcode within the threshold to more than one whitelist
-    barcode will be excluded'''
-
-    true_to_false = collections.defaultdict(set)
-
-    whitelist = set([str(x).encode("utf-8") for x in whitelist])
-
-    for cell_barcode in cell_barcodes:
-        match = None
-        barcode_in_bytes = str(cell_barcode).encode("utf-8")
-        for white_cell in whitelist:
-
-            if barcode_in_bytes in whitelist:  # don't check if whitelisted
-                continue
-
-            if edit_distance(barcode_in_bytes, white_cell) <= threshold:
-                if match is not None:  # already matched one barcode
-                    match = None  # set match back to None
-                    break  # break and don't add to maps
-                else:
-                    match = white_cell.decode("utf-8")
-
-        if match is not None:
-            true_to_false[match].add(cell_barcode)
-
-    return true_to_false
-
-
-def getErrorCorrectMapping_bktree(cell_barcodes, whitelist, threshold=1):
+def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
 
@@ -435,10 +403,6 @@ def getErrorCorrectMapping_bktree(cell_barcodes, whitelist, threshold=1):
             # we drop it as its not uniquely assignable
             continue
     return true_to_false
-
-
-getErrorCorrectMapping = getErrorCorrectMapping_bktree
-# getErrorCorrectMapping = getErrorCorrectMapping_old
 
 
 def getCellWhitelist(cell_barcode_counts,
