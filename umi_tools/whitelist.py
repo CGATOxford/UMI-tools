@@ -371,14 +371,21 @@ def main(argv=None):
         options.plot_prefix)
 
     U.info("Writing out whitelist")
+    total_correct_barcodes = 0
+    total_corrected_barcodes = 0
     for barcode in sorted(list(cell_whitelist)):
+        
+        total_correct_barcodes += cell_barcode_counts[barcode]
 
         if true_to_false_map:
             corrected_barcodes = ",".join(
                 sorted(true_to_false_map[barcode]))
-            corrected_barcode_counts = ",".join(
-                map(str, [cell_barcode_counts[x] for x
-                          in sorted(true_to_false_map[barcode])]))
+
+            correct_barcode_counts = [cell_barcode_counts[x] for x
+                                      in sorted(true_to_false_map[barcode])]
+            total_corrected_barcodes += sum(correct_barcode_counts)
+
+            corrected_barcode_counts = ",".join(map(str, correct_barcode_counts))
         else:
             corrected_barcodes, corrected_barcode_counts = "", ""
 
@@ -389,7 +396,10 @@ def main(argv=None):
     U.info("Parsed %i reads" % n_reads)
     U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
     U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
-
+    U.info("Found %i total reads matching the selected cell barcodes" % 
+        total_correct_barcodes)
+    U.info("Found %i total reads which can be error corrected to the selected "
+           "cell barcodes" % total_corrected_barcodes)
     U.Stop()
 
 if __name__ == "__main__":
