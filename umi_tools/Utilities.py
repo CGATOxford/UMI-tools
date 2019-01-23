@@ -1240,9 +1240,11 @@ the --extract-method option
        should be used where the cell barcodes are variable in
        length. Alternatively, the regex option can also be used to
        filter out reads which do not contain an expected adapter
-       sequence.
+       sequence. UMI-tools uses the regex module rather than the more
+       standard re module since the former also enables fuzzy matching
 
-       The expected groups in the regex are:
+       The regex must contain groups to define how the barcodes are
+       encoded in the read. The expected groups in the regex are:
 
        umi_n = UMI positions, where n can be any value (required)
        cell_n = cell barcode positions, where n can be any value (optional)
@@ -1250,10 +1252,11 @@ the --extract-method option
 
        UMI positions and cell barcode positions will be extracted and
        added to the read name. The corresponding sequence qualities
-       will be removed from the read. Discard bases and the
-       corresponding quality scores will be removed from the read. All
-       bases matched by other groups or components of the regex will be
-       reattached to the read sequence
+       will be removed from the read. 
+
+       Discard bases and the corresponding quality scores will be
+       removed from the read. All bases matched by other groups or
+       components of the regex will be reattached to the read sequence
 
        For example, the following regex can be used to extract reads
        from the Klein et al inDrop data:
