@@ -164,7 +164,8 @@ def main(argv=None):
                       dest="subset_reads", type="int",
                       help=("Use the first N reads to automatically identify "
                             "the true cell barcodes. If N is greater than the "
-                            "number of reads, all reads will be used"))
+                            "number of reads, all reads will be used. "
+                            "Default is 100,000,000"))
     parser.add_option("--error-correct-threshold",
                       dest="error_correct_threshold",
                       type="int",
