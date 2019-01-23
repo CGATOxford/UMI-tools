@@ -37,9 +37,17 @@ In addition, if you have some prior expectation on the maximum number
 of cells which may have been sequenced, you can provide this using the
 option --expect-cells (see below).
 
+If you don't mind if whitelist cannot identify a suitable threshold as
+you intend to inspect the plots and identify the threshold manually,
+provide the following options: --allow-threshold-error
+--plot-prefix=[PLOT_PREFIX]
 
 whitelist-specific options
 --------------------------
+
+--plot-prefix
+        Use this option to indicate the prefix for the plots and table
+        describing the set of thresholds considered for defining cell barcodes
 
 --set-cell-number
         Use this option to explicity set the number of cell barcodes
@@ -54,6 +62,10 @@ whitelist-specific options
         method will now select the first threshold (order ascendingly)
         which results in the number of cell barcodes accepted being <=
         EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
+
+--allow-threshold-error
+        This is useful if you what the command to exit with just a
+        warning if a suitable threshold cannot be selected
 
 Usage:
 ------
@@ -167,10 +179,15 @@ def main(argv=None):
                       type="int",
                       help=("Prior expectation on the upper limit on the "
                             "number of cells sequenced"))
+    parser.add_option("--allow-threshold-error",
+                      dest="allow_threshold_error", action="store_true",
+                      help=("Don't select a threshold. Will still "
+                            "output the plots if requested (--plot-prefix)"))
     parser.add_option("--set-cell-number",
                       dest="cell_number",
                       type="int",
                       help=("Specify the number of cell barcodes to accept"))
+
     parser.set_defaults(method="reads",
                         extract_method="string",
                         filter_cell_barcodes=False,
@@ -183,6 +200,7 @@ def main(argv=None):
                         plot_prefix=None,
                         subset_reads=100000000,
                         expect_cells=False,
+                        allow_threshold_error=False,
                         cell_number=False)
 
     # add common options (-h/--help, ...) and parse command line
@@ -370,36 +388,51 @@ def main(argv=None):
         options.error_correct_threshold,
         options.plot_prefix)
 
-    U.info("Writing out whitelist")
-    total_correct_barcodes = 0
-    total_corrected_barcodes = 0
-    for barcode in sorted(list(cell_whitelist)):
+    if cell_whitelist:
+        U.info("Writing out whitelist")
+        total_correct_barcodes = 0
+        total_corrected_barcodes = 0
+        for barcode in sorted(list(cell_whitelist)):
 
-        total_correct_barcodes += cell_barcode_counts[barcode]
+            total_correct_barcodes += cell_barcode_counts[barcode]
 
-        if true_to_false_map:
-            corrected_barcodes = ",".join(
-                sorted(true_to_false_map[barcode]))
+            if true_to_false_map:
+                corrected_barcodes = ",".join(
+                    sorted(true_to_false_map[barcode]))
 
-            correct_barcode_counts = [cell_barcode_counts[x] for x
-                                      in sorted(true_to_false_map[barcode])]
-            total_corrected_barcodes += sum(correct_barcode_counts)
+                correct_barcode_counts = [cell_barcode_counts[x] for x in
+                                          sorted(true_to_false_map[barcode])]
+                total_corrected_barcodes += sum(correct_barcode_counts)
 
-            corrected_barcode_counts = ",".join(map(str, correct_barcode_counts))
+                corrected_barcode_counts = ",".join(
+                    map(str, correct_barcode_counts))
+            else:
+                corrected_barcodes, corrected_barcode_counts = "", ""
+
+            options.stdout.write("%s\t%s\t%s\t%s\n" % (
+                barcode, corrected_barcodes, cell_barcode_counts[barcode],
+                corrected_barcode_counts))
+    else:
+        msg = ("No local minima was accepted. Recommend checking the plot "
+               "output and counts per local minima (requires `--plot-prefix`"
+               "option) and then re-running with manually selected threshold "
+               "(`--set-cell-number` option)")
+
+        if options.allow_threshold_error:
+            U.info(msg)
         else:
-            corrected_barcodes, corrected_barcode_counts = "", ""
-
-        options.stdout.write("%s\t%s\t%s\t%s\n" % (
-            barcode, corrected_barcodes, cell_barcode_counts[barcode],
-            corrected_barcode_counts))
+            U.error(msg)
 
     U.info("Parsed %i reads" % n_reads)
     U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
     U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
-    U.info("Found %i total reads matching the selected cell barcodes" %
-           total_correct_barcodes)
-    U.info("Found %i total reads which can be error corrected to the selected "
-           "cell barcodes" % total_corrected_barcodes)
+    if cell_whitelist:
+        U.info("Top %s cell barcodes passed the selected threshold" %
+               len(cell_whitelist))
+        U.info("Found %i total reads matching the selected cell barcodes" %
+               total_correct_barcodes)
+        U.info("Found %i total reads which can be error corrected to the "
+               "selected cell barcodes" % total_corrected_barcodes)
     U.Stop()
 
 if __name__ == "__main__":

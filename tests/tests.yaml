@@ -1,4 +1,4 @@
-teextract_single_string:
+extract_single_string:
       stdin: slim.fastq.gz
       outputs: [stdout]
       references: [processed_single.fastq]
@@ -76,6 +76,11 @@ whitelist_indrop_expect_cells:
       outputs: [stdout]
       references: [indrop_whitelist_user.tsv]
       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --expect-cells=6000
+
+# TS: Note the 2 whitelist tests above all generate the same
+# output. Ideally, would have input which generates different output
+# for these tests. Also the input is so small that the plot output for
+# this data is not very convincing. Consider expanding input?
 
 count_single_gene_tag:
       stdin: chr19_gene_tags.bam

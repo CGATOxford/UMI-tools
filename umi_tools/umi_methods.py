@@ -401,20 +401,14 @@ def getCellWhitelist(cell_barcode_counts,
 
     U.info("Finished - whitelist determination")
 
-    if cell_whitelist is None:
-        U.error("No local minima was accepted. Recommend checking the plot "
-                "output and counts per local minima "
-                "(requires `--plot-prefix` option) and then re-running with "
-                "manually selected threshold (`--set-cell-number` option)")
+    true_to_false_map = None
 
-    if error_correct_threshold > 0:
+    if cell_whitelist and error_correct_threshold > 0:
         U.info("Starting - finding putative error cell barcodes")
         true_to_false_map = getErrorCorrectMapping(
             cell_barcode_counts.keys(), cell_whitelist,
             error_correct_threshold)
         U.info("Finished - finding putative error cell barcodes")
-    else:
-        true_to_false_map = None
 
     return cell_whitelist, true_to_false_map
 
