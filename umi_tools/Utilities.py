@@ -905,6 +905,11 @@ def Start(parser=None,
                          help="file where output is to go "
                          "[default = stdout].",
                          metavar="FILE")
+        group.add_option("--temp-dir", dest="tmpdir", type="string",
+                         help="Directory for temporary files. If not set,"
+                         " the bash environmental variable TMPDIR is used"
+                         "[default = None].",
+                         metavar="FILE")
         group.add_option("--log2stderr", dest="log2stderr",
                          action="store_true", help="send logging information"
                          " to stderr [default = False].")
@@ -916,6 +921,7 @@ def Start(parser=None,
         parser.set_defaults(stdout=sys.stdout)
         parser.set_defaults(stdlog=sys.stdout)
         parser.set_defaults(stdin=sys.stdin)
+        parser.set_defaults(tmpdir=None)
         parser.set_defaults(log2stderr=False)
         parser.set_defaults(compresslevel=6)
 
@@ -1477,7 +1483,7 @@ Group/Dedup options
        use of a temporary unsorted file since reads are considered in
        the order of their start position which may not be the same
        as their alignment coordinate due to soft-clipping and reverse
-       alignments. The temp file will be saved in $TMPDIR and deleted
+       alignments. The temp file will be saved (in --temp-dir) and deleted
        when it has been sorted to the outfile. Use this option to turn
        off sorting.
 

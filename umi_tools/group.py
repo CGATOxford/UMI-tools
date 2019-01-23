@@ -144,7 +144,7 @@ def main(argv=None):
         if options.no_sort_output:
             out_name = options.stdout.name
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = options.stdout.name
         options.stdout.close()
         assert options.output_bam, (
@@ -153,7 +153,7 @@ def main(argv=None):
         if options.no_sort_output:
             out_name = "-"
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = "-"
 
     if not options.no_sort_output:  # need to determine the output format for sort

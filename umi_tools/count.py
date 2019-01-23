@@ -82,7 +82,7 @@ def main(argv=None):
     infile = pysam.Samfile(in_name, in_mode)
 
     # write out to tempfile and then sort to stdout
-    tmpfilename = U.getTempFilename()
+    tmpfilename = U.getTempFilename(dir=options.tmpdir)
     tmpfile = U.openFile(tmpfilename, mode="w")
 
     nInput, nOutput, input_reads = 0, 0, 0
