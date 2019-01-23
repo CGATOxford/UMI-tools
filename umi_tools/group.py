@@ -144,7 +144,7 @@ def main(argv=None):
         if options.no_sort_output:
             out_name = options.stdout.name
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = options.stdout.name
         options.stdout.close()
         assert options.output_bam, (
@@ -153,7 +153,7 @@ def main(argv=None):
         if options.no_sort_output:
             out_name = "-"
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = "-"
 
     if not options.no_sort_output:  # need to determine the output format for sort
@@ -296,6 +296,19 @@ def main(argv=None):
                                  bundle_iterator.read_events.most_common()]))
     U.info("Number of reads out: %i, Number of groups: %i" %
            (nOutput, unique_id))
+
+    U.info("Total number of positions deduplicated: %i" %
+           processor.UMIClusterer.positions)
+    if processor.UMIClusterer.positions > 0:
+        U.info("Mean number of unique UMIs per position: %.2f" %
+               (float(processor.UMIClusterer.total_umis_per_position) /
+                processor.UMIClusterer.positions))
+        U.info("Max. number of unique UMIs per position: %i" %
+               processor.UMIClusterer.max_umis_per_position)
+    else:
+        U.warn("The BAM did not contain any valid "
+               "reads/read pairs for deduplication")
+
     U.Stop()
 
 if __name__ == "__main__":

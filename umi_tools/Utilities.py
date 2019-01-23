@@ -905,6 +905,11 @@ def Start(parser=None,
                          help="file where output is to go "
                          "[default = stdout].",
                          metavar="FILE")
+        group.add_option("--temp-dir", dest="tmpdir", type="string",
+                         help="Directory for temporary files. If not set,"
+                         " the bash environmental variable TMPDIR is used"
+                         "[default = None].",
+                         metavar="FILE")
         group.add_option("--log2stderr", dest="log2stderr",
                          action="store_true", help="send logging information"
                          " to stderr [default = False].")
@@ -916,6 +921,7 @@ def Start(parser=None,
         parser.set_defaults(stdout=sys.stdout)
         parser.set_defaults(stdlog=sys.stdout)
         parser.set_defaults(stdin=sys.stdin)
+        parser.set_defaults(tmpdir=None)
         parser.set_defaults(log2stderr=False)
         parser.set_defaults(compresslevel=6)
 
@@ -1234,9 +1240,11 @@ the --extract-method option
        should be used where the cell barcodes are variable in
        length. Alternatively, the regex option can also be used to
        filter out reads which do not contain an expected adapter
-       sequence.
+       sequence. UMI-tools uses the regex module rather than the more
+       standard re module since the former also enables fuzzy matching
 
-       The expected groups in the regex are:
+       The regex must contain groups to define how the barcodes are
+       encoded in the read. The expected groups in the regex are:
 
        umi_n = UMI positions, where n can be any value (required)
        cell_n = cell barcode positions, where n can be any value (optional)
@@ -1244,10 +1252,11 @@ the --extract-method option
 
        UMI positions and cell barcode positions will be extracted and
        added to the read name. The corresponding sequence qualities
-       will be removed from the read. Discard bases and the
-       corresponding quality scores will be removed from the read. All
-       bases matched by other groups or components of the regex will be
-       reattached to the read sequence
+       will be removed from the read.
+
+       Discard bases and the corresponding quality scores will be
+       removed from the read. All bases matched by other groups or
+       components of the regex will be reattached to the read sequence
 
        For example, the following regex can be used to extract reads
        from the Klein et al inDrop data:
@@ -1477,7 +1486,7 @@ Group/Dedup options
        use of a temporary unsorted file since reads are considered in
        the order of their start position which may not be the same
        as their alignment coordinate due to soft-clipping and reverse
-       alignments. The temp file will be saved in $TMPDIR and deleted
+       alignments. The temp file will be saved (in --temp-dir) and deleted
        when it has been sorted to the outfile. Use this option to turn
        off sorting.
 

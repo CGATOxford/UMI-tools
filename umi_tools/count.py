@@ -10,8 +10,31 @@ count.py - Count reads per gene from BAM using UMIs
 Purpose
 -------
 
-The purpose of this command is to count the number of reads per gene based
-on the mapping co-ordinate and the UMI attached to the read.
+The purpose of this command is to count the number of reads per gene
+based on the mapping co-ordinate and the UMI attached to the
+read. This tool is only designed to work with library preparation
+methods where the fragmentation occurs after amplification, as per
+most single cell RNA-Seq methods (e.g 10x, inDrop, Drop-seq, SCRB-seq
+and CEL-seq2). Since the precise mapping co-ordinate is not longer
+informative for such library preparations, it is simplified to the
+gene. This is a reasonable approach providing the number of available
+UMIs is sufficiently high and the sequencing depth is sufficiently low
+that the probability of two reads from the same gene having the same
+UMIs is acceptably low.
+
+If you want to count reads per gene for library preparations which
+fragment prior to amplification (e.g bulk RNA-Seq), please use
+umi_tools dedup to remove the duplicate reads as this will use the
+full information from the mapping co-ordinate. Then use a read
+counting tool such as FeatureCounts or HTSeq to count the reads per
+gene.
+
+In the rare case of bulk RNA-Seq using a library preparation method
+with fragmentation after amplification, one can still use count.py but
+note that it has not been tested on bulk RNA-Seq.
+
+This tool deviates from group and dedup in that the --per-gene option
+is hardcoded on.
 
 '''
 
@@ -82,7 +105,7 @@ def main(argv=None):
     infile = pysam.Samfile(in_name, in_mode)
 
     # write out to tempfile and then sort to stdout
-    tmpfilename = U.getTempFilename()
+    tmpfilename = U.getTempFilename(dir=options.tmpdir)
     tmpfile = U.openFile(tmpfilename, mode="w")
 
     nInput, nOutput, input_reads = 0, 0, 0
