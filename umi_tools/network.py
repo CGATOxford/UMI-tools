@@ -352,7 +352,7 @@ class UMIClusterer:
             self.get_groups = self._group_unique
 
     def __call__(self, umis, counts, threshold):
-        '''Counts is a directionary that maps UMIs to their counts'''
+        '''Counts is a dictionary that maps UMIs to their counts'''
 
         umis = list(umis)
 
