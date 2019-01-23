@@ -142,8 +142,8 @@ By default UMI-tools outputs everything, final output, logging info and progress
 
 This applies to all the UMI-Tools commands. 
 
-### Using UMI counts rather than read counts
-Many published protocols rank CBs by the number of reads the CBs appear in. However you could also use the number of unique UMIs a CB is associated with. Note that this is still and approximation to the number of transcripts captured because the same UMI could be associated with two different transcripts and be counted as independent. Activate this with `--method=umis`.
+### Using UMI counts rather than read counts in umi_tools whitelist
+Many published protocols rank CBs by the number of reads the CBs appear in. However you could also use the number of unique UMIs a CB is associated with. Note that this is still an approximation to the number of transcripts captured because the same UMI could be associated with two different transcripts and be counted as independent. Activate this with `--method=umis`.
 
 ### Contents of `whitelist.txt`
 

@@ -1252,7 +1252,7 @@ the --extract-method option
 
        UMI positions and cell barcode positions will be extracted and
        added to the read name. The corresponding sequence qualities
-       will be removed from the read. 
+       will be removed from the read.
 
        Discard bases and the corresponding quality scores will be
        removed from the read. All bases matched by other groups or

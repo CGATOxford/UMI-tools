@@ -43,7 +43,7 @@ deduplication schemes are enabled - The recommended method is
 * count:
    **Groups and deduplicates PCR duplicates and counts the unique molecules per gene**
       Use this when you want to obtain a matrix with unique molecules
-      per gene. Can also perform per-cell counting for scRNA-Seq.
+      per gene, per cell, for scRNA-Seq.
 
 * count_tab:
    **As per count except input is a flatfile**
