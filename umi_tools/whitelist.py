@@ -94,10 +94,9 @@ whitelist-specific options
 
 --ed-above-threshold
         Detect CBs above the threshold which may be sequence errors
-        from another CB
 
 --ed-resolution=[discard/correct]
-        Either discard or correct putative errors in the CBs above the
+        Either discard or correct putative errors in CBs above the
         threshold
 
 Usage:
