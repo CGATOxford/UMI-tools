@@ -896,7 +896,7 @@ def Start(parser=None,
 
     group.add_option("-?", dest="short_help", action="callback",
                      callback=callbackShortHelp,
-                     help="output short help (command line options only.)x")
+                     help="output short help (command line options only).")
 
     group.add_option("--random-seed", dest='random_seed', type="int",
                      help="random seed to initialize number generator "
