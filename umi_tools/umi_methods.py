@@ -818,12 +818,14 @@ class ExtractFilterAndUpdate:
                         [x - RANGES[self.quality_encoding][0] for
                          x in map(ord, umi_quals2)])
 
+                    # Note that UMI and UMI quals are defined by best
+                    # match but UMI is removed from both reads
                     if read1_min_quals >= read2_min_quals:
                         self.read_counts['regex matches both. read1 used'] += 1
-                        return(cell, umi, umi_quals, new_seq, new_quals, "", "")
+                        return(cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2)
                     else:
                         self.read_counts['regex matches both. read2 used'] += 1
-                        return(cell2, umi2, umi_quals2, "", "", new_seq2, new_quals2)
+                        return(cell2, umi2, umi_quals2, new_seq, new_quals, new_seq2, new_quals2)
 
                 else:
                     raise ValueError("unexpected value for either_read_resolve")
@@ -1054,7 +1056,7 @@ class ExtractFilterAndUpdate:
         self.read_counts['Reads output'] += 1
 
         # if UMI could be on either read, use umi_values to identify
-        # which read it was on
+        # which read(s) it was on
         if self.either_read:
             new_identifier = addBarcodesToIdentifier(
                 read1, umi, cell)
@@ -1070,7 +1072,7 @@ class ExtractFilterAndUpdate:
                 read1.quals = new_quals
 
             # UMI was on read 2
-            elif new_seq == "" and new_quals == "":
+            if new_seq == "" and new_quals == "":
                 read2.seq = new_seq2
                 read2.quals = new_quals2
 
