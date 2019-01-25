@@ -49,6 +49,17 @@ in the whitelist input, such as the counts columns from the output of
 umi_tools whitelist, will be ignored.
 
 
+Experimental options
+--------------------
+If you have a library preparation method where the UMI may be in
+either read, you can use --either-read --extract-method
+--bc-pattern=[PATTERN1] --bc-pattern2=[PATTERN2] to search for the UMI
+in either. See the section 'regex' in umi_tools extract --help for
+further details about using a regex pattern. Where both patterns
+match, the default behaviour is to discard both reads. If you want to
+select the read with the UMI with highest sequence quality, provide
+--either-read-resolve=quality.
+
 Usage:
 ------
 
@@ -158,6 +169,22 @@ def main(argv=None):
 
     parser.add_option_group(group)
 
+    group = U.OptionGroup(parser, "[EXPERIMENTAl] barcode extraction options")
+
+    group.add_option("--either-read", dest="either_read", action="store_true",
+                     help="UMI may be on either read (see "
+                     "--either-read-resolve) for options to resolve cases where"
+                     "UMI is on both reads")
+    group.add_option("--either-read-resolve",
+                     dest="either_read_resolve", type="choice",
+                     choices=["discard", "quality"],
+                     help=("How to resolve instances where both reads "
+                           "contain a UMI but using --either-read."
+                           "Choose from 'discard' or 'quality'"
+                           "(use highest quality). default=dicard"))
+
+    parser.add_option_group(group)
+
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
                         whitelist=None,
@@ -170,7 +197,9 @@ def main(argv=None):
                         read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,
-                        reconcile=False)
+                        reconcile=False,
+                        either_read=False,
+                        either_read_resolve="discard")
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -190,77 +219,19 @@ def main(argv=None):
                     "-filter-threshold) or mask low quality bases "
                     "with (--quality-filter-mask)")
 
-    if not options.pattern and not options.pattern2:
-        if not options.read2_in:
-            U.error("Must supply --bc-pattern for single-end")
-        else:
-            U.error("Must supply --bc-pattern and/or --bc-pattern "
-                    "if paired-end ")
+    extract_cell, extract_umi = U.validateExtractOptions(options)
 
-    if options.pattern2:
-        if not options.read2_in:
-            U.error("must specify a paired fastq ``--read2-in``")
-
-        if not options.pattern2:
-            options.pattern2 = options.pattern
-
-    extract_cell = False
-    extract_umi = False
-
-    # If the pattern is a regex we can compile the regex(es) prior to
-    # ExtractFilterAndUpdate instantiation
-    if options.extract_method == "regex":
-        if options.pattern:
-            try:
-                options.pattern = regex.compile(options.pattern)
-            except regex.error:
-                U.error("barcode_regex '%s' is not a "
-                        "valid regex" % options.pattern)
-
-        if options.pattern2:
-            try:
-                options.pattern2 = regex.compile(options.pattern2)
-            except regex.Error:
-                U.error("barcode_regex2 '%s' is not a "
-                        "valid regex" % options.pattern2)
-
-    # check whether the regex contains a umi group(s) and cell groups(s)
-    if options.extract_method == "regex":
-        if options.pattern:
-            for group in options.pattern.groupindex:
-                if group.startswith("cell_"):
-                    extract_cell = True
-                elif group.startswith("umi_"):
-                    extract_umi = True
-        if options.pattern2:
-            for group in options.pattern2.groupindex:
-                if group.startswith("cell_"):
-                    extract_cell = True
-                elif group.startswith("umi_"):
-                    extract_umi = True
-
-    # check whether the pattern string contains umi/cell bases
-    elif options.extract_method == "string":
-        if options.pattern:
-            if "C" in options.pattern:
-                extract_cell = True
-            if "N" in options.pattern:
-                extract_umi = True
-        if options.pattern2:
-            if "C" in options.pattern2:
-                extract_cell = True
-            if "N" in options.pattern2:
-                extract_umi = True
-
-    if not extract_umi:
-        if options.extract_method == "string":
-            U.error("barcode pattern(s) do not include any umi bases "
-                    "(marked with 'Ns') %s, %s" % (
-                        options.pattern, options.pattern2))
-        elif options.extract_method == "regex":
-            U.error("barcode regex(es) do not include any umi groups "
-                    "(starting with 'umi_') %s, %s" (
-                        options.pattern, options.pattern2))
+    if options.either_read:
+        if extract_cell:
+            U.error("Option to extract from either read (--either-read) "
+                    "is not currently compatible with cell barcode extraction")
+        if not options.extract_method == "regex":
+            U.error("Option to extract from either read (--either-read)"
+                    "requires --extract-method=regex")
+        if not options.pattern or not options.pattern2:
+            U.error("Option to extract from either read (--either-read)"
+                    "requires --bc-pattern=[PATTERN1] and"
+                    "--bc-pattern2=[PATTERN2]")
 
     if options.filter_cell_barcodes:
 
