@@ -31,15 +31,15 @@ analysis depending on the needs of the user. A number of different UMI
 deduplication schemes are enabled - The recommended method is
 *directional*.
 
-* group: 
-   **Groups PCR duplicates using the same methods available through `dedup`.**
-      This is useful when you want to manually interrogate the PCR duplicates
-
 * dedup:
    **Groups PCR duplicates and deduplicates reads to yield one read per group**
       Use this when you want to remove the PCR duplicates prior to any
       downstream analysis
-    
+
+* group: 
+   **Groups PCR duplicates using the same methods available through `dedup`.**
+      This is useful when you want to manually interrogate the PCR duplicates
+   
 * count:
    **Groups and deduplicates PCR duplicates and counts the unique molecules per gene**
       Use this when you want to obtain a matrix with unique molecules
@@ -54,6 +54,8 @@ the most common usage pattern.
 If you want to use UMI-tools in single-cell RNA-Seq data processing,
 see `Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_
 
+**Important update**: We now recommend the use of `alevin` for droplet-based
+scRNA-Seq (e.g 10X, inDrop etc). `alevin` is an accurate, fast and convenient end-to-end tool to go from fastq -> count matrix and  extends the UMI error correction in `UMI-tools` within a framework that also enables quantification of droplet scRNA-Seq without discarding multi-mapped reads.  See `alevin documentation <https://salmon.readthedocs.io/en/latest/alevin.html>`_ and `alevin pre-print <https://www.biorxiv.org/content/10.1101/335000v2>`_ for more information
 
 The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
@@ -115,3 +117,4 @@ Dependencies
 ------------
 umi_tools is dependent on `numpy`, `pandas`, `scipy`, `cython`, `pysam`,
 `future`, `regex` and `matplotlib`
+
