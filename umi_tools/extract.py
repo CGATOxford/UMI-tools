@@ -291,7 +291,9 @@ def main(argv=None):
         options.quality_filter_threshold,
         options.quality_filter_mask,
         options.filter_cell_barcode,
-        options.retain_umi)
+        options.retain_umi,
+        options.either_read,
+        options.either_read_resolve)
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = umi_methods.getUserDefinedBarcodes(

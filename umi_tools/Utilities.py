@@ -674,7 +674,7 @@ def Start(parser=None,
 
     if add_extract_options:
 
-        group = OptionGroup(parser, "barcord extraction options")
+        group = OptionGroup(parser, "barcode extraction options")
 
         group.add_option("--extract-method",
                          dest="extract_method", type="choice",
@@ -689,6 +689,26 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        parser.add_option_group(group)
+
+    if add_extract_options:
+
+        group = OptionGroup(parser, "[EXPERIMENTAl] barcode extraction options")
+
+        group.add_option("--either-read", dest="either_read", action="store_true",
+                         default=False,
+                         help="UMI may be on either read (see "
+                         "--either-read-resolve) for options to resolve cases where"
+                         "UMI is on both reads")
+        group.add_option("--either-read-resolve",
+                         dest="either_read_resolve", type="choice",
+                         choices=["discard", "quality"],
+                         help=("How to resolve instances where both reads "
+                               "contain a UMI but using --either-read."
+                               "Choose from 'discard' or 'quality'"
+                               "(use highest quality). default=dicard"),
+                         default="discard")
+
         parser.add_option_group(group)
 
     if add_umi_grouping_options:
@@ -1026,7 +1046,7 @@ def Start(parser=None,
 
 
 def validateSamOptions(options):
-    ''' Check the validity of the option combinations '''
+    ''' Check the validity of the option combinations for sam/bam input'''
 
     if options.per_gene:
         if options.gene_tag and options.per_contig:
