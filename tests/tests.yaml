@@ -53,12 +53,11 @@ extract_scrb_seq_prefiltered:
       references: [scrb_extract.fastq]
       options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN --read2-stdout  -L test.log  --reconcile-pairs
 
-
 extract_either_read:
-      stdin: indrop.fastq.1_either_read.gz
-      outputs: [stdout, either_read.2.fastq]
-      references: [either_read.1.fastq, either_read.2.fastq]
-      options: extract --extract-method=regex  --read2-in=<DIR>/indrop.fastq.2_either_read.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --bc-pattern2="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --either-read --read2-out=either_read.2.fastq
+      stdin: either_read.fastq.1.gz
+      outputs: [stdout, either_read_out.2.fastq]
+      references: [either_read_out.1.fastq, either_read_out.2.fastq]
+      options: extract --extract-method=regex --read2-in=<DIR>/either_read.fastq.2.gz --bc-pattern="(?P<discard_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<discard_3>.{8})(?P<umi_1>.{6})T{3}.*" --bc-pattern2="(?P<discard_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<discard_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --either-read --read2-out=either_read_out.2.fastq
 
 # TS: add tests to cover options for what to do when both reads match
 # the regexes (e.g discard + prioritise based on quality)
