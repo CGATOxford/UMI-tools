@@ -121,7 +121,13 @@ def main(argv=None):
 
     group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
                      default=False,
-                     help=("Retain all unmapped reads in output[default=%default]"))
+                     help=("Retain all unmapped reads in output. "
+                           "These will not be grouped[default=%default]"))
+
+    group.add_option("--output-chimeric", dest="output_chimeric", action="store_true",
+                     default=False,
+                     help=("Retain all chimeric reads in output."
+                           "These will not be grouped [default=%default]"))
 
     parser.add_option("--umi-group-tag", dest="umi_group_tag",
                       type="string", help="tag for the outputted umi group",
@@ -212,7 +218,7 @@ def main(argv=None):
 
     for bundle, key, status in bundle_iterator(inreads):
 
-        # write out read2s and unmapped (if these options are set)
+        # write out read2s and unmapped/chimeric (if these options are set)
         if status == 'single_read':
             # bundle is just a single read here
             nInput += 1
@@ -298,13 +304,13 @@ def main(argv=None):
            (nOutput, unique_id))
 
     U.info("Total number of positions deduplicated: %i" %
-           processor.UMIClusterer.positions)
-    if processor.UMIClusterer.positions > 0:
+           processor.positions)
+    if processor.positions > 0:
         U.info("Mean number of unique UMIs per position: %.2f" %
-               (float(processor.UMIClusterer.total_umis_per_position) /
-                processor.UMIClusterer.positions))
+               (float(processor.total_umis_per_position) /
+                processor.positions))
         U.info("Max. number of unique UMIs per position: %i" %
-               processor.UMIClusterer.max_umis_per_position)
+               processor.max_umis_per_position)
     else:
         U.warn("The BAM did not contain any valid "
                "reads/read pairs for deduplication")

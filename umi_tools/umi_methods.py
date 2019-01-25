@@ -1365,6 +1365,9 @@ class get_bundles:
             else:
                 self.read_events['Input Reads'] += 1
 
+            if self.options.paired:
+                self.read_events['Paired Reads'] += 1
+
             if read.is_unmapped:
                 if self.options.paired:
                     if read.mate_is_unmapped:
@@ -1386,8 +1389,14 @@ class get_bundles:
                     yield read, None, "single_read"
                 continue
 
-            if self.options.paired:
-                self.read_events['Paired Reads'] += 1
+            if self.options.paired and (
+                    read.reference_name != read.next_reference_name):
+                self.read_events['Chimeric read pair'] += 1
+
+                if self.options.output_chimeric:
+                    yield read, None, "single_read"
+                else:
+                    continue
 
             if self.options.subset:
                 if random.random() >= self.options.subset:
