@@ -528,11 +528,25 @@ def get_umi_read_string(read_id, sep="_"):
     specified separator '''
 
     try:
-        return read_id.split(sep)[-1].encode('utf-8')
+        return (None, read_id.split(sep)[-1].encode('utf-8'))
     except IndexError:
         raise ValueError(
             "Could not extract UMI from the read ID, please"
             "check UMI is encoded in the read name")
+
+
+def get_cell_umi_read_string(read_id, sep="_"):
+    ''' extract the umi and cell barcode from the read id (input as a
+    string) using the specified separator '''
+
+    try:
+        return (read_id.split(sep)[-1].encode('utf-8'),
+                read_id.split(sep)[-2].encode('utf-8'))
+    except IndexError:
+        raise ValueError(
+            "Could not extract UMI or CB from the read ID, please"
+            "check UMI and CB are encoded in the read name:"
+            "%s" % read_id)
 
 
 def get_average_umi_distance(umis):
@@ -1509,11 +1523,12 @@ class get_bundles:
 
 
 def get_gene_count_tab(infile,
-                       umi_getter=None):
+                       bc_getter=None):
 
     ''' Yields the counts per umi for each gene
 
-    umi_getter: method to get umi from read, e.g get_umi_read_id or get_umi_tag
+    bc_getter: method to get umi (plus optionally, cell barcode) from
+    read, e.g get_umi_read_id or get_umi_tag
 
 
     TODO: ADD FOLLOWING OPTION
@@ -1534,19 +1549,17 @@ def get_gene_count_tab(infile,
 
         read_id, assigned_gene = values
 
-        # only output when the contig changes to avoid problems with
-        # overlapping genes
         if assigned_gene != gene:
             if gene:
                 yield gene, counts
 
             gene = assigned_gene
-            counts = collections.Counter()
+            counts = collections.defaultdict(collections.Counter)
 
-        umi = umi_getter(read_id)
-        counts[umi] += 1
+        cell, umi = bc_getter(read_id)
+        counts[cell][umi] += 1
 
-    # yield final gene
+    # yield final values
     yield gene, counts
 
 

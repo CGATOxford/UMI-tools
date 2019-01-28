@@ -107,64 +107,57 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=globals()["__doc__"])
 
+    group = U.OptionGroup(parser, "extract-specific options")
+
     # (Experimental option) Retain the UMI in the sequence read"
-    parser.add_option("--retain-umi", dest="retain_umi", action="store_true",
-                      help=optparse.SUPPRESS_HELP)
-    parser.add_option("-p", "--bc-pattern", dest="pattern", type="string",
-                      help="Barcode pattern")
-    parser.add_option("--bc-pattern2", dest="pattern2", type="string",
-                      help="Barcode pattern for paired reads")
-    parser.add_option("--3prime", dest="prime3", action="store_true",
-                      help="barcode is on 3' end of read.")
-    parser.add_option("--read2-in", dest="read2_in", type="string",
-                      help="file name for read pairs")
-    parser.add_option("--read2-out", dest="read2_out", type="string",
-                      help="file to output processed paired read to")
-    parser.add_option("--read2-stdout", dest="read2_stdout",
-                      action="store_true",
-                      help="Paired reads, send read2 to stdout, discarding read1")
-    parser.add_option("--quality-filter-threshold",
-                      dest="quality_filter_threshold", type="int",
-                      help=("Remove reads where any UMI base quality score "
-                            "falls below this threshold"))
-    parser.add_option("--quality-filter-mask",
-                      dest="quality_filter_mask", type="int",
-                      help=("If a UMI base has a quality below this threshold, "
-                            "replace the base with 'N'"))
-    parser.add_option("--quality-encoding",
-                      dest="quality_encoding", type="choice",
-                      choices=["phred33", "phred64", "solexa"],
-                      help=("Quality score encoding. Choose from 'phred33'"
-                            "[33-77] 'phred64' [64-106] or 'solexa' [59-106]"))
-    parser.add_option("--extract-method",
-                      dest="extract_method", type="choice",
-                      choices=["string", "regex"],
-                      help=("How to extract the umi +/- cell barcodes, Choose "
-                            "from 'string' or 'regex'"))
-    parser.add_option("--filter-cell-barcode",
-                      dest="filter_cell_barcode",
-                      action="store_true",
-                      help="Filter the cell barcodes")
-    parser.add_option("--error-correct-cell",
-                      dest="error_correct_cell",
-                      action="store_true",
-                      help=("Correct errors in the cell barcode"))
-    parser.add_option("--whitelist",
-                      dest="whitelist", type="string",
-                      help=("A whitelist of accepted cell barcodes"))
-    parser.add_option("--blacklist",
-                      dest="blacklist", type="string",
-                      help=("A blacklist of accepted cell barcodes"))
-    parser.add_option("--reads-subset",
-                      dest="reads_subset", type="int",
-                      help=("Only extract from the first N reads. If N is "
-                            "greater than the number of reads, all reads will "
-                            "be used"))
-    parser.add_option("--reconcile-pairs",
-                      dest="reconcile", action="store_true",
-                      help=("Allow the presences of reads in read2 input that are"
-                            "not present in read1 input. This allows cell barcode"
-                            "filtering of read1s without considering read2s"))
+    group.add_option("--retain-umi", dest="retain_umi", action="store_true",
+                     help=optparse.SUPPRESS_HELP)
+    group.add_option("--read2-out", dest="read2_out", type="string",
+                     help="file to output processed paired read to")
+    group.add_option("--read2-stdout", dest="read2_stdout",
+                     action="store_true",
+                     help="Paired reads, send read2 to stdout, discarding read1")
+    group.add_option("--quality-filter-threshold",
+                     dest="quality_filter_threshold", type="int",
+                     help=("Remove reads where any UMI base quality score "
+                           "falls below this threshold"))
+    group.add_option("--quality-filter-mask",
+                     dest="quality_filter_mask", type="int",
+                     help=("If a UMI base has a quality below this threshold, "
+                           "replace the base with 'N'"))
+    group.add_option("--quality-encoding",
+                     dest="quality_encoding", type="choice",
+                     choices=["phred33", "phred64", "solexa"],
+                     help=("Quality score encoding. Choose from 'phred33'"
+                           "[33-77] 'phred64' [64-106] or 'solexa' [59-106]"))
+    group.add_option("--filter-cell-barcode",
+                     dest="filter_cell_barcode",
+                     action="store_true",
+                     help="Filter the cell barcodes")
+    group.add_option("--error-correct-cell",
+                     dest="error_correct_cell",
+                     action="store_true",
+                     help=("Correct errors in the cell barcode"))
+    group.add_option("--whitelist",
+                     dest="whitelist", type="string",
+                     help=("A whitelist of accepted cell barcodes"))
+    group.add_option("--blacklist",
+                     dest="blacklist", type="string",
+                     help=("A blacklist of accepted cell barcodes"))
+    group.add_option("--subset-reads", "--reads-subset",
+                     dest="reads_subset", type="int",
+                     help=("Only extract from the first N reads. If N is "
+                           "greater than the number of reads, all reads will "
+                           "be used"))
+    group.add_option("--reconcile-pairs",
+                     dest="reconcile", action="store_true",
+                     help=("Allow the presences of reads in read2 input that "
+                           "are not present in read1 input. This allows cell "
+                           "barcode filtering of read1s without "
+                           "considering read2s"))
+
+    parser.add_option_group(group)
+
     parser.set_defaults(extract_method="string",
                         filter_cell_barcodes=False,
                         whitelist=None,
@@ -182,7 +175,9 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
 
     (options, args) = U.Start(parser, argv=argv,
+                              add_extract_options=True,
                               add_group_dedup_options=False,
+                              add_umi_grouping_options=False,
                               add_sam_options=False)
 
     if options.retain_umi and not options.extract_method == "regex":
