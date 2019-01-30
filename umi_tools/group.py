@@ -119,16 +119,6 @@ def main(argv=None):
                      help=("output a bam file with read groups tagged using the UG tag"
                            "[default=%default]"))
 
-    group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
-                     default=False,
-                     help=("Retain all unmapped reads in output. "
-                           "These will not be grouped[default=%default]"))
-
-    group.add_option("--output-chimeric", dest="output_chimeric", action="store_true",
-                     default=False,
-                     help=("Retain all chimeric reads in output."
-                           "These will not be grouped [default=%default]"))
-
     parser.add_option("--umi-group-tag", dest="umi_group_tag",
                       type="string", help="tag for the outputted umi group",
                       default='BX')
@@ -138,7 +128,21 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=True)
+
+    if options.paired:
+        if options.chimeric_pairs != "discard":
+            U.warn("Chimeric read pairs are not being discarded. This may "
+                   "increase the run time and memory usage. Consider "
+                   "--chimeric-pairs==discard to discard these reads")
+        if options.unpaired_reads != "discard":
+            U.warn("Unpaired read pairs are not being discarded. This may "
+                   "increase the run time and memory usage. Consider "
+                   "--unpared-reads==discard to discard these reads")
+        if options.unmapped_reads == "discard":
+            U.warn("Unmapped read pairs are not being discarded. This may "
+                   "increase the run time and memory usage. Consider "
+                   "--unmapped_reads==discard to discard these reads")
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
@@ -196,6 +200,11 @@ def main(argv=None):
     gene_tag = options.gene_tag
     metacontig2contig = None
 
+    if options.unmapped_reads in ["use", "output"]:
+        output_unmapped = True
+    else:
+        output_unmapped = False
+
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
@@ -207,13 +216,13 @@ def main(argv=None):
             gene_tag = metatag
 
         else:
-            inreads = infile.fetch(until_eof=options.output_unmapped)
+            inreads = infile.fetch(until_eof=output_unmapped)
 
     bundle_iterator = umi_methods.get_bundles(
         options,
         all_reads=True,
         return_read2=True,
-        return_unmapped=options.output_unmapped,
+        return_unmapped=output_unmapped,
         metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):

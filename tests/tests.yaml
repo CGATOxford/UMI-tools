@@ -264,23 +264,53 @@ group_unsorted:
       references: [group_unsorted_py3.sam]
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam
 
-group_paired:
+group_paired_discard_chimeric:
+       sort: True
+       stdin: paired.bam
+       outputs: [stdout]
+       references: [paired_group_discard_chimeras.sam]
+       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --paired --no-sort-output --output-bam --chimeric-pairs=discard
+
+group_paired_output_chimeric:
+       sort: True
+       stdin: paired.bam
+       outputs: [stdout]
+       references: [paired_group_output_chimeras.sam]
+       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --paired --no-sort-output --output-bam --chimeric-pairs=output
+
+group_paired_use_chimeric:
+       sort: True
+       stdin: paired.bam
+       outputs: [stdout]
+       references: [paired_group_use_chimeras.sam]
+       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --paired --no-sort-output --output-bam --chimeric-pairs=use
+
+group_paired_discard_unmapped:
       sort: True
       stdin: paired.bam
       outputs: [stdout]
-      references: [paired_group_no_chimeras.sam]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam
+      references: [paired_group_discard_unmapped.sam]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --paired --no-sort-output --output-bam --unmapped=discard
 
-group_paired_keep_chimeric:
+group_paired_output_unmapped:
       sort: True
       stdin: paired.bam
       outputs: [stdout]
-      references: [paired_group_no_chimeras.sam]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --output-chimeric
+      references: [paired_group_output_unmapped.sam]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --unmapped=output
 
-## Tests to implement ####
+group_paired_use_unmapped:
+      sort: True
+      stdin: paired.bam
+      outputs: [stdout]
+      references: [paired_group_use_unmapped.sam]
+      options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --unmapped=use --paired
+
+### Tests to implement ####
 
 ## dedup ##
 # mapping-quality (Need a BAM with meaningful MAPQ)
 # paired end (obv. need a paired end BAM)
 # read-length (ideally with sRNA-Seq BAM?!)
+
+# unpaired reads (Need a BAM with mixed paired and single end reads)

@@ -86,7 +86,7 @@ def main(argv=None):
 
     options.per_gene = True  # hardcodes counting to per-gene only
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=False)
 
     if options.random_seed:
         np.random.seed(options.random_seed)

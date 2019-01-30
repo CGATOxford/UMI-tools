@@ -1365,8 +1365,27 @@ class get_bundles:
             else:
                 self.read_events['Input Reads'] += 1
 
+            # only ever dealing with read1s from here
+
             if self.options.paired:
-                self.read_events['Paired Reads'] += 1
+                if read.is_paired:
+                    self.read_events['Read pairs'] += 1
+                else:
+                    self.read_events['Unpaired reads'] += 1
+
+                    # if paired end input and read1 is unpaired...
+
+                    # skip, or
+                    if self.options.unpaired_reads == "discard":
+                        continue
+
+                    # yield without grouping, or
+                    elif self.options.unpaired_reads == "output":
+                        yield read, None, "single_read"
+
+                    # Use read pair; TLEN will be 0
+                    elif self.options.unpaired_reads == "use":
+                        pass
 
             if read.is_unmapped:
                 if self.options.paired:
@@ -1377,26 +1396,41 @@ class get_bundles:
                 else:
                     self.read_events['Single end unmapped'] += 1
 
+                # if read1 is unmapped, yield immediately or skip read
                 if self.return_unmapped:
                     self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue
 
-            if read.mate_is_unmapped and self.options.paired:
+            if self.options.paired and read.mate_is_unmapped:
                 if not read.is_unmapped:
                     self.read_events['Read 2 unmapped'] += 1
-                if self.return_unmapped:
-                    yield read, None, "single_read"
-                continue
 
-            if self.options.paired and (
+                # if paired end input and read2 is unmapped, skip unless
+                # options.unmapped_reads == "use", in which case TLEN will be 0
+                if self.options.unmapped_reads != "use":
+                    if self.return_unmapped:
+                        yield read, None, "single_read"
+                        continue
+
+            if read.is_paired and (
                     read.reference_name != read.next_reference_name):
                 self.read_events['Chimeric read pair'] += 1
 
-                if self.options.output_chimeric:
-                    yield read, None, "single_read"
-                else:
+                # if paired end input and read2 is mapped to another contig...
+
+                # skip, or
+                if self.options.chimeric_pairs == "discard":
                     continue
+
+                # yield without grouping, or
+                elif self.options.chimeric_pairs == "output":
+                    yield read, None, "single_read"
+                    continue
+
+                # Use read pair; TLEN will be 0
+                elif self.options.chimeric_pairs == "use":
+                    pass
 
             if self.options.subset:
                 if random.random() >= self.options.subset:
