@@ -1070,6 +1070,32 @@ def validateSamOptions(options, group=False):
                              "to retain unmapped without deduplicating them, "
                              "use the group command")
 
+    if options.paired:
+        if options.chimeric_pairs == "use":
+            warn("Chimeric read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1."
+                 "This may also increase the run time and memory usage. "
+                 "Consider --chimeric-pairs==discard to discard these reads "
+                 "or --chimeric-pairs==output (group command only) to "
+                 "output them without grouping")
+        if options.unpaired_reads == "use":
+            warn("Unpaired read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1."
+                 "This may also increase the run time and memory usage. "
+                 "Consider --unpared-reads==discard to discard these reads "
+                 "or --unpared-reads==output (group command only) to "
+                 "output them without grouping")
+        if options.unmapped_reads == "use":
+            warn("Unmapped read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1. "
+                 "This may also increase the run time and memory usage. "
+                 "Consider --unmapped_reads==discard to discard these reads "
+                 "or --unmapped_reads==output (group command only) to "
+                 "output them without grouping")
+
     command = " ".join(sys.argv)
     info("command: %s" % command)
     if "--umi-tag" in command or "--cell-tag" in command:
@@ -1092,14 +1118,6 @@ def validateSamOptions(options, group=False):
         if not options.paired:
             raise ValueError("--unpaired-reads is only compatible "
                              "with paired end reads (--paired)")
-
-    if (options.unmapped_reads == "use" or
-        options.chimeric_pairs == "use" or
-        options.unpaired_reads == "use"):
-        warn("Use of --unmapped-reads=use, --chimeric-pairs=use (default) or "
-             "--unpaired-reads=use (default) will mean some read pair UMIs may "
-             "be grouped/deduplicated using just the mapping coordinates "
-             "from read1")
 
     # legacy support for --output-unmapped behaviour
     if options.output_unmapped:

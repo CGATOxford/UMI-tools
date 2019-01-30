@@ -130,20 +130,6 @@ def main(argv=None):
 
     U.validateSamOptions(options, group=True)
 
-    if options.paired:
-        if options.chimeric_pairs != "discard":
-            U.warn("Chimeric read pairs are not being discarded. This may "
-                   "increase the run time and memory usage. Consider "
-                   "--chimeric-pairs==discard to discard these reads")
-        if options.unpaired_reads != "discard":
-            U.warn("Unpaired read pairs are not being discarded. This may "
-                   "increase the run time and memory usage. Consider "
-                   "--unpared-reads==discard to discard these reads")
-        if options.unmapped_reads == "discard":
-            U.warn("Unmapped read pairs are not being discarded. This may "
-                   "increase the run time and memory usage. Consider "
-                   "--unmapped_reads==discard to discard these reads")
-
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()
