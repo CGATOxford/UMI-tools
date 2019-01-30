@@ -588,8 +588,10 @@ def Start(parser=None,
           argv=sys.argv,
           quiet=False,
           add_pipe_options=True,
+          add_extract_options=False,
           add_group_dedup_options=True,
           add_sam_options=True,
+          add_umi_grouping_options=True,
           return_parser=False):
     """set up an experiment.
 
@@ -639,8 +641,14 @@ def Start(parser=None,
     add_pipe_options : bool
         add common options for redirecting input/output
 
+    add_extract_options : bool
+        add options for extracting barcodes
+
     add_sam_options : bool
-        add options for UMI grouping/deduping and counting from a sam
+        add options for SAM/BAM input
+
+    add_umi_grouping_options : bool
+        add options for barcode grouping
 
     add_group_dedup_options : bool
         add options for UMI grouping and deduping
@@ -664,8 +672,44 @@ def Start(parser=None,
 
     global_starting_time = time.time()
 
+    if add_extract_options:
+
+        group = OptionGroup(parser, "barcord extraction options")
+
+        group.add_option("--extract-method",
+                         dest="extract_method", type="choice",
+                         choices=["string", "regex"],
+                         help=("How to extract the umi +/- cell barcodes, "
+                               "Choose from 'string' or 'regex'"))
+        group.add_option("-p", "--bc-pattern", dest="pattern", type="string",
+                         help="Barcode pattern")
+        group.add_option("--bc-pattern2", dest="pattern2", type="string",
+                         help="Barcode pattern for paired reads")
+        group.add_option("--3prime", dest="prime3", action="store_true",
+                         help="barcode is on 3' end of read.")
+        group.add_option("--read2-in", dest="read2_in", type="string",
+                         help="file name for read pairs")
+        parser.add_option_group(group)
+
+    if add_umi_grouping_options:
+        group = OptionGroup(parser, "UMI grouping options")
+
+        group.add_option("--method", dest="method", type="choice",
+                         choices=("adjacency", "directional",
+                                  "percentile", "unique", "cluster"),
+                         default="directional",
+                         help="method to use for umi grouping [default=%default]")
+
+        group.add_option("--edit-distance-threshold", dest="threshold",
+                         type="int",
+                         default=1,
+                         help="Edit distance theshold at which to join two UMIs "
+                         "when grouping UMIs. [default=%default]")
+
+        parser.add_option_group(group)
+
     if add_sam_options:
-        group = OptionGroup(parser, "Input options")
+        group = OptionGroup(parser, "input options")
 
         group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
                          help="Input file is in sam format [default=%default]",
@@ -721,23 +765,7 @@ def Start(parser=None,
 
         parser.add_option_group(group)
 
-        group = OptionGroup(parser, "UMI grouping options")
-
-        group.add_option("--method", dest="method", type="choice",
-                         choices=("adjacency", "directional",
-                                  "percentile", "unique", "cluster"),
-                         default="directional",
-                         help="method to use for umi grouping [default=%default]")
-
-        group.add_option("--edit-distance-threshold", dest="threshold",
-                         type="int",
-                         default=1,
-                         help="Edit distance theshold at which to join two UMIs "
-                         "when grouping UMIs. [default=%default]")
-
-        parser.add_option_group(group)
-
-        group = OptionGroup(parser, "Single-cell RNA-Seq options")
+        group = OptionGroup(parser, "single-cell RNA-Seq options")
 
         group.add_option("--per-gene", dest="per_gene", action="store_true",
                          default=False,
@@ -779,7 +807,7 @@ def Start(parser=None,
 
     if add_group_dedup_options:
 
-        group = OptionGroup(parser, "Group/Dedup options")
+        group = OptionGroup(parser, "group/dedup options")
 
         group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
                          help="Output alignments in sam format [default=%default]",
@@ -868,7 +896,7 @@ def Start(parser=None,
 
     group.add_option("-?", dest="short_help", action="callback",
                      callback=callbackShortHelp,
-                     help="output short help (command line options only.")
+                     help="output short help (command line options only).")
 
     group.add_option("--random-seed", dest='random_seed', type="int",
                      help="random seed to initialize number generator "
@@ -889,7 +917,7 @@ def Start(parser=None,
     )
 
     if add_pipe_options:
-        group = OptionGroup(parser, "Input/output options")
+        group = OptionGroup(parser, "input/output options")
         group.add_option("-I", "--stdin", dest="stdin", type="string",
                          help="file to read stdin from [default = stdin].",
                          metavar="FILE")
