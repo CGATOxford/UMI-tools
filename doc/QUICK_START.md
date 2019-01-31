@@ -1,7 +1,7 @@
 UMI-Tools quick start guide
 =============================
 
-This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the `Single cell tutorial <Single_cell_tutorial.md>`_
+This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the [Single cell tutorial](Single_cell_tutorial.md)
 
 
 - [UMI-Tools quick start guide](#umi-tools-quick-start-guide)
