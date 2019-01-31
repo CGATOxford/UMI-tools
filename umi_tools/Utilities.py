@@ -774,7 +774,7 @@ def Start(parser=None,
 
         group.add_option("--gene-tag", dest="gene_tag",
                          type="string",
-                         help="gene is defined by this bam tag [default=%default]",
+                         help="Gene is defined by this bam tag [default=%default]",
                          default=None)
 
         group.add_option("--assigned-status-tag", dest="assigned_tag",
@@ -791,17 +791,17 @@ def Start(parser=None,
 
         group.add_option("--per-contig", dest="per_contig", action="store_true",
                          default=False,
-                         help="count per contig (field 3 in BAM; RNAME),"
+                         help="group/dedup/count UMIs per contig (field 3 in BAM; RNAME),"
                          " e.g for transcriptome where contig = gene")
 
         group.add_option("--gene-transcript-map", dest="gene_transcript_map",
                          type="string",
-                         help="file mapping transcripts to genes (tab separated)",
+                         help="File mapping transcripts to genes (tab separated)",
                          default=None)
 
         group.add_option("--per-cell", dest="per_cell", action="store_true",
                          default=False,
-                         help="Group/Dedup/Count per cell")
+                         help="group/dedup/count per cell")
 
         parser.add_option_group(group)
 

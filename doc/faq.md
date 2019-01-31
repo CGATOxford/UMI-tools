@@ -20,7 +20,7 @@ Regexes provide a more flexible way to describe the pattern of UMI +/- cell barc
     - cell_n = cell barcode positions, where n can be any value (optional)
     - discard_n = positions to discard, where n can be any value (optional)
 
-  For example, the following regex can be used to extract reads from the Klein et al inDrop data:
+  For example, the following regex can be used to extract reads from the Klein *et al* inDrop data:
 `(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*`
 Regexes provide a number of advantages over the simpler "string" extraction method:
     1. Reads not matching the regex will be discarded. In the above, this is used to filter reads which do not contain the adapter sequence between `cell_1` and `cell_2` groups.
@@ -29,9 +29,9 @@ Regexes provide a number of advantages over the simpler "string" extraction meth
     `(?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}`
   Note that to enable fuzzy matching, `umi_tools` uses the [`regex`](https://pypi.org/project/regex/) library rather than the more standard `re` library.
 &nbsp;
-- **Can I use `umi_tools` to determine consensus sequences**
+- **Can I use `umi_tools` to determine consensus sequences?**
 Right now, you can use `umi_tools group` to identify the duplicated read groups. From this, you can then derive consensus sequences as you wish. We have discussed adding consense sequence calling as a separate `umi_tools` command (see [#203](https://github.com/CGATOxford/UMI-tools/issues/181)). If you'd like to help us out, get in touch!
 &nbsp;
-- **What do the `--per-gene`, `--gene-tag` and `--per-contig` options do?**
+- **What do the `--per-gene`, `--gene-tag` and `--per-contig` options do in `umi_tools group`/`dedup`/`count`?**
   These options are designed to handle samples from sequence library protocols where amplification occurs post fragmentation, e.g CEL-Seq for single cell RNA-Seq. For such sample, mapping coordinates of duplicate reads will no longer be identical and `umi_tools` can instead use the gene to which the read is mapped.
-This behaviour is switched on with `--per-gene`. `umi_tools` then needs to be told if the reads are directly mapped to a transcriptome (`--per-contig`), or mapped to a genome and the transcript/gene assignment is contained in a read tag (`--gene-tag=[TAG]`). There is a further option to provide a file mapping transcript IDs to gene IDs (`--gene-transcript-map`) if you have assigned reads to transcripts but want to use the gene IDs to determine UMI groups. Finally, for single cell RNA-Seq, you must specify `--per-cell`. See `umi_tools dedup`/`group`/`count --help` for details of further related options and the [UMI-tools single cell RNA-Seq guide](https://github.com/CGATOxford/UMI-tools/blob/%7BTS%7D-AddFAQ/doc/Single_cell_tutorial.md).
+This behaviour is switched on with `--per-gene`. `umi_tools` then needs to be told if the reads are directly mapped to a transcriptome (`--per-contig`), or mapped to a genome and the transcript/gene assignment is contained in a read tag (`--gene-tag=[TAG]`). If you have assigned reads to transcripts but want to use the gene IDs to determine UMI groups, there is a further option to provide a file mapping transcript IDs to gene IDs (`--gene-transcript-map`). Finally, for single cell RNA-Seq, you must specify `--per-cell`. See `umi_tools dedup`/`group`/`count --help` for details of further related options and the [UMI-tools single cell RNA-Seq guide](https://github.com/CGATOxford/UMI-tools/blob/%7BTS%7D-AddFAQ/doc/Single_cell_tutorial.md).
