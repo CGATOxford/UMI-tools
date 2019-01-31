@@ -42,7 +42,7 @@ The easiest way to install `UMI-Tools` is using your favorite python
 package manager, either `pip` or `conda`. If you don't know which you
 have installed, we recommend trying both, starting with `conda`:
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda umi_tools
 
 Alternatively, `pip`:
 
