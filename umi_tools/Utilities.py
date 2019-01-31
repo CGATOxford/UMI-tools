@@ -809,14 +809,6 @@ def Start(parser=None,
 
         group = OptionGroup(parser, "group/dedup options")
 
-        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                         help="Output alignments in sam format [default=%default]",
-                         default=False)
-
-        group.add_option("--no-sort-output", dest="no_sort_output",
-                         action="store_true", default=False,
-                         help="Don't Sort the output")
-
         group.add_option("--buffer-whole-contig", dest="whole_contig",
                          action="store_true", default=False,
                          help="Read whole contig before outputting bundles: "
@@ -858,7 +850,36 @@ def Start(parser=None,
 
     # options added separately here to maintain better output order
     if add_sam_options:
-        group = OptionGroup(parser, "debug options")
+        group = OptionGroup(parser, "SAM/BAM options")
+
+        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
+                         help="Output alignments in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--no-sort-output", dest="no_sort_output",
+                         action="store_true", default=False,
+                         help="Don't Sort the output")
+
+        group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
+                         default=False, help=optparse.SUPPRESS_HELP)
+
+        group.add_option("--unmapped-reads", dest="unmapped_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="discard",
+                         help=("How to handle unmapped reads [default=%default]"))
+
+        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle chimeric read pairs [default=%default]"))
+
+        group.add_option("--unpaired-reads", dest="unpaired_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle unpaired reads [default=%default]"))
 
         group.add_option("--ignore-umi", dest="ignore_umi",
                          action="store_true", help="Ignore UMI and dedup"
@@ -1025,7 +1046,7 @@ def Start(parser=None,
     return global_options, global_args
 
 
-def validateSamOptions(options):
+def validateSamOptions(options, group=False):
     ''' Check the validity of the option combinations '''
 
     if options.per_gene:
@@ -1063,11 +1084,79 @@ def validateSamOptions(options):
             raise ValueError("skip-regex '%s' is not a "
                              "valid regex" % options.skip_regex)
 
+    if not group:
+        if options.unmapped_reads == "output":
+            raise ValueError("Cannot use --unmapped-reads=output. If you want "
+                             "to retain unmapped without deduplicating them, "
+                             "use the group command")
+        if options.chimeric_pairs == "output":
+            raise ValueError("Cannot use --chimeric-pairs=output. If you want "
+                             "to retain chimeric read pairs without "
+                             "deduplicating them, use the group command")
+        if options.unpaired_reads == "output":
+            raise ValueError("Cannot use --unpaired-reads=output. If you want "
+                             "to retain unmapped without deduplicating them, "
+                             "use the group command")
+
+    if options.paired:
+        if options.chimeric_pairs == "use":
+            warn("Chimeric read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1."
+                 "This may also increase the run time and memory usage. "
+                 "Consider --chimeric-pairs==discard to discard these reads "
+                 "or --chimeric-pairs==output (group command only) to "
+                 "output them without grouping")
+        if options.unpaired_reads == "use":
+            warn("Unpaired read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1."
+                 "This may also increase the run time and memory usage. "
+                 "Consider --unpared-reads==discard to discard these reads "
+                 "or --unpared-reads==output (group command only) to "
+                 "output them without grouping")
+        if options.unmapped_reads == "use":
+            warn("Unmapped read pairs are being used. "
+                 "Some read pair UMIs may be grouped/deduplicated using "
+                 "just the mapping coordinates from read1. "
+                 "This may also increase the run time and memory usage. "
+                 "Consider --unmapped_reads==discard to discard these reads "
+                 "or --unmapped_reads==output (group command only) to "
+                 "output them without grouping")
+
     command = " ".join(sys.argv)
+    info("command: %s" % command)
     if "--umi-tag" in command or "--cell-tag" in command:
         if options.get_umi_method != "tag":
             raise ValueError("--umi-tag and/or --cell-tag options provided. "
                              "Need to set --extract-umi-method=tag")
+
+    if options.unmapped_reads == "use":
+        if not options.paired:
+            raise ValueError("--unmapped-reads=use is only compatible with "
+                             "paired end reads (--paired)")
+
+    if "--chimeric-pairs" in command:
+        info("command: %s" % command)
+        if not options.paired:
+            raise ValueError("--chimeric-pairs is only compatible "
+                             "with paired end reads (--paired)")
+
+    if "--unpaired-reads" in command:
+        if not options.paired:
+            raise ValueError("--unpaired-reads is only compatible "
+                             "with paired end reads (--paired)")
+
+    # legacy support for --output-unmapped behaviour
+    if options.output_unmapped:
+        warn("--output-unmapped will be removed in the near future. "
+             "Use --unmapped-reads=output instead")
+        # We will update the value of options.unmapped_reads so we want to
+        # check the user has not also supplied this option
+        if "--unmapped_reads" in command:
+            raise ValueError("Do not use --output-unmapped in combination with"
+                             "--unmapped-reads. Just use --unmapped-reads")
+        options.unmapped_reads = "output"
 
 
 def Stop():
@@ -1397,6 +1486,27 @@ Input/Output Options
 --cell-tag (string)
       Tag which contains cell barcode. See --extract-umi-method above
 
+--unmapped-reads (string, choice)
+     How should unmapped reads be handled. Options are:
+     'discard' [DEFAULT] - Discard all unmapped reads
+     'use' - If read2 is unmapped, deduplicate using read1 only.
+             Requires --paired
+     'output' - Output unmapped reads/read pairs without UMI
+                grouping/deduplication. Only available in umi_tools group
+
+--chimeric-pairs (string, choice)
+     How should chimeric read pairs be handled. Options are:
+     'discard' - Discard all chimeric read pairs
+     'use' [DEFAULT] - Deduplicate using read1 only
+     'output' - Output chimeric read pairs without UMI grouping/deduplication.
+                Only available in umi_tools group
+
+--unpaired-reads (string, choice)
+     How should unpaired reads be handled. Options are:
+     'discard' - Discard all unpaired reads
+     'use' [DEFAULT] - Deduplicate using read1 only
+     'output' - Output unpaired reads without UMI grouping/deduplication.
+                Only available in umi_tools group
 
 UMI grouping options
 ---------------------------
@@ -1548,4 +1658,5 @@ Group/Dedup options
       sorted. However, by default, dedup reads for another 1000bp
       before outputting read groups which will avoid any reads being
       missed with short read sequencing (<1000bp)
+
 '''
