@@ -1047,7 +1047,6 @@ def Start(parser=None,
     return global_options, global_args
 
 
-<<<<<<< HEAD
 def validateExtractOptions(options):
     ''' Check the validity of the option combinations for barcode extraction'''
 
