@@ -134,7 +134,7 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=False)
 
     if options.random_seed:
         np.random.seed(options.random_seed)

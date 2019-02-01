@@ -1,6 +1,15 @@
 Single cell tutorial
 ====================
-  
+
+**Important update**: We now recommend the use of `alevin` for droplet-based
+scRNA-Seq (e.g 10X, inDrop etc). `alevin` extends the directional
+method used in `UMI-tools` to correct UMI errors with droplet
+scRNA-Seq within a framework that also enables quantification using
+multi-mapped reads. `alevin` is an accurate, fast and convenient
+end-to-end tool to go from fastq -> count matrix. See
+[alevin documentation](https://salmon.readthedocs.io/en/latest/alevin.html)
+and [alevin pre-print](https://www.biorxiv.org/content/10.1101/335000v2) for more information
+
 This tutorial will go through an end to end analysis for single cell analysis using UMI-tools. Before you start, you will need:
 *  An installed copy of UMI-tools (see the installation guide)
 *  [The STAR aligner](https://github.com/alexdobin/STAR)
