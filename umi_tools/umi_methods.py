@@ -771,41 +771,96 @@ class ExtractFilterAndUpdate:
             match = self.pattern.match(read1.seq)
             if not match:
                 self.read_counts['regex does not match read1'] += 1
-                return None
+                if not self.either_read:
+                    return None
             else:
                 self.read_counts['regex matches read1'] += 1
 
         if read2 and self.pattern2:
             match2 = self.pattern2.match(read2.seq)
             if not match2:
-                self.read_counts['regex does not match read1'] += 1
-                return None
+                self.read_counts['regex does not match read2'] += 1
+                # if barcodes can be on either read, check if read1
+                # match also failed
+                if self.either_read:
+                    if not match:
+                        return None
+                else:
+                    return None
             else:
                 self.read_counts['regex matches read2'] += 1
 
         # now extract barcodes
-        if self.pattern:
-            (cell, cell_quals,
-             umi, umi_quals,
-             new_seq, new_quals) = ExtractBarcodes(
-                 read1, match, extract_cell=self.extract_cell,
-                 extract_umi=True, discard=True, retain_umi=self.retain_umi)
-        else:
-            cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
+        if self.either_read:  # extract depending on match and match2
 
-        if read2 and self.pattern2:
-            (cell2, cell_quals2,
-             umi2, umi_quals2,
-             new_seq2, new_quals2) = ExtractBarcodes(
-                 read2, match2, extract_cell=self.extract_cell,
-                 extract_umi=True, discard=True)
+            if match and match2 and self.either_read_resolve == "discard":
+                self.read_counts['regex matches both. discarded'] += 1
+                return None
 
-            cell += cell2
-            cell_quals += cell_quals2
-            umi += umi2
-            umi_quals += umi_quals2
-        else:
-            new_seq2, new_quals2 = "", ""
+            if match:
+                (cell, cell_quals, umi, umi_quals,
+                 new_seq, new_quals) = ExtractBarcodes(
+                     read1, match, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+            if match2:
+                (cell2, cell_quals2, umi2, umi_quals2,
+                 new_seq2, new_quals2) = ExtractBarcodes(
+                     read2, match2, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+
+            if match and match2:
+                if self.either_read_resolve == "quality":
+                    read1_min_quals = min(
+                        [x - RANGES[self.quality_encoding][0] for
+                         x in map(ord, umi_quals)])
+
+                    read2_min_quals = min(
+                        [x - RANGES[self.quality_encoding][0] for
+                         x in map(ord, umi_quals2)])
+
+                    # Note that UMI and UMI quals are defined by best
+                    # match but UMI is removed from both reads
+                    if read1_min_quals >= read2_min_quals:
+                        self.read_counts['regex matches both. read1 used'] += 1
+                        return(cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2)
+                    else:
+                        self.read_counts['regex matches both. read2 used'] += 1
+                        return(cell2, umi2, umi_quals2, new_seq, new_quals, new_seq2, new_quals2)
+
+                else:
+                    raise ValueError("unexpected value for either_read_resolve")
+
+            elif match:
+                self.read_counts['regex only matches read1'] += 1
+                return(cell, umi, umi_quals,
+                       new_seq, new_quals, "", "")
+            else:
+                self.read_counts['regex only matches read2'] += 1
+                return(cell2, umi2, umi_quals2, "", "", new_seq2, new_quals2)
+
+        else:  # extract dependening on patterns/reads provided
+            if self.pattern:
+                (cell, cell_quals,
+                 umi, umi_quals,
+                 new_seq, new_quals) = ExtractBarcodes(
+                     read1, match, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+            else:
+                cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
+
+            if read2 and self.pattern2:
+                (cell2, cell_quals2,
+                 umi2, umi_quals2,
+                 new_seq2, new_quals2) = ExtractBarcodes(
+                     read2, match2, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+
+                cell += cell2
+                cell_quals += cell_quals2
+                umi += umi2
+                umi_quals += umi_quals2
+            else:
+                new_seq2, new_quals2 = "", ""
 
         return cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2
 
@@ -920,7 +975,9 @@ class ExtractFilterAndUpdate:
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
                  filter_cell_barcode=False,
-                 retain_umi=False):
+                 retain_umi=False,
+                 either_read=False,
+                 either_read_resolve="discard"):
 
         self.read_counts = collections.Counter()
         self.method = method
@@ -932,6 +989,8 @@ class ExtractFilterAndUpdate:
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
         self.retain_umi = retain_umi
+        self.either_read = either_read
+        self.either_read_resolve = either_read_resolve
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
@@ -996,20 +1055,43 @@ class ExtractFilterAndUpdate:
 
         self.read_counts['Reads output'] += 1
 
-        new_identifier = addBarcodesToIdentifier(
-            read1, umi, cell)
-        read1.identifier = new_identifier
-        if self.pattern:  # seq and quals need to be updated
-            read1.seq = new_seq
-            read1.quals = new_quals
+        # if UMI could be on either read, use umi_values to identify
+        # which read(s) it was on
+        if self.either_read:
+            new_identifier = addBarcodesToIdentifier(
+                read1, umi, cell)
+            read1.identifier = new_identifier
 
-        if read2:
             new_identifier2 = addBarcodesToIdentifier(
                 read2, umi, cell)
-            read2.identifier = new_identifier2
-            if self.pattern2:   # seq and quals need to be updated
+            read2.identifier = new_identifier
+
+            # UMI was on read 1
+            if new_seq2 == "" and new_quals2 == "":
+                read1.seq = new_seq
+                read1.quals = new_quals
+
+            # UMI was on read 2
+            if new_seq == "" and new_quals == "":
                 read2.seq = new_seq2
                 read2.quals = new_quals2
+
+        # Otherwise, use input from user to identiy which reads need updating
+        else:
+            new_identifier = addBarcodesToIdentifier(
+                read1, umi, cell)
+            read1.identifier = new_identifier
+            if self.pattern:  # seq and quals need to be updated
+                read1.seq = new_seq
+                read1.quals = new_quals
+
+            if read2:
+                new_identifier2 = addBarcodesToIdentifier(
+                    read2, umi, cell)
+                read2.identifier = new_identifier2
+                if self.pattern2:   # seq and quals need to be updated
+                    read2.seq = new_seq2
+                    read2.quals = new_quals2
 
         if read2 is None:
             return read1
