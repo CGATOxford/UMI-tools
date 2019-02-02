@@ -39,7 +39,7 @@ To understand how `X`s are treated, consider the read layout for an iCLIP experi
 
 ## Regex (regular expression) mode
 
-Regexes provide a more flexible way to describe the pattern of UMI +/- cell barcode in the reads and can be used with (`--extract-method=regex`). Its needed for techniques such as inDrop, SLiT-seq and ddSeq among others.  If you nothing about regular expressions, see [regular what-nows?](#regular-what-nows) below. 
+Regexes provide a more flexible way to describe the pattern of UMI +/- cell barcode in the reads and can be used with (`--extract-method=regex`). Its needed for techniques such as inDrop, SLiT-seq and ddSeq among others.  If you know nothing about regular expressions, see [regular what-nows?](#regular-what-nows) below. 
 
 Regexes provide a number of advantages over the simpler "string" extraction method: 
 
@@ -58,7 +58,7 @@ When passing a regex to `whitelist`/`extract`, the allowable groups in the regex
  We specify fuzzy matching by adding something like `{s<=X}` after a group. This specifies that the group should be matched with up to X **s**ubstitutions. The allowed error types are `s`: substitutions, `i`: insertions, `d`:deletions, `e`: any error (or the Levenshtein distance). See the  [`regex`](https://pypi.org/project/regex/) package documentation for more details.
  
  ### Example: the inDrop barcode read
-Read 1 from the inDrop technique of Klein *et al* consists of a two part cell barcode separated by an a 22 base adapter sequence. The first part of the cell barcode can be between 8 and 12 bases in length, and the second part is always 8 bases long. An 8 base UMI follows the second part of the, and this is then followed by at least three T bases. 
+Read 1 from the inDrop technique of Klein *et al* consists of a two part cell barcode separated by an a 22 base adapter sequence. The first part of the cell barcode can be between 8 and 12 bases in length, and the second part is always 8 bases long. A 6 base UMI follows the second part of the cell barcode, and this is then followed by at least three T bases. 
 
 This gives us the regex:
 `(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*`
@@ -66,7 +66,7 @@ This gives us the regex:
 The first part of the cell barcode is matched by `.{8,12}`. We wish to capture this and use it as the first part of the cell barcode, so we name this group `cell_1`. This is followed by the adapter sequence `GAGTGATTGCTTGTGACGCCTT` which is captured in a group `discard_1` so that it is discarded. We wish to allow up to two mismatches when matching the adapter sequence, so we follow the group with `{s<=2}` (this is a syntax specific to the  [`regex`](https://pypi.org/project/regex/) library). Next up is the second part of the cell barcode, 8 anythings in a group called `cell_2`: `(?<cell_2>.{8})`, the final cell barcode attached to the read header will consist of the concatenation of these two parts. `(?<umi_1?.{6})` captures the six base UMI. Finally three Ts and then any number of any base is matched with `T{3}.*`. Because these are not in a capture group they are left on the read and not discarded or moved to the read header. 
 
 ### Regular what-nows?
-Regular expressions (abbreviated regex) are a language used for flexible string matching. Will not go into the full details of this here, there are many tutorials available on the web. A good reference manual is the python regular expression page. 
+Regular expressions (abbreviated regex) are a language used for flexible string matching. We will not go into the full details of this here, there are many tutorials available on the web. A good reference manual is the python regular expression page. 
 
 The basics you will need are that patterns consist of characters that must be matched. For for example `A` matches the character A. If we put sets of characters in square brackets, we match any of the characters, so the pattern `[AT]` matches an A or a T. We also have wildcards. There are many wildcards, but the most useful is `.` which matches anything. 
 
