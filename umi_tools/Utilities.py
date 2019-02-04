@@ -1252,21 +1252,21 @@ the ``--extract-method`` option
        E.g. If the pattern is `NNNNCC`,
        Then the read::
 
-       @HISEQ:87:00000000 read1
-       AAGGTTGCTGATTGGATGGGCTAG
-       DA1AEBFGGCG01DFH00B1FF0B
-       +
+           @HISEQ:87:00000000 read1
+           AAGGTTGCTGATTGGATGGGCTAG
+           +
+           DA1AEBFGGCG01DFH00B1FF0B
 
        will become::
 
-       @HISEQ:87:00000000_TT_AAGG read1
-       GCTGATTGGATGGGCTAG
-       1AFGGCG01DFH00B1FF0B
-       +
+           @HISEQ:87:00000000_TT_AAGG read1
+           GCTGATTGGATGGGCTAG
+           +
+           1AFGGCG01DFH00B1FF0B
 
        where 'TT' is the cell barcode and 'AAGG' is the UMI.
 
--'regex'
+-'regex':
        This method allows for more flexible barcode extraction and
        should be used where the cell barcodes are variable in
        length. Alternatively, the regex option can also be used to
@@ -1292,7 +1292,7 @@ the ``--extract-method`` option
        For example, the following regex can be used to extract reads
        from the Klein et al inDrop data::
 
-       (?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*
+           (?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*
 
        Where only reads with a 3' T-tail and `GAGTGATTGCTTGTGACGCCTT` in
        the correct position to yield two cell barcodes of 8-12 and 8bp
@@ -1302,16 +1302,16 @@ the ``--extract-method`` option
        the discard group above was specified as below this would enable
        matches with up to 2 errors in the discard_1 group.
 
-::
+       ::
 
-       (?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}
+           (?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}
 
        Note that all UMIs must be the same length for downstream
        processing with dedup, group or count commands
 
 
 additional whitelist/extract options
--------------------------
+-------------------------------------
 
 --3prime
        By default the barcode is assumed to be on the 5' end of the
@@ -1326,10 +1326,14 @@ additional whitelist/extract options
 # this is the generic docstring we want to add to the documentation
 # for group/dedup/count/count_tab
 GENERIC_DOCSTRING_GDC = '''
+
+Group, Dedup and Count genetric options
+----------------------------------------
+
 It is assumed that the FASTQ files were processed with extract_umi.py
 before mapping and thus the UMI is the last word of the read name. e.g::
 
-@HISEQ:87:00000000_AATT
+    @HISEQ:87:00000000_AATT
 
 where `AATT` is the UMI sequeuence.
 
@@ -1353,7 +1357,8 @@ cigar 2S98M will be assumed to start at position 498.
 
 
 Input/Output Options
--------------
+---------------------
+
 -i, --in-sam/-o, --out-sam
       By default, inputs are assumed to be in BAM format and outputs are written
       in BAM format. Use these options to specify the use of SAM format for
@@ -1488,9 +1493,9 @@ Single-cell RNA-Seq options
 --gene-transcript-map (string)
       File mapping genes to transcripts (tab separated), e.g::
 
-      gene1   transcript1
-      gene1   transcript2
-      gene2   transcript3
+          gene1   transcript1
+          gene1   transcript2
+          gene2   transcript3
 
 --per-cell (string)
       Reads will only be grouped together if they have the same cell

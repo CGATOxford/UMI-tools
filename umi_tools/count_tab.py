@@ -21,12 +21,12 @@ identifier.
 
 Input template::
 
-read_id[SEP]_UMI    gene
+    read_id[SEP]_UMI    gene
 
 Example::
 
-NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA     ENSG00000279457.3
-NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG     ENSG00000225972.1
+    NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA     ENSG00000279457.3
+    NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG     ENSG00000225972.1
 
 You can perform any required file transformation and pipe the output
 directly to count_tab. For example to pipe output from featureCounts
@@ -39,19 +39,20 @@ The tab file is assumed to contain each read id once only. For paired
 end reads with featureCounts you must include the "-p" option so each
 read id is included once only.
 
-Per-cell counting can be enable with `--per-cell`. For per-cell
+Per-cell counting can be enable with ``--per-cell``. For per-cell
 counting, the input must be in the following format (tab separated),
 where the first column is the read identifier (including UMI and Cell
 Barcode) and the second column is the assigned gene. The input must be
 sorted by the gene identifier:
 
 Input template::
-read_id[SEP]_UMI_CB    gene
+
+    read_id[SEP]_UMI_CB    gene
 
 Example::
 
-NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
-NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1
+    NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
+    NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1
 
 '''
 
