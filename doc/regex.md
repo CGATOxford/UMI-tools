@@ -51,9 +51,10 @@ Regexes provide a number of advantages over the simpler "string" extraction meth
 The regex must contain named capture groups to define how the barcodes are encoded in the read. Named capture groups are a non-standard regex feature available in the python regex dialect. A capture group is a sub part of a pattern enclosed in brackets. Matches to sub-pattern are "captured" and can be extracted for reuse. So the pattern `(.{4})TTTTT` will match any four characters followed by 5 Ts, and return what those 4 characters were. In most cases we refer to a capture group by its positions (1st group, 2nd group etc). *Named* capture groups allow use to give names to each group using a `(?P<name>` syntax. Thus, `(?P<prefix>.{4})TTTTT` matches the same as the pattern above, but the captured group is given the name "prefix". 
 
 When passing a regex to `whitelist`/`extract`, the allowable groups in the regex are:
-    - umi_n = UMI positions, where n can be any value (required)
-    - cell_n = cell barcode positions, where n can be any value (optional)
-    - discard_n = positions to discard, where n can be any value (optional)
+
+   * umi_n = UMI positions, where n can be any value (required)
+   * cell_n = cell barcode positions, where n can be any value (optional)
+   * discard_n = positions to discard, where n can be any value (optional)
  
  We specify fuzzy matching by adding something like `{s<=X}` after a group. This specifies that the group should be matched with up to X **s**ubstitutions. The allowed error types are `s`: substitutions, `i`: insertions, `d`:deletions, `e`: any error (or the Levenshtein distance). See the  [`regex`](https://pypi.org/project/regex/) package documentation for more details.
  
