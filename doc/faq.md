@@ -15,31 +15,16 @@ There are a few reasons why your command could require an excessive amount of me
  - **Can I run `umi_tools` with parallel threads?**
 Not yet! This is something we have been discussing for a while (see [#203](https://github.com/CGATOxford/UMI-tools/issues/203) & [#257](https://github.com/CGATOxford/UMI-tools/issues/257)) but haven't found the time to actually implement. If you'd like to help us out, get in touch!
 &nbsp;
-- **What's this regex thing all about in `umi_tools extract`/`whitelist`?**
-Regexes provide a more flexible way to describe the pattern of UMI +/- cell barcode in the reads and can be used with (`--extract-method=regex`). The regex must contain groups to define how the barcodes are encoded in the read. The allowable groups in the regex are:
-    - umi_n = UMI positions, where n can be any value (required)
-    - cell_n = cell barcode positions, where n can be any value (optional)
-    - discard_n = positions to discard, where n can be any value (optional)
-
-  For example, the following regex can be used to extract reads from the Klein *et al* inDrop data:
-`(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*`
-Regexes provide a number of advantages over the simpler "string" extraction method:
-    1. Reads not matching the regex will be discarded. In the above, this is used to filter reads which do not contain the adapter sequence between `cell_1` and `cell_2` groups.
-    2. Variable cell barcode lengths can be encoded (see `cell_1` group above)
-    3. Finally, regexes allow fuzzy matching (error-aware). For example to allow up to 2 errors to the inDrop adapter sequence:
-    `(?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}`
-  Note that to enable fuzzy matching, `umi_tools` uses the [`regex`](https://pypi.org/project/regex/) library rather than the more standard `re` library.
-&nbsp;
 - **What's the correct regex to use for technique X?**
 Here is a table of the techniques we have come across that are not easily processed with the basic barcode pattern syntax, and the correct regex's to use with them:
 
-    | Technique | regex |
-    | --------- | ------|
-    | inDrop    | `(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*` |
-    | ddSeq/Sureccell | `(?P<cell_1>.{6})(?P<discard_1>TAGCCATCGCATTGC)(?P<cell_2>.{6})(?P<discard_2>TACCTCTGAGCTGAA)(?P<cell_3>.{6})(?P<discard_3>ACG)(?P<umi_1>.{8}).*` |
-    | SPLiT-seq | `(?P<umi_1>.{10})(?<cell_1>.{8})(?P<discard_1>GTGGCCGATGTTTCGCATCGGCGTACGACT)(?P<cell_2>.{8})(?<discard_2>ATCCACGTGCTTGAGAGGCCAGAGCATTCG)(?P<cell_3>.{8})` |
+   | Technique | regex |
+   | --------- | ------ |
+   | inDrop    | `(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*` |
+   | ddSeq/Sureccell | `(?P<cell_1>.{6})(?P<discard_1>TAGCCATCGCATTGC)(?P<cell_2>.{6})(?P<discard_2>TACCTCTGAGCTGAA)(?P<cell_3>.{6})(?P<discard_3>ACG)(?P<umi_1>.{8}).*` |
+   | SPLiT-seq | `(?P<umi_1>.{10})(?<cell_1>.{8})(?P<discard_1>GTGGCCGATGTTTCGCATCGGCGTACGACT)(?P<cell_2>.{8})(?<discard_2>ATCCACGTGCTTGAGAGGCCAGAGCATTCG)(?P<cell_3>.{8})` |
 
-    If you know of other, please drop us a PR with them!
+   If you know of other, please drop us a PR with them!
 
 - **Can I use `umi_tools` to determine consensus sequences?**
 Right now, you can use `umi_tools group` to identify the duplicated read groups. From this, you can then derive consensus sequences as you wish. We have discussed adding consense sequence calling as a separate `umi_tools` command (see [#203](https://github.com/CGATOxford/UMI-tools/issues/181)). If you'd like to help us out, get in touch!
