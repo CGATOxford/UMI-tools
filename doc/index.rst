@@ -11,7 +11,7 @@ Tools for dealing with Unique Molecular Identifiers
 .. note::
 
    **Important update**: We now recommend the use of `alevin`
-   10x Chromium and Drop-seq droplet-based scRNA-Seq. `alevin` is an
+   for 10x Chromium and Drop-seq droplet-based scRNA-Seq. `alevin` is an
    accurate, fast and convenient end-to-end tool to go from fastq ->
    count matrix and extends the UMI error correction in `UMI-tools`
    within a framework that also enables quantification of droplet
