@@ -1,7 +1,7 @@
-UMI-Tools quick start guide
+Quick start guide
 =============================
 
-This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the `Single cell tutorial <Single_cell_tutorial.md>`_
+This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the [Single cell tutorial](Single_cell_tutorial)
 
 
 - [UMI-Tools quick start guide](#umi-tools-quick-start-guide)
@@ -12,9 +12,7 @@ This quick start guide uses an iCLIP dataset as an example. If you want to apply
   * [Step 5: Deduplication](#step-5--deduplication)
   * [Common variations](#common-variations)
     + [Paired-end sequencing](#paired-end-sequencing)
-    + [Mapping to the transcriptome](#mapping-to-the-transcriptome)
     + [Read grouping](#read-grouping)
-    + [Bespoke UMI extraction](#bespoke-umi-extraction)
     + [Other options](#other-options)
 
 The following steps will guide you through a short example of how to

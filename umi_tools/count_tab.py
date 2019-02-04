@@ -1,5 +1,5 @@
 '''
-count_tab.py - Count reads per gene from flatfile using UMIs
+count_tab - Count reads per gene from flatfile using UMIs
 =================================================================
 
 :Author: Ian Sudbery, Tom Smith
@@ -19,16 +19,18 @@ first column is the read identifier (including UMI) and the second
 column is the assigned gene. The input must be sorted by the gene
 identifier.
 
-Input template:
+Input template::
+
 read_id[SEP]_UMI    gene
 
-Example:
+Example::
+
 NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA     ENSG00000279457.3
 NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG     ENSG00000225972.1
 
 You can perform any required file transformation and pipe the output
 directly to count_tab. For example to pipe output from featureCounts
-with the '-R CORE' option you can do the following:
+with the '-R CORE' option you can do the following::
 
     awk '$2=="Assigned" {print $1"\t"$4}' my.bam.featureCounts | sort -k2 |
     umi_tools count_tab -S gene_counts.tsv -L count.log
@@ -37,16 +39,16 @@ The tab file is assumed to contain each read id once only. For paired
 end reads with featureCounts you must include the "-p" option so each
 read id is included once only.
 
-Per-cell counting can be enable with --per-cell. For per-cell
+Per-cell counting can be enable with `--per-cell`. For per-cell
 counting, the input must be in the following format (tab separated),
 where the first column is the read identifier (including UMI and Cell
 Barcode) and the second column is the assigned gene. The input must be
 sorted by the gene identifier:
 
-Input template:
+Input template::
 read_id[SEP]_UMI_CB    gene
 
-Example:
+Example::
 
 NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
 NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1

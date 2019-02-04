@@ -8,8 +8,6 @@
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
-UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
-
 .. note::
 
    **Important update**: We now recommend the use of `alevin`
@@ -26,6 +24,9 @@ UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/ear
 Welcome to the UMI-tools documentation. UMI-tools contains tools for
 dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags
 (RMTs) and single cell RNA-Seq cell barcodes.
+
+UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
+
 
 .. toctree::
    :maxdepth: 1
@@ -82,20 +83,20 @@ enabled - The recommended method is *directional*.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Reference:
+   :caption: Commands:
 
-   reference/whitelist
-   reference/extract
-   reference/group
-   reference/dedup
-   reference/count
-   refernece/count_tab
+   whitelist <reference/whitelist>
+   extract <reference/extract>
+   group <reference/group>
+   dedup <reference/dedup>
+   count <reference/count>
+   count_tab <reference/count_tab>
 
-See `QUICK_START <QUICK_START.md>`_ for a quick tutorial on
+See :doc:`QUICK_START` for a quick tutorial on
 the most common usage pattern.
 
 If you want to use UMI-tools in single-cell RNA-Seq data processing,
-see `Single_cell_tutorial <.Single_cell_tutorial.md>`_
+see :doc:`Single_cell_tutorial`
 
 The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
@@ -132,7 +133,7 @@ Enter repository and run:
 
    $ python setup.py install
 
-For more detail see `INSTALL.rst <INSTALL.rst>`_
+For more detail see :doc:`INSTALL`
 
 
 To get detailed help on umi_tools run

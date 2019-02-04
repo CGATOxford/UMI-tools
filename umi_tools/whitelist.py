@@ -1,5 +1,5 @@
 '''
-whitelist.py - Identify the true cell barcodes
+whitelist - Identify the true cell barcodes
 ====================================================
 
 :Author: Tom Smith, Ian Sudbery
@@ -24,23 +24,23 @@ detailed explanation:
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
 Counts per cell barcode can be performed using either read or unique
-UMI counts. Use --method=[read|umis] to set the counting method.
+UMI counts. Use ``--method=[read|umis]`` to set the counting method.
 
 The process of selecting the "best" local minima is not completely
 foolproof. We recommend users always run whitelist with the
---plot-prefix option to visualise the set of thresholds considered for
+``--plot-prefix`` option to visualise the set of thresholds considered for
 defining cell barcodes. This option will also generate a table
 containing the thresholds which were rejected if you want to manually
 adjust the threshold.
 
 In addition, if you have some prior expectation on the maximum number
 of cells which may have been sequenced, you can provide this using the
-option --expect-cells (see below).
+option ``--expect-cells`` (see below).
 
 If you don't mind if whitelist cannot identify a suitable threshold as
 you intend to inspect the plots and identify the threshold manually,
-provide the following options: --allow-threshold-error
---plot-prefix=[PLOT_PREFIX]
+provide the following options: ``--allow-threshold-error``,
+``--plot-prefix=[PLOT_PREFIX]``
 
 whitelist-specific options
 --------------------------
@@ -70,13 +70,15 @@ whitelist-specific options
 Usage:
 ------
 
-For single ended reads:
+For single ended reads::
+
         umi_tools whitelist --bc-pattern=[PATTERN] -L extract.log
         [OPTIONS]
 
 reads from stdin and outputs to stdout.
 
-For paired end reads where the cell barcodes is split across the read pairs:
+For paired end reads where the cell barcodes is split across the read pairs::
+
         umi_tools whitelist --bc-pattern=[PATTERN]
         --bc-pattern2=[PATTERN] --read2-in=[FASTQIN] -L extract.log
         [OPTIONS]
@@ -95,7 +97,7 @@ The whitelist is outputted as 4 tab-separated columns:
     3. Count for whitelisted cell barcodes
     4. Count(s) for the other cell barcode(s) (comma-separated)
 
-example output:
+example output::
 
     AAAAAA      AGAAAA          146	1
     AAAATC		        22

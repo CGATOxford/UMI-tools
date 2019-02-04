@@ -1,5 +1,5 @@
 '''
-extract.py - Extract UMI from fastq
+extract - Extract UMI from fastq
 ====================================================
 
 :Author: Ian Sudbery, Tom Smith
@@ -22,16 +22,16 @@ Filtering and correcting cell barcodes
 --------------------------------------
 
 umi_tools extract can optionally filter cell barcodes
-(--filter-cell-barcode) against a user-supplied whitelist
-(--whitelist). If a whitelist is not available for your data, e.g
+(``--filter-cell-barcode``) against a user-supplied whitelist
+(``--whitelist``). If a whitelist is not available for your data, e.g
 if you have performed droplet-based scRNA-Seq, you can use the
 whitelist tool.
 
 Cell barcodes which do not match the whitelist (user-generated or
 automatically generated) can also be optionally corrected using the
---error-correct-cell option.
+``--error-correct-cell`` option.
 
-The whitelist should be in the following format (tab-separated):
+The whitelist should be in the following format (tab-separated)::
 
     AAAAAA	AGAAAA
     AAAATC
@@ -43,7 +43,7 @@ The whitelist should be in the following format (tab-separated):
 
 Where column 1 is the whitelisted cell barcodes and column 2 is
 the list (comma-separated) of other cell barcodes which should be
-corrected to the barcode in column 1. If the --error-correct-cell
+corrected to the barcode in column 1. If the ``--error-correct-cell``
 option is not used, this column will be ignored. Any additional columns
 in the whitelist input, such as the counts columns from the output of
 umi_tools whitelist, will be ignored.
@@ -52,13 +52,15 @@ umi_tools whitelist, will be ignored.
 Usage:
 ------
 
-For single ended reads:
+For single ended reads::
+
         umi_tools extract --extract-method=string
         --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
 
 reads from stdin and outputs to stdout.
 
-For paired end reads:
+For paired end reads::
+
         umi_tools extract --extract-method=string
         --bc-pattern=[PATTERN] --bc-pattern2=[PATTERN]
         --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
@@ -67,7 +69,8 @@ reads end one from stdin and end two from FASTQIN and outputs end one to stdin
 and end two to FASTQOUT.
 
 
-Using regex and filtering against a whitelist of cell barcodes:
+Using regex and filtering against a whitelist of cell barcodes::
+
         umi_tools extract --extract-method=regex --filter-cell-barcode
         --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
         -L extract.log [OPTIONS]

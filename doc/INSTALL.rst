@@ -48,7 +48,7 @@ etc. You can read more `about conda here`_.
 
 2. Type::
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda -c conda-forge umi_tools
 
 That's it, simple as that.
 

@@ -1,5 +1,5 @@
 '''
-dedup.py - Deduplicate reads that are coded with a UMI
+dedup - Deduplicate reads that are coded with a UMI
 =========================================================
 
 :Author: Ian Sudbery, Tom Smith
@@ -20,7 +20,7 @@ The following criteria are applied to select the read that will be retained
 from a group of duplicated reads:
 
 1. The read with the lowest number of mapping coordinates (see
---multimapping-detection-method option)
+``--multimapping-detection-method`` option)
 2. The read with the highest mapping quality
 
 Otherwise a read is chosen at random.

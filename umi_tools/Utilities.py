@@ -1234,8 +1234,8 @@ Barcode extraction
 
 There are two methods enabled to extract the umi barcode (+/- cell
 barcode). For both methods, the patterns should be provided using the
---bc-pattern and --bc-pattern2 options. The method is specified using
-the --extract-method option
+``--bc-pattern`` and ``--bc-pattern2`` options. The method is specified using
+the ``--extract-method`` option
 
 -'string':
        This should be used where the barcodes are always in the same
@@ -1249,13 +1249,16 @@ the --extract-method option
        name. The corresponding sequence qualities will be removed from
        the read. Bases with an X will be reattached to the read.
 
-       E.g. If the pattern is NNNNCC,
-       Then the read:
+       E.g. If the pattern is `NNNNCC`,
+       Then the read::
+
        @HISEQ:87:00000000 read1
        AAGGTTGCTGATTGGATGGGCTAG
        DA1AEBFGGCG01DFH00B1FF0B
        +
-       will become:
+
+       will become::
+
        @HISEQ:87:00000000_TT_AAGG read1
        GCTGATTGGATGGGCTAG
        1AFGGCG01DFH00B1FF0B
@@ -1287,17 +1290,19 @@ the --extract-method option
        components of the regex will be reattached to the read sequence
 
        For example, the following regex can be used to extract reads
-       from the Klein et al inDrop data:
+       from the Klein et al inDrop data::
 
        (?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*
 
-       Where only reads with a 3' T-tail and GAGTGATTGCTTGTGACGCCTT in
+       Where only reads with a 3' T-tail and `GAGTGATTGCTTGTGACGCCTT` in
        the correct position to yield two cell barcodes of 8-12 and 8bp
        respectively, and a 6bp UMI will be retained.
 
        You can also specify fuzzy matching to allow errors. For example if
        the discard group above was specified as below this would enable
        matches with up to 2 errors in the discard_1 group.
+
+::
 
        (?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}
 
@@ -1313,7 +1318,7 @@ additional whitelist/extract options
        read, but use this option to sepecify that it is on the 3' end
        instead. This option only works with --extract-method=string
        since 3' encoding can be specified explicitly with a regex, e.g
-       ".*(?P<umi_1>.{5})$"
+       `.*(?P<umi_1>.{5})$`
 
 '''
 
@@ -1322,25 +1327,25 @@ additional whitelist/extract options
 # for group/dedup/count/count_tab
 GENERIC_DOCSTRING_GDC = '''
 It is assumed that the FASTQ files were processed with extract_umi.py
-before mapping and thus the UMI is the last word of the read name. e.g:
+before mapping and thus the UMI is the last word of the read name. e.g::
 
 @HISEQ:87:00000000_AATT
 
-where AATT is the UMI sequeuence.
+where `AATT` is the UMI sequeuence.
 
 If you have used an alternative method which does not separate the
 read id and UMI with a "_", such as bcl2fastq which uses ":", you can
-specify the separator with the option "--umi-separator=<sep>",
+specify the separator with the option ``--umi-separator=<sep>``,
 replacing <sep> with e.g ":".
 
 Alternatively, if your UMIs are encoded in a tag, you can specify this
 by setting the option --extract-umi-method=tag and set the tag name
 with the --umi-tag option. For example, if your UMIs are encoded in
 the 'UM' tag, provide the following options:
-"--extract-umi-method=tag --umi-tag=UM"
+``--extract-umi-method=tag`` ``--umi-tag=UM``
 
 Finally, if you have used umis to extract the UMI +/- cell barcode,
-you can specify --extract-umi-method=umis
+you can specify ``--extract-umi-method=umis``
 
 The start position of a read is considered to be the start of its alignment
 minus any soft clipped bases. A read aligned at position 500 with
@@ -1361,11 +1366,11 @@ Input/Output Options
 
 -L    (string, filename) log file name
 
-.. note::
-   In order to get a valid sam/bam file you need to redirect logging
-   information or turn it off logging via -v 0. You can redirect the
-   logging to a file with -L <logfile> or use the --log2stderr option
-   to send the logging to stderr.
+      .. note::
+         In order to get a valid sam/bam file you need to redirect logging
+         information or turn it off logging via -v 0. You can redirect the
+         logging to a file with ``-L <logfile>`` or use the ``--log2stderr`` option
+         to send the logging to stderr.
 
 --paired
        BAM is paired end - output both read pairs. This will also
@@ -1379,23 +1384,23 @@ Input/Output Options
 
       - "read_id" (default)
             Barcodes are contained at the end of the read separated as
-            specified with --umi-separator option
+            specified with ``--umi-separator`` option
 
       - "tag"
-            Barcodes contained in a tag(s), see --umi-tag/--cell-tag
+            Barcodes contained in a tag(s), see ``--umi-tag``/``--cell-tag``
             options
 
       - "umis"
             Barcodes were extracted using umis (https://github.com/vals/umis)
 
 --umi-separator (string)
-      Separator between read id and UMI. See --extract-umi-method above
+      Separator between read id and UMI. See ``--extract-umi-method`` above
 
 --umi-tag (string)
-      Tag which contains UMI. See --extract-umi-method above
+      Tag which contains UMI. See ``--extract-umi-method`` above
 
 --cell-tag (string)
-      Tag which contains cell barcode. See --extract-umi-method above
+      Tag which contains cell barcode. See `--extract-umi-method` above
 
 
 UMI grouping options
@@ -1455,7 +1460,7 @@ Single-cell RNA-Seq options
       identical alignment positions such as CEL-Seq. Note this option
       is hardcoded to be on with the count command. I.e counting is
       always performed per-gene. Must be combined with either
-      --gene-tag or --per-contig option
+      ``--gene-tag`` or ``--per-contig`` option
 
 --gene-tag (string)
       Deduplicate per gene. The gene information is encoded in the bam
@@ -1466,7 +1471,7 @@ Single-cell RNA-Seq options
       gene. Defaults to the same value as given for --gene-tag
 
 --skip-tags-regex (string)
-      Used in conjunction with the --assigned-status-tag option. Skip any reads
+      Used in conjunction with the ``--assigned-status-tag`` option. Skip any reads
       where the tag matches this regex.
       Default matches anything which starts with "__" or "Unassigned":
       ("^[__|Unassigned]")
@@ -1481,7 +1486,7 @@ Single-cell RNA-Seq options
       using the --gene-transcript-map option
 
 --gene-transcript-map (string)
-      File mapping genes to transcripts (tab separated), e.g:
+      File mapping genes to transcripts (tab separated), e.g::
 
       gene1   transcript1
       gene1   transcript2
@@ -1489,7 +1494,7 @@ Single-cell RNA-Seq options
 
 --per-cell (string)
       Reads will only be grouped together if they have the same cell
-      barcode. Can be combined with --per-gene.
+      barcode. Can be combined with ``--per-gene``.
 
 
 Debug options
@@ -1514,7 +1519,7 @@ Group/Dedup options
        use of a temporary unsorted file since reads are considered in
        the order of their start position which may not be the same
        as their alignment coordinate due to soft-clipping and reverse
-       alignments. The temp file will be saved (in --temp-dir) and deleted
+       alignments. The temp file will be saved (in ``--temp-dir``) and deleted
        when it has been sorted to the outfile. Use this option to turn
        off sorting.
 

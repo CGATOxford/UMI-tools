@@ -1,5 +1,5 @@
 '''
-group.py - Group reads based on their UMI
+group - Group reads based on their UMI
 =========================================
 
 :Author: Tom Smith
@@ -16,24 +16,26 @@ their genomic coordinate and UMI.
 The group command can be used to create two types of outfile: a tagged
 BAM or a flatfile describing the read groups
 
-To generate the tagged-BAM file, use the option --output-bam and
-provide a filename with the -S option. Alternatively, if you do not
+To generate the tagged-BAM file, use the option ``--output-bam`` and
+provide a filename with the ``-S`` option. Alternatively, if you do not
 provide a filename, the bam file will be outputted to the stdout. If
-you have provided the --log/-L option to send the logging output
+you have provided the ``--log``/``-L`` option to send the logging output
 elsewhere, you can pipe the output from the group command directly to
-e.g samtools view like so:
+e.g samtools view like so::
 
-umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam
---log=group.log --paired | samtools view - |less
+    umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam
+    --log=group.log --paired | samtools view - |less
 
 The tagged-BAM file will have two tagged per read:
+
 UG = Unique_id. 0-indexed unique id number for each group of reads
      with the same genomic position and UMI or UMIs inferred to be
      from the same true UMI + errors
+
 BX = Final UMI. The inferred true UMI for the group
 
 To generate the flatfile describing the read groups, include the
---group-out=<filename> option. The columns of the read groups file are
+``--group-out=<filename>`` option. The columns of the read groups file are
 below. The first five columns relate to the read. The final 3 columns
 relate to the group.
 
@@ -69,11 +71,12 @@ relate to the group.
     The unique id for the group
 
 
-dedup-specific options
+group-specific options
 ----------------------
 
 --group-out (string, filename)
    Outfile name for file mapping read id to read group
+
 
 '''
 import sys

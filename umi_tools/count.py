@@ -1,5 +1,5 @@
 '''
-count.py - Count reads per gene from BAM using UMIs
+count - Count reads per gene from BAM using UMIs
 ===================================================
 
 :Author: Ian Sudbery, Tom Smith
@@ -30,10 +30,10 @@ counting tool such as FeatureCounts or HTSeq to count the reads per
 gene.
 
 In the rare case of bulk RNA-Seq using a library preparation method
-with fragmentation after amplification, one can still use count.py but
+with fragmentation after amplification, one can still use `count` but
 note that it has not been tested on bulk RNA-Seq.
 
-This tool deviates from group and dedup in that the --per-gene option
+This tool deviates from group and dedup in that the ``--per-gene`` option
 is hardcoded on.
 
 '''
