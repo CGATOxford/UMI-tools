@@ -49,8 +49,8 @@ for alignment.
 * whitelist:
    **Builds a whitelist of the 'real' cell barcodes**
       This is useful for droplet-based single cell RNA-Seq where the
-      identity of the true cell barcodes is unknown. Whitelist can
-      then be used to filter with extract (see below)
+      identity of the true cell barcodes is unknown. The whitelist can
+      then be used to filter cell barcodes with extract (see below)
 
 * extract:
    **Flexible removal of UMI sequences from fastq reads.**
@@ -71,12 +71,14 @@ enabled - The recommended method is *directional*.
 
 * group: 
    **Groups PCR duplicates using the same methods available through `dedup`.**
-      This is useful when you want to manually interrogate the PCR duplicates
+      This is useful when you want to manually interrogate the PCR
+      duplicates or perform bespoke downstream processing such as
+      generating consensus sequences
    
 * count:
    **Groups and deduplicates PCR duplicates and counts the unique molecules per gene**
       Use this when you want to obtain a matrix with unique molecules
-      per gene, per cell, for scRNA-Seq.
+      per gene, per cell, for scRNA-Seq
 
 * count_tab:
    **As per count except input is a flatfile**

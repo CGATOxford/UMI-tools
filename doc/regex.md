@@ -1,10 +1,10 @@
-﻿# Specifiying cell bar code and UMI
+﻿# Specifiying cell barcode and UMI
 
 There are two ways to specify the location of cell barcodes and UMI bases when using `whitelist` and `extract`: string/basic (default) or regex. Sting or basic mode is simple and easy to understand and can be used for most techniques, like iCLIP, 10x chromium or Drop-seq. The regex mode is a little harder to explain, but allows a great deal of flexibility in specifying the layout of your read.
 
 ## Basic string mode
 
-In the default mode basic mode we specify the location of barcodes and UMIs in a read using a simple string. `N`s specify the location of bases to be treated as UMIs, `C`s as bases to treated as cell barcode and `X`s as bases that are neither and that should be retained on the read. By default this pattern is applied to the 5' end of the read, but we can tell `extract` to look on the 3' end of the read using `--3-prime`. 
+In the default basic mode we specify the location of barcodes and UMIs in a read using a simple string. `N`s specify the location of bases to be treated as UMIs, `C`s as bases to treated as cell barcode and `X`s as bases that are neither and that should be retained on the read. By default this pattern is applied to the 5' end of the read, but we can tell `extract` to look on the 3' end of the read using `--3-prime`. 
 
 So for example in 10x Chromium, read one consists of 16 bases of cell barcode followed by 10 bases of UMI, so the correct pattern to use is `CCCCCCCCCCCCCCCCNNNNNNNNNN`:
 
