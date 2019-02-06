@@ -60,12 +60,7 @@ for an analysis of errors in barcodes above the knee threshold.
 
 Optional detection of putative error CBs above the threshold can be
 switched on with the error detection option:
---ed-above-threshold
-
-The choice of conservative (discard) and relaxed (correct) approaches
-for putative error CBs is made with
---ed-resolution=discard or
---ed-resolution=correct
+--ed-above-threshold=[discard/correct]
 
 whitelist-specific options
 --------------------------
@@ -92,12 +87,10 @@ whitelist-specific options
         This is useful if you what the command to exit with just a
         warning if a suitable threshold cannot be selected
 
---ed-above-threshold
-        Detect CBs above the threshold which may be sequence errors
-
---ed-resolution=[discard/correct]
-        Either discard or correct putative errors in CBs above the
-        threshold
+--ed-above-threshold=[discard/correct]
+        Detect CBs above the threshold which may be sequence
+        errors. Either "discard" or "correct" putative errors in CBs above
+        the threshold
 
 Usage:
 ------
@@ -190,8 +183,10 @@ def main(argv=None):
     group.add_option("--error-correct-threshold",
                      dest="error_correct_threshold",
                      type="int",
-                     help=("Hamming distance for correction of "
-                           "barcodes to whitelist barcodes"))
+                     help=("Hamming distance for correction of barcodes to "
+                           "whitelist barcodes. This value will also be used "
+                           "for error detection above the knee if required "
+                           "(--ed-above-threshold)"))
     group.add_option("--method",
                      dest="method",
                      choices=["reads", "umis"],
@@ -211,16 +206,11 @@ def main(argv=None):
                      help=("Specify the number of cell barcodes to accept"))
 
     parser.add_option("--ed-above-threshold",
-                      dest="ed_above_threshold", action="store_true",
-                      help=("Detect CBs above the threshold which may be "
-                            "sequence errors from another CB"))
-    parser.add_option("--ed-resolution",
-                      dest="ed_resolution", type="choice",
+                      dest="ed_above_threshold", type="choice",
                       choices=["discard", "correct"],
-                      help=("What to do with putative errors in the CBs above "
-                            "the threshold. Choices are [discard or correct]."
-                            "Default=discard"))
-
+                      help=("Detect CBs above the threshold which may be "
+                            "sequence errors from another CB and either "
+                            "'discard' or 'correct'. Default=discard"))
     parser.add_option_group(group)
 
     parser.set_defaults(method="reads",
@@ -237,8 +227,7 @@ def main(argv=None):
                         expect_cells=False,
                         allow_threshold_error=False,
                         cell_number=False,
-                        ed_above_threshold=False,
-                        ed_resolution="discard")
+                        ed_above_threshold=None)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -433,7 +422,7 @@ def main(argv=None):
             cell_whitelist,
             true_to_false_map,
             errors=options.error_correct_threshold,
-            resolution_method=options.ed_resolution)
+            resolution_method=options.ed_above_threshold)
 
     if cell_whitelist:
         U.info("Writing out whitelist")

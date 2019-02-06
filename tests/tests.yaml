@@ -92,13 +92,13 @@ whitelist_indrop_ed_above_threshold_discard:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist_ed_above_thres_disc.tsv]
-      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log  --ed-above-threshold --ed-resolution=discard --error-correct-threshold=3
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log  --ed-above-threshold=discard --error-correct-threshold=3
 
 whitelist_indrop_ed_above_threshold_correct:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist_ed_above_thres_corr.tsv]
-      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log  --ed-above-threshold --ed-resolution=correct --error-correct-threshold=3
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log  --ed-above-threshold=correct --error-correct-threshold=3
 
 count_single_gene_tag:
       stdin: chr19_gene_tags.bam
