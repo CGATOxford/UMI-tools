@@ -10,20 +10,20 @@ whitelist.py - Identify the true cell barcodes
 Purpose
 -------
 
-Extract cell barcodes and identify the most likely true barcodes using
-the 'knee' method.
+Extract cell barcodes and identify the most likely true cell barcodes
+(CB) using the 'knee' method.
 
 Identifying the true cell barcodes
 ----------------------------------
 
 In the absence of the --set-cell-number options (see below),
-we use the distribution of counts per cell barcode to identify the
+we use the distribution of counts per CB to identify the
 cut-off for 'true' UMIs (the 'knee'). See this blog post for a more
 detailed explanation:
 
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
-Counts per cell barcode can be performed using either read or unique
+Counts per CB can be performed using either read or unique
 UMI counts. Use --method=[read|umis] to set the counting method.
 
 The process of selecting the "best" local minima is not completely
@@ -42,14 +42,34 @@ you intend to inspect the plots and identify the threshold manually,
 provide the following options: --allow-threshold-error
 --plot-prefix=[PLOT_PREFIX]
 
+Finally, in some dataset there may be a risk that CBs above the
+selected threshold are actually errors from another CB. We can detect
+potential instances of this by looking for CBs within one error
+(substition, insertion or deletion) of another CB with higher
+counts. One can then either take a conservate approach (remove CB with
+lower counts), or a more relaxed approach (correct CB with lower
+counts to CB with higher counts).  Of course, the risk with the
+relaxed approach is that this may erroneously merge two truly
+different CBs together and create an in-silico "doublet". The end of
+the log file (--log) will detail the number of reads from CBs above
+the threshold which may be errors. In most cases, we expect the number
+of reads to be a very small fraction of the total reads and therefore
+recommend taking the conservative approach. See
+https://cgatoxford.wordpress.com/2017/05/23/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq-part-2/
+for an analysis of errors in barcodes above the knee threshold.
+
+Optional detection of putative error CBs above the threshold can be
+switched on with the error detection option:
+--ed-above-threshold=[discard/correct]
+
 whitelist-specific options
 --------------------------
 
---plot-prefix
+--plot-prefix=[PLOT_PREFIX]
         Use this option to indicate the prefix for the plots and table
         describing the set of thresholds considered for defining cell barcodes
 
---set-cell-number
+--set-cell-number=[N_CELLS]
         Use this option to explicity set the number of cell barcodes
         which should be accepted. Note that the exact number of cell
         barcodes in the outputted whitelist may be slightly less than
@@ -66,6 +86,16 @@ whitelist-specific options
 --allow-threshold-error
         This is useful if you what the command to exit with just a
         warning if a suitable threshold cannot be selected
+
+--ed-above-threshold=[discard/correct]
+        Detect CBs above the threshold which may be sequence
+        errors. Either "discard" or "correct" putative substituion
+        errors in CBs above the threshold. Note that correction is
+        only possible when the CB contains only substituions since
+        insertions and deletions may cause errors in the UMI sequence
+        too. Also, where a CB could be corrected to two other CBs,
+        correction is not possible. In these cases, the CB will be
+        discarded regardless of which option is used.
 
 Usage:
 ------
@@ -158,8 +188,10 @@ def main(argv=None):
     group.add_option("--error-correct-threshold",
                      dest="error_correct_threshold",
                      type="int",
-                     help=("Hamming distance for correction of "
-                           "barcodes to whitelist barcodes"))
+                     help=("Hamming distance for correction of barcodes to "
+                           "whitelist barcodes. This value will also be used "
+                           "for error detection above the knee if required "
+                           "(--ed-above-threshold)"))
     group.add_option("--method",
                      dest="method",
                      choices=["reads", "umis"],
@@ -178,6 +210,12 @@ def main(argv=None):
                      type="int",
                      help=("Specify the number of cell barcodes to accept"))
 
+    parser.add_option("--ed-above-threshold",
+                      dest="ed_above_threshold", type="choice",
+                      choices=["discard", "correct"],
+                      help=("Detect CBs above the threshold which may be "
+                            "sequence errors from another CB and either "
+                            "'discard' or 'correct'. Default=discard"))
     parser.add_option_group(group)
 
     parser.set_defaults(method="reads",
@@ -193,7 +231,8 @@ def main(argv=None):
                         subset_reads=100000000,
                         expect_cells=False,
                         allow_threshold_error=False,
-                        cell_number=False)
+                        cell_number=False,
+                        ed_above_threshold=None)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -314,6 +353,18 @@ def main(argv=None):
         options.plot_prefix)
 
     if cell_whitelist:
+        U.info("Top %s cell barcodes passed the selected threshold" %
+               len(cell_whitelist))
+
+    if options.ed_above_threshold:
+        cell_whitelist, true_to_false_map = umi_methods.errorDetectAboveThreshold(
+            cell_barcode_counts,
+            cell_whitelist,
+            true_to_false_map,
+            errors=options.error_correct_threshold,
+            resolution_method=options.ed_above_threshold)
+
+    if cell_whitelist:
         U.info("Writing out whitelist")
         total_correct_barcodes = 0
         total_corrected_barcodes = 0
@@ -351,13 +402,13 @@ def main(argv=None):
     U.info("Parsed %i reads" % n_reads)
     U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
     U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
+
     if cell_whitelist:
-        U.info("Top %s cell barcodes passed the selected threshold" %
-               len(cell_whitelist))
         U.info("Found %i total reads matching the selected cell barcodes" %
                total_correct_barcodes)
         U.info("Found %i total reads which can be error corrected to the "
                "selected cell barcodes" % total_corrected_barcodes)
+
     U.Stop()
 
 if __name__ == "__main__":

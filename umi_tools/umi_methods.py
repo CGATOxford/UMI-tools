@@ -12,9 +12,11 @@ umi_methods.py - Methods for dealing with UMIs
 from __future__ import absolute_import
 import itertools
 import collections
+import copy
 import random
 import pysam
 import re
+import regex
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib
@@ -436,6 +438,95 @@ def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
                     false_to_true_map[error_barcode] = whitelist_barcode
 
     return set(cell_whitelist), false_to_true_map
+
+
+def checkError(barcode, whitelist, errors=1):
+    '''
+    Check for errors (substitutions, insertions, deletions) between a barcode
+    and a set of whitelist barcodes.
+
+    Returns the whitelist barcodes which match the input barcode
+    allowing for errors. Returns as soon as two are identified.
+    '''
+
+    near_matches = []
+    comp_regex = regex.compile("(%s){e<=%i}" % (barcode, errors))
+    b_length = len(barcode)
+    for whitelisted_barcode in whitelist:
+        w_length = len(whitelisted_barcode)
+
+        # Don't check against itself
+        if barcode == whitelisted_barcode:
+            continue
+
+        # If difference in barcode lengths > number of allowed errors, continue
+        if (max(b_length, w_length) > (min(b_length, w_length) + errors)):
+            continue
+        if comp_regex.match(whitelisted_barcode):
+            near_matches.append(whitelisted_barcode)
+
+            # Assuming downstream processes are the same for
+            # (>1 -> Inf) near_matches this is OK
+            if len(near_matches) > 1:
+                return near_matches
+
+    return near_matches
+
+
+def errorDetectAboveThreshold(cell_barcode_counts,
+                              cell_whitelist,
+                              true_to_false_map,
+                              errors=1,
+                              resolution_method="discard"):
+
+    assert resolution_method in ["discard", "correct"], (
+        "resolution method must be discard or correct")
+
+    error_counter = collections.Counter()
+
+    new_true_to_false_map = copy.deepcopy(true_to_false_map)
+
+    discard_cbs = set()
+
+    cell_whitelist = list(cell_whitelist)
+    cell_whitelist.sort(key=lambda x: cell_barcode_counts[x])
+
+    for ix, cb in enumerate(cell_whitelist):
+
+        near_misses = checkError(cb, cell_whitelist[ix+1:], errors=errors)
+
+        if len(near_misses) > 0:
+            error_counter["error_discarded_mt_1"]
+            discard_cbs.add(cb)  # Will always discard CB from cell_whitelist
+
+        if resolution_method == "correct" and len(near_misses) == 1:
+
+            # Only correct substitutions as INDELs will also mess
+            # up UMI so simple correction of CB is insufficient
+            if regex.match("(%s){s<=%i}" % (cb, errors), near_misses[0]):
+                # add corrected barcode to T:F map
+                new_true_to_false_map[near_misses[0]].add(cb)
+                error_counter["substitution_corrected"] += 1
+            else:
+                discard_cbs.add(cb)
+                error_counter["indel_discarded"] += 1
+        else:
+            error_counter["error_discarded"] += 1
+
+    if resolution_method == "correct":
+        U.info("CBs above the knee corrected due to possible substitutions: %i" %
+               error_counter["substitution_corrected"])
+        U.info("CBs above the knee discarded due to possible INDELs: %i" %
+               error_counter["indel_discarded"])
+        U.info("CBs above the knee discarded due to possible errors from "
+               "multiple other CBs: %i" % error_counter["error_discarded_mt_1"])
+    else:
+        U.info("CBs above the knee discarded due to possible errors: %i" %
+               len(discard_cbs))
+
+    cell_whitelist = set(cell_whitelist).difference(discard_cbs)
+
+    return(cell_whitelist, new_true_to_false_map)
 
 
 def get_barcode_read_id(read, cell_barcode=False, sep="_"):
