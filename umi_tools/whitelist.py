@@ -89,8 +89,13 @@ whitelist-specific options
 
 --ed-above-threshold=[discard/correct]
         Detect CBs above the threshold which may be sequence
-        errors. Either "discard" or "correct" putative errors in CBs above
-        the threshold
+        errors. Either "discard" or "correct" putative substituion
+        errors in CBs above the threshold. Note that correction is
+        only possible when the CB contains only substituions since
+        insertions and deletions may cause errors in the UMI sequence
+        too. Also, where a CB could be corrected to two other CBs,
+        correction is not possible. In these cases, the CB will be
+        discarded regardless of which option is used.
 
 Usage:
 ------
@@ -416,6 +421,10 @@ def main(argv=None):
         options.error_correct_threshold,
         options.plot_prefix)
 
+    if cell_whitelist:
+        U.info("Top %s cell barcodes passed the selected threshold" %
+               len(cell_whitelist))
+
     if options.ed_above_threshold:
         cell_whitelist, true_to_false_map = umi_methods.errorDetectAboveThreshold(
             cell_barcode_counts,
@@ -462,13 +471,13 @@ def main(argv=None):
     U.info("Parsed %i reads" % n_reads)
     U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
     U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
+
     if cell_whitelist:
-        U.info("Top %s cell barcodes passed the selected threshold" %
-               len(cell_whitelist))
         U.info("Found %i total reads matching the selected cell barcodes" %
                total_correct_barcodes)
         U.info("Found %i total reads which can be error corrected to the "
                "selected cell barcodes" % total_corrected_barcodes)
+
     U.Stop()
 
 if __name__ == "__main__":

@@ -482,6 +482,8 @@ def errorDetectAboveThreshold(cell_barcode_counts,
     assert resolution_method in ["discard", "correct"], (
         "resolution method must be discard or correct")
 
+    error_counter = collections.Counter()
+
     new_true_to_false_map = copy.deepcopy(true_to_false_map)
 
     discard_cbs = set()
@@ -494,10 +496,33 @@ def errorDetectAboveThreshold(cell_barcode_counts,
         near_misses = checkError(cb, cell_whitelist[ix+1:], errors=errors)
 
         if len(near_misses) > 0:
+            error_counter["error_discarded_mt_1"]
             discard_cbs.add(cb)  # Will always discard CB from cell_whitelist
-            if resolution_method == "correct" and len(near_misses) == 1:
+
+        if resolution_method == "correct" and len(near_misses) == 1:
+
+            # Only correct substitutions as INDELs will also mess
+            # up UMI so simple correction of CB is insufficient
+            if regex.match("(%s){s<=%i}" % (cb, errors), near_misses[0]):
                 # add corrected barcode to T:F map
                 new_true_to_false_map[near_misses[0]].add(cb)
+                error_counter["substitution_corrected"] += 1
+            else:
+                discard_cbs.add(cb)
+                error_counter["indel_discarded"] += 1
+        else:
+            error_counter["error_discarded"] += 1
+
+    if resolution_method == "correct":
+        U.info("CBs above the knee correct due to possible substitutions: %i" %
+               error_counter["substitution_corrected"])
+        U.info("CBs above the knee discarded due to possible INDELs: %i" %
+               error_counter["indel_discarded"])
+        U.info("CBs above the knee discarded due to possible errors from "
+               "multiple other CBs: %i" % error_counter["error_discarded_mt_1"])
+    else:
+        U.info("CBs above the knee discarded due to possible errors: %i" %
+               len(discard_cbs))
 
     cell_whitelist = set(cell_whitelist).difference(discard_cbs)
 
