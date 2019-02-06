@@ -514,7 +514,7 @@ def errorDetectAboveThreshold(cell_barcode_counts,
             error_counter["error_discarded"] += 1
 
     if resolution_method == "correct":
-        U.info("CBs above the knee correct due to possible substitutions: %i" %
+        U.info("CBs above the knee corrected due to possible substitutions: %i" %
                error_counter["substitution_corrected"])
         U.info("CBs above the knee discarded due to possible INDELs: %i" %
                error_counter["indel_discarded"])
