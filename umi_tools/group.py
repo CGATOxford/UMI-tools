@@ -122,10 +122,6 @@ def main(argv=None):
                      help=("output a bam file with read groups tagged using the UG tag"
                            "[default=%default]"))
 
-    group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
-                     default=False,
-                     help=("Retain all unmapped reads in output[default=%default]"))
-
     parser.add_option("--umi-group-tag", dest="umi_group_tag",
                       type="string", help="tag for the outputted umi group",
                       default='BX')
@@ -135,7 +131,7 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=True)
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
@@ -193,6 +189,11 @@ def main(argv=None):
     gene_tag = options.gene_tag
     metacontig2contig = None
 
+    if options.unmapped_reads in ["use", "output"]:
+        output_unmapped = True
+    else:
+        output_unmapped = False
+
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
@@ -204,18 +205,18 @@ def main(argv=None):
             gene_tag = metatag
 
         else:
-            inreads = infile.fetch(until_eof=options.output_unmapped)
+            inreads = infile.fetch(until_eof=output_unmapped)
 
     bundle_iterator = umi_methods.get_bundles(
         options,
         all_reads=True,
         return_read2=True,
-        return_unmapped=options.output_unmapped,
+        return_unmapped=output_unmapped,
         metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
 
-        # write out read2s and unmapped (if these options are set)
+        # write out read2s and unmapped/chimeric (if these options are set)
         if status == 'single_read':
             # bundle is just a single read here
             nInput += 1
@@ -301,13 +302,13 @@ def main(argv=None):
            (nOutput, unique_id))
 
     U.info("Total number of positions deduplicated: %i" %
-           processor.UMIClusterer.positions)
-    if processor.UMIClusterer.positions > 0:
+           processor.positions)
+    if processor.positions > 0:
         U.info("Mean number of unique UMIs per position: %.2f" %
-               (float(processor.UMIClusterer.total_umis_per_position) /
-                processor.UMIClusterer.positions))
+               (float(processor.total_umis_per_position) /
+                processor.positions))
         U.info("Max. number of unique UMIs per position: %i" %
-               processor.UMIClusterer.max_umis_per_position)
+               processor.max_umis_per_position)
     else:
         U.warn("The BAM did not contain any valid "
                "reads/read pairs for deduplication")

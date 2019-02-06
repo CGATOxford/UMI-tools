@@ -12,9 +12,11 @@ umi_methods.py - Methods for dealing with UMIs
 from __future__ import absolute_import
 import itertools
 import collections
+import copy
 import random
 import pysam
 import re
+import regex
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 import matplotlib
@@ -438,6 +440,95 @@ def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
     return set(cell_whitelist), false_to_true_map
 
 
+def checkError(barcode, whitelist, errors=1):
+    '''
+    Check for errors (substitutions, insertions, deletions) between a barcode
+    and a set of whitelist barcodes.
+
+    Returns the whitelist barcodes which match the input barcode
+    allowing for errors. Returns as soon as two are identified.
+    '''
+
+    near_matches = []
+    comp_regex = regex.compile("(%s){e<=%i}" % (barcode, errors))
+    b_length = len(barcode)
+    for whitelisted_barcode in whitelist:
+        w_length = len(whitelisted_barcode)
+
+        # Don't check against itself
+        if barcode == whitelisted_barcode:
+            continue
+
+        # If difference in barcode lengths > number of allowed errors, continue
+        if (max(b_length, w_length) > (min(b_length, w_length) + errors)):
+            continue
+        if comp_regex.match(whitelisted_barcode):
+            near_matches.append(whitelisted_barcode)
+
+            # Assuming downstream processes are the same for
+            # (>1 -> Inf) near_matches this is OK
+            if len(near_matches) > 1:
+                return near_matches
+
+    return near_matches
+
+
+def errorDetectAboveThreshold(cell_barcode_counts,
+                              cell_whitelist,
+                              true_to_false_map,
+                              errors=1,
+                              resolution_method="discard"):
+
+    assert resolution_method in ["discard", "correct"], (
+        "resolution method must be discard or correct")
+
+    error_counter = collections.Counter()
+
+    new_true_to_false_map = copy.deepcopy(true_to_false_map)
+
+    discard_cbs = set()
+
+    cell_whitelist = list(cell_whitelist)
+    cell_whitelist.sort(key=lambda x: cell_barcode_counts[x])
+
+    for ix, cb in enumerate(cell_whitelist):
+
+        near_misses = checkError(cb, cell_whitelist[ix+1:], errors=errors)
+
+        if len(near_misses) > 0:
+            error_counter["error_discarded_mt_1"]
+            discard_cbs.add(cb)  # Will always discard CB from cell_whitelist
+
+        if resolution_method == "correct" and len(near_misses) == 1:
+
+            # Only correct substitutions as INDELs will also mess
+            # up UMI so simple correction of CB is insufficient
+            if regex.match("(%s){s<=%i}" % (cb, errors), near_misses[0]):
+                # add corrected barcode to T:F map
+                new_true_to_false_map[near_misses[0]].add(cb)
+                error_counter["substitution_corrected"] += 1
+            else:
+                discard_cbs.add(cb)
+                error_counter["indel_discarded"] += 1
+        else:
+            error_counter["error_discarded"] += 1
+
+    if resolution_method == "correct":
+        U.info("CBs above the knee corrected due to possible substitutions: %i" %
+               error_counter["substitution_corrected"])
+        U.info("CBs above the knee discarded due to possible INDELs: %i" %
+               error_counter["indel_discarded"])
+        U.info("CBs above the knee discarded due to possible errors from "
+               "multiple other CBs: %i" % error_counter["error_discarded_mt_1"])
+    else:
+        U.info("CBs above the knee discarded due to possible errors: %i" %
+               len(discard_cbs))
+
+    cell_whitelist = set(cell_whitelist).difference(discard_cbs)
+
+    return(cell_whitelist, new_true_to_false_map)
+
+
 def get_barcode_read_id(read, cell_barcode=False, sep="_"):
     ''' extract the umi +/- cell barcode from the read id using the
     specified separator '''
@@ -771,41 +862,96 @@ class ExtractFilterAndUpdate:
             match = self.pattern.match(read1.seq)
             if not match:
                 self.read_counts['regex does not match read1'] += 1
-                return None
+                if not self.either_read:
+                    return None
             else:
                 self.read_counts['regex matches read1'] += 1
 
         if read2 and self.pattern2:
             match2 = self.pattern2.match(read2.seq)
             if not match2:
-                self.read_counts['regex does not match read1'] += 1
-                return None
+                self.read_counts['regex does not match read2'] += 1
+                # if barcodes can be on either read, check if read1
+                # match also failed
+                if self.either_read:
+                    if not match:
+                        return None
+                else:
+                    return None
             else:
                 self.read_counts['regex matches read2'] += 1
 
         # now extract barcodes
-        if self.pattern:
-            (cell, cell_quals,
-             umi, umi_quals,
-             new_seq, new_quals) = ExtractBarcodes(
-                 read1, match, extract_cell=self.extract_cell,
-                 extract_umi=True, discard=True, retain_umi=self.retain_umi)
-        else:
-            cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
+        if self.either_read:  # extract depending on match and match2
 
-        if read2 and self.pattern2:
-            (cell2, cell_quals2,
-             umi2, umi_quals2,
-             new_seq2, new_quals2) = ExtractBarcodes(
-                 read2, match2, extract_cell=self.extract_cell,
-                 extract_umi=True, discard=True)
+            if match and match2 and self.either_read_resolve == "discard":
+                self.read_counts['regex matches both. discarded'] += 1
+                return None
 
-            cell += cell2
-            cell_quals += cell_quals2
-            umi += umi2
-            umi_quals += umi_quals2
-        else:
-            new_seq2, new_quals2 = "", ""
+            if match:
+                (cell, cell_quals, umi, umi_quals,
+                 new_seq, new_quals) = ExtractBarcodes(
+                     read1, match, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+            if match2:
+                (cell2, cell_quals2, umi2, umi_quals2,
+                 new_seq2, new_quals2) = ExtractBarcodes(
+                     read2, match2, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+
+            if match and match2:
+                if self.either_read_resolve == "quality":
+                    read1_min_quals = min(
+                        [x - RANGES[self.quality_encoding][0] for
+                         x in map(ord, umi_quals)])
+
+                    read2_min_quals = min(
+                        [x - RANGES[self.quality_encoding][0] for
+                         x in map(ord, umi_quals2)])
+
+                    # Note that UMI and UMI quals are defined by best
+                    # match but UMI is removed from both reads
+                    if read1_min_quals >= read2_min_quals:
+                        self.read_counts['regex matches both. read1 used'] += 1
+                        return(cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2)
+                    else:
+                        self.read_counts['regex matches both. read2 used'] += 1
+                        return(cell2, umi2, umi_quals2, new_seq, new_quals, new_seq2, new_quals2)
+
+                else:
+                    raise ValueError("unexpected value for either_read_resolve")
+
+            elif match:
+                self.read_counts['regex only matches read1'] += 1
+                return(cell, umi, umi_quals,
+                       new_seq, new_quals, "", "")
+            else:
+                self.read_counts['regex only matches read2'] += 1
+                return(cell2, umi2, umi_quals2, "", "", new_seq2, new_quals2)
+
+        else:  # extract dependening on patterns/reads provided
+            if self.pattern:
+                (cell, cell_quals,
+                 umi, umi_quals,
+                 new_seq, new_quals) = ExtractBarcodes(
+                     read1, match, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+            else:
+                cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
+
+            if read2 and self.pattern2:
+                (cell2, cell_quals2,
+                 umi2, umi_quals2,
+                 new_seq2, new_quals2) = ExtractBarcodes(
+                     read2, match2, extract_cell=self.extract_cell,
+                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+
+                cell += cell2
+                cell_quals += cell_quals2
+                umi += umi2
+                umi_quals += umi_quals2
+            else:
+                new_seq2, new_quals2 = "", ""
 
         return cell, umi, umi_quals, new_seq, new_quals, new_seq2, new_quals2
 
@@ -920,7 +1066,9 @@ class ExtractFilterAndUpdate:
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
                  filter_cell_barcode=False,
-                 retain_umi=False):
+                 retain_umi=False,
+                 either_read=False,
+                 either_read_resolve="discard"):
 
         self.read_counts = collections.Counter()
         self.method = method
@@ -932,6 +1080,8 @@ class ExtractFilterAndUpdate:
         self.quality_filter_mask = quality_filter_mask
         self.filter_cell_barcodes = filter_cell_barcode
         self.retain_umi = retain_umi
+        self.either_read = either_read
+        self.either_read_resolve = either_read_resolve
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
@@ -996,20 +1146,43 @@ class ExtractFilterAndUpdate:
 
         self.read_counts['Reads output'] += 1
 
-        new_identifier = addBarcodesToIdentifier(
-            read1, umi, cell)
-        read1.identifier = new_identifier
-        if self.pattern:  # seq and quals need to be updated
-            read1.seq = new_seq
-            read1.quals = new_quals
+        # if UMI could be on either read, use umi_values to identify
+        # which read(s) it was on
+        if self.either_read:
+            new_identifier = addBarcodesToIdentifier(
+                read1, umi, cell)
+            read1.identifier = new_identifier
 
-        if read2:
             new_identifier2 = addBarcodesToIdentifier(
                 read2, umi, cell)
-            read2.identifier = new_identifier2
-            if self.pattern2:   # seq and quals need to be updated
+            read2.identifier = new_identifier
+
+            # UMI was on read 1
+            if new_seq2 == "" and new_quals2 == "":
+                read1.seq = new_seq
+                read1.quals = new_quals
+
+            # UMI was on read 2
+            if new_seq == "" and new_quals == "":
                 read2.seq = new_seq2
                 read2.quals = new_quals2
+
+        # Otherwise, use input from user to identiy which reads need updating
+        else:
+            new_identifier = addBarcodesToIdentifier(
+                read1, umi, cell)
+            read1.identifier = new_identifier
+            if self.pattern:  # seq and quals need to be updated
+                read1.seq = new_seq
+                read1.quals = new_quals
+
+            if read2:
+                new_identifier2 = addBarcodesToIdentifier(
+                    read2, umi, cell)
+                read2.identifier = new_identifier2
+                if self.pattern2:   # seq and quals need to be updated
+                    read2.seq = new_seq2
+                    read2.quals = new_quals2
 
         if read2 is None:
             return read1
@@ -1379,6 +1552,28 @@ class get_bundles:
             else:
                 self.read_events['Input Reads'] += 1
 
+            # only ever dealing with read1s from here
+
+            if self.options.paired:
+                if read.is_paired:
+                    self.read_events['Read pairs'] += 1
+                else:
+                    self.read_events['Unpaired reads'] += 1
+
+                    # if paired end input and read1 is unpaired...
+
+                    # skip, or
+                    if self.options.unpaired_reads == "discard":
+                        continue
+
+                    # yield without grouping, or
+                    elif self.options.unpaired_reads == "output":
+                        yield read, None, "single_read"
+
+                    # Use read pair; TLEN will be 0
+                    elif self.options.unpaired_reads == "use":
+                        pass
+
             if read.is_unmapped:
                 if self.options.paired:
                     if read.mate_is_unmapped:
@@ -1388,20 +1583,41 @@ class get_bundles:
                 else:
                     self.read_events['Single end unmapped'] += 1
 
+                # if read1 is unmapped, yield immediately or skip read
                 if self.return_unmapped:
                     self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue
 
-            if read.mate_is_unmapped and self.options.paired:
+            if self.options.paired and read.mate_is_unmapped:
                 if not read.is_unmapped:
                     self.read_events['Read 2 unmapped'] += 1
-                if self.return_unmapped:
-                    yield read, None, "single_read"
-                continue
 
-            if self.options.paired:
-                self.read_events['Paired Reads'] += 1
+                # if paired end input and read2 is unmapped, skip unless
+                # options.unmapped_reads == "use", in which case TLEN will be 0
+                if self.options.unmapped_reads != "use":
+                    if self.return_unmapped:
+                        yield read, None, "single_read"
+                        continue
+
+            if read.is_paired and (
+                    read.reference_name != read.next_reference_name):
+                self.read_events['Chimeric read pair'] += 1
+
+                # if paired end input and read2 is mapped to another contig...
+
+                # skip, or
+                if self.options.chimeric_pairs == "discard":
+                    continue
+
+                # yield without grouping, or
+                elif self.options.chimeric_pairs == "output":
+                    yield read, None, "single_read"
+                    continue
+
+                # Use read pair; TLEN will be 0
+                elif self.options.chimeric_pairs == "use":
+                    pass
 
             if self.options.subset:
                 if random.random() >= self.options.subset:

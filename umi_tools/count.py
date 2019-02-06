@@ -86,7 +86,7 @@ def main(argv=None):
 
     options.per_gene = True  # hardcodes counting to per-gene only
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=False)
 
     if options.random_seed:
         np.random.seed(options.random_seed)
@@ -218,7 +218,7 @@ def main(argv=None):
     for event in bundle_iterator.read_events.most_common():
         U.info("%s: %s" % (event[0], event[1]))
 
-    U.info("Number of reads counted: %i" % nOutput)
+    U.info("Number of (post deduplication) reads counted: %i" % nOutput)
 
     U.Stop()
 
