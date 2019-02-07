@@ -64,11 +64,12 @@ from builtins import dict
 from functools import partial
 
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 
 
 def main(argv=None):

@@ -148,6 +148,7 @@ import regex
 import collections
 
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.umi_methods as umi_methods
 
 # python 3 doesn't require izip
@@ -159,7 +160,7 @@ except ImportError:
     izip = zip
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_WE
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
 
 
 def main(argv=None):
