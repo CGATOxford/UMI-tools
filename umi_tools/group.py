@@ -101,12 +101,11 @@ __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
 usage = '''
 group - Group reads based on their UMI
 
-Usage: umi_tools group [OPTIONS] [--stdin=INFILE.bam] [--stdout=OUTFILE.bam]
+Usage: umi_tools group --output-bam [OPTIONS] [--stdin=INFILE.bam] [--stdout=OUTFILE.bam]
 
-       note: If --stdin/--stdout are ommited standard in and standard
-             out are used for input and output. To generate a valid
-             BAM file on standard out, please redirect log with
-             --log=LOGFILE or --log2stderr '''
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 def main(argv=None):
     """script main.
@@ -119,7 +118,7 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage
+                            usage=usage,
                             description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "group-specific options")

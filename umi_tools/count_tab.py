@@ -2,11 +2,6 @@
 count_tab - Count reads per gene from flatfile using UMIs
 =================================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 Purpose
 -------
 
@@ -72,6 +67,14 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 
+usage = '''
+count - Count reads per-gene using UMI and mapping coordinates
+
+Usage: umi_tools count_tab [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.tsv]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 def main(argv=None):
     """script main.
@@ -84,7 +87,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "count_tab-specific options")
 

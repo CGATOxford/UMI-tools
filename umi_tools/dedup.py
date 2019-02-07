@@ -96,10 +96,9 @@ dedup - Deduplicate reads using UMI and mapping coordinates
 
 Usage: umi_tools dedup [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.bam]
 
-       note: If --stdin/--stdout are ommited standard in and standard
-             out are used for input and output. To generate a valid
-             BAM file on standard out, please redirect log with
-             --log=LOGFILE or --log2stderr ''' 
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 def detect_bam_features(bamfile, n_entries=1000):
     ''' read the first n entries in the bam file and identify the tags

@@ -2,11 +2,6 @@
 extract - Extract UMI from fastq
 ====================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 Purpose
 -------
 
@@ -110,6 +105,15 @@ import umi_tools.whitelist_methods as whitelist_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
 
+usage = '''
+extract - Extracts barcodes from reads
+
+Usage: umi_tools whitelist [OPTIONS] [--stdin=INFILE.fastq] [--stdout=OUTFILE.fastq]
+
+       note: If --stdin or --stdout are ommited, standard in is input
+             and standard out is output.
+'''
+
 
 def main(argv=None):
     """script main.
@@ -122,7 +126,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "extract-specific options")
 
