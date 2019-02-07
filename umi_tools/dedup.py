@@ -15,9 +15,14 @@ Purpose
 The purpose of this command is to deduplicate BAM files based on the
 first mapping co-ordinate and the UMI attached to the read. The
 identification of duplicate reads is performed in an error-aware
-manner by building networks of related UMIs (see ``--method``).
+manner by building networks of related UMIs (see
+``--method``). ``dedup`` can also handle cell barcoded input (see
+``--per-cell``).
 
-``dedup`` can also handle cell barcoded input (see ``--per-cell``).
+Usage::
+
+    umi_tools dedup --stdin=INFILE --log=LOGFILE > OUTFILE
+
 
 Selecting the representative read
 ---------------------------------

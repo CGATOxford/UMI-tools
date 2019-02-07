@@ -105,7 +105,7 @@ the ``--extract-method`` option
        processing with dedup, group or count commands
 
 
-additional whitelist/extract options
+Additional whitelist/extract options
 -------------------------------------
 
 --3prime
