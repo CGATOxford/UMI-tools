@@ -1,6 +1,8 @@
 '''
-dedup - Deduplicate reads that are coded with a UMI
-=========================================================
+dedup - Deduplicate reads using UMI and mapping coordinates
+===========================================================
+
+TS: THE RELEASE DOES NOT RENDER...
 
 :Author: Ian Sudbery, Tom Smith
 :Release: $Id$
@@ -10,17 +12,22 @@ dedup - Deduplicate reads that are coded with a UMI
 Purpose
 -------
 
-The purpose of this command is to deduplicate BAM files based
-on the first mapping co-ordinate and the UMI attached to the read.
+The purpose of this command is to deduplicate BAM files based on the
+first mapping co-ordinate and the UMI attached to the read. The
+identification of duplicate reads is performed in an error-aware
+manner by building networks of related UMIs (see ``--method``).
+
+``dedup`` can also handle cell barcoded input (see ``--per-cell``).
 
 Selecting the representative read
 ---------------------------------
-
-The following criteria are applied to select the read that will be retained
-from a group of duplicated reads:
+For every group of duplicate reads, a single representative read is
+retained.The following criteria are applied to select the read that
+will be retained from a group of duplicated reads:
 
 1. The read with the lowest number of mapping coordinates (see
 ``--multimapping-detection-method`` option)
+
 2. The read with the highest mapping quality
 
 Otherwise a read is chosen at random.
@@ -28,21 +35,22 @@ Otherwise a read is chosen at random.
 
 dedup-specific options
 ----------------------
-
---output-stats (string, filename_prefix)
+"""""""""""""""""""""""""""
+``--output-stats=[PREFIX]``
+"""""""""""""""""""""""""""
        Output edit distance statistics and UMI usage statistics
        using this prefix.
 
        Output files are:
 
-       "[prefix]_stats_per_umi_per_position.tsv"
+       [PREFIX]_stats_per_umi_per_position.tsv
            Histogram of counts per position per UMI pre- and post-deduplication
 
-       "[prefix]_stats_per_umi_per.tsv"
+       [PREFIX_stats_per_umi_per.tsv
            Table of stats per umi. Number of times UMI was observed,
            total counts and median counts, pre- and post-deduplication
 
-       "[prefix]_stats_edit_distance.tsv"
+       [PREFIX]_stats_edit_distance.tsv
            Edit distance between UMIs at each position. Positions with a
            single UMI are reported seperately. Pre- and post-deduplication and
            inluding null expectations from random sampling of UMIs from the

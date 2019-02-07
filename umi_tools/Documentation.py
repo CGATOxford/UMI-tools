@@ -4,6 +4,24 @@ The :mod:`Documentation` module contains the generic docstrings for
 the commands
 '''
 
+'''
+``-I, --stdin`` (string, filename)
+      input file name [default = stdin]. The input file must be sorted and indexed.
+
+``-S, --stdout`` (string, filename)
+      output file name [default = stdout]
+
+``-L, --log`` (string, filename) log file name [default = stdout]
+      .. note::
+         In order to get a valid sam/bam file you need to redirect logging
+         information or turn it off logging via -v 0. You can redirect the
+         logging to a file with ``-L <logfile>`` or use the ``--log2stderr`` option
+         to send the logging to stderr.
+
+``-E, --error`` (string, filename)
+       file with error information [default = stderr].
+'''
+
 # generic docstring for whitelist/extract
 GENERIC_DOCSTRING_WE = '''
 Barcode extraction
@@ -103,8 +121,8 @@ additional whitelist/extract options
 # generic docstring for group/dedup/count/count_tab
 GENERIC_DOCSTRING_GDC = '''
 
-Group, Dedup and Count genetric options
-----------------------------------------
+Extracting barcodes
+-------------------
 
 It is assumed that the FASTQ files were processed with extract_umi.py
 before mapping and thus the UMI is the last word of the read name. e.g::
@@ -131,88 +149,71 @@ The start position of a read is considered to be the start of its alignment
 minus any soft clipped bases. A read aligned at position 500 with
 cigar 2S98M will be assumed to start at position 498.
 
-
-Input/Output Options
----------------------
-
--i, --in-sam/-o, --out-sam
-      By default, inputs are assumed to be in BAM format and outputs are written
-      in BAM format. Use these options to specify the use of SAM format for
-      inputs or outputs.
-
--I    (string, filename) input file name
-      The input file must be sorted and indexed.
-
--S    (string, filename) output file name
-
--L    (string, filename) log file name
-
-      .. note::
-         In order to get a valid sam/bam file you need to redirect logging
-         information or turn it off logging via -v 0. You can redirect the
-         logging to a file with ``-L <logfile>`` or use the ``--log2stderr`` option
-         to send the logging to stderr.
-
---paired
-       BAM is paired end - output both read pairs. This will also
-       force the use of the template length to determine reads with
-       the same mapping coordinates.
-
---extract-umi-method (choice)
+""""""""""""""""""""""""
+``--extract-umi-method``
+""""""""""""""""""""""""
       How are the barcodes encoded in the read?
 
       Options are:
 
-      - "read_id" (default)
+      - read_id (default)
             Barcodes are contained at the end of the read separated as
             specified with ``--umi-separator`` option
 
-      - "tag"
+      - tag
             Barcodes contained in a tag(s), see ``--umi-tag``/``--cell-tag``
             options
 
-      - "umis"
+      - umis
             Barcodes were extracted using umis (https://github.com/vals/umis)
 
---umi-separator (string)
-      Separator between read id and UMI. See ``--extract-umi-method`` above
+"""""""""""""""""""""""""""""""
+``--umi-separator=[SEPARATOR]``
+"""""""""""""""""""""""""""""""
+      Separator between read id and UMI. See ``--extract-umi-method``
+      above. Default=``_``
 
---umi-tag (string)
+"""""""""""""""""""
+``--umi-tag=[TAG]``
+"""""""""""""""""""
       Tag which contains UMI. See ``--extract-umi-method`` above
 
---cell-tag (string)
+"""""""""""""""""""""""""""
+``--umi-tag-split=[SPLIT]``
+"""""""""""""""""""""""""""
+      Separate the UMI in tag by SPLIT and take the first element
+
+"""""""""""""""""""""""""""""""""""
+``--umi-tag-delimiter=[DELIMITER]``
+"""""""""""""""""""""""""""""""""""
+      Separate the UMI in by DELIMITER and concatenate the elements
+
+""""""""""""""""""""
+``--cell-tag=[TAG]``
+""""""""""""""""""""
       Tag which contains cell barcode. See `--extract-umi-method` above
 
---unmapped-reads (string, choice)
-     How should unmapped reads be handled. Options are:
-     'discard' [DEFAULT] - Discard all unmapped reads
-     'use' - If read2 is unmapped, deduplicate using read1 only.
-             Requires --paired
-     'output' - Output unmapped reads/read pairs without UMI
-                grouping/deduplication. Only available in umi_tools group
+""""""""""""""""""""""""""""
+``--cell-tag-split=[SPLIT]``
+""""""""""""""""""""""""""""
+      Separate the cell barcode in tag by SPLIT and take the first element
 
---chimeric-pairs (string, choice)
-     How should chimeric read pairs be handled. Options are:
-     'discard' - Discard all chimeric read pairs
-     'use' [DEFAULT] - Deduplicate using read1 only
-     'output' - Output chimeric read pairs without UMI grouping/deduplication.
-                Only available in umi_tools group
+""""""""""""""""""""""""""""""""""""
+``--cell-tag-delimiter=[DELIMITER]``
+""""""""""""""""""""""""""""""""""""
+      Separate the cell barcode in by DELIMITER and concatenate the elements
 
---unpaired-reads (string, choice)
-     How should unpaired reads be handled. Options are:
-     'discard' - Discard all unpaired reads
-     'use' [DEFAULT] - Deduplicate using read1 only
-     'output' - Output unpaired reads without UMI grouping/deduplication.
-                Only available in umi_tools group
 
 UMI grouping options
 ---------------------------
 
---method (string, choice)
-    count can be run with multiple methods to identify group of reads with
-    the same (or similar) UMI(s), from which a single read is
-    returned. All methods start by identifying the reads with the same
-    mapping position.
+""""""""""""
+``--method``
+""""""""""""
+    What method to use to identify group of reads with the same (or
+    similar) UMI(s)?
+
+    All methods start by identifying the reads with the same mapping position.
 
     The simplest methods, unique and percentile, group reads with
     the exact same UMI. The network-based methods, cluster, adjacency and
@@ -222,92 +223,210 @@ UMI grouping options
     the network-based methods, each read group is equivalent to one read
     count for the gene.
 
-      "unique"
+      - unique
           Reads group share the exact same UMI
 
-      "percentile"
+      - percentile
           Reads group share the exact same UMI. UMIs with counts < 1% of the
           median counts for UMIs at the same position are ignored.
 
-      "cluster"
+      - cluster
           Identify clusters of connected UMIs (based on hamming distance
           threshold). Each network is a read group
 
-      "adjacency"
+      - adjacency
           Cluster UMIs as above. For each cluster, select the node (UMI)
           with the highest counts. Visit all nodes one edge away. If all
           nodes have been visited, stop. Otherwise, repeat with remaining
           nodes until all nodes have been visted. Each step
           defines a read group.
 
-      "directional" (default)
+      - directional (default)
           Identify clusters of connected UMIs (based on hamming distance
           threshold) and umi A counts >= (2* umi B counts) - 1. Each
           network is a read group.
 
-
---edit-distance-threshold (int)
+"""""""""""""""""""""""""""""
+``--edit-distance-threshold``
+"""""""""""""""""""""""""""""
        For the adjacency and cluster methods the threshold for the
        edit distance to connect two UMIs in the network can be
        increased. The default value of 1 works best unless the UMI is
-       very long (>14bp)
+       very long (>14bp).
+
+"""""""""""""""""""""""
+``--spliced-is-unique``
+"""""""""""""""""""""""
+       Causes two reads that start in the same position on the same
+       strand and having the same UMI to be considered unique if one is spliced
+       and the other is not. (Uses the 'N' cigar operation to test for
+       splicing).
+
+"""""""""""""""""""""""""
+``--soft-clip-threshold``
+"""""""""""""""""""""""""
+       Mappers that soft clip will sometimes do so rather than mapping a
+       spliced read if there is only a small overhang over the exon
+       junction. By setting this option, you can treat reads with at least
+       this many bases soft-clipped at the 3' end as spliced. Default=4.
+
+""""""""""""""""""""""""""""""""""""""""""""""
+``--multimapping-detection-method=[NH/X0/XT]``
+""""""""""""""""""""""""""""""""""""""""""""""
+      If the sam/bam contains tags to identify multimapping reads, you can
+      specify for use when selecting the best read at a given loci.
+      Supported tags are "NH", "X0" and "XT". If not specified, the read
+      with the highest mapping quality will be selected.
+
+"""""""""""""""""
+``--read-length``
+"""""""""""""""""
+      Use the read length as a criteria when deduping, for e.g sRNA-Seq.
 
 
 Single-cell RNA-Seq options
 ---------------------------
 
---per-gene (string)
+""""""""""""""
+``--per-gene``
+""""""""""""""
       Reads will be grouped together if they have the same gene.  This
       is useful if your library prep generates PCR duplicates with non
       identical alignment positions such as CEL-Seq. Note this option
       is hardcoded to be on with the count command. I.e counting is
       always performed per-gene. Must be combined with either
-      ``--gene-tag`` or ``--per-contig`` option
+      ``--gene-tag`` or ``--per-contig`` option.
 
---gene-tag (string)
+""""""""""""""
+``--gene-tag``
+""""""""""""""
       Deduplicate per gene. The gene information is encoded in the bam
       read tag specified
 
---assigned-status-tag (string)
+"""""""""""""""""""""""""
+``--assigned-status-tag``
+"""""""""""""""""""""""""
       BAM tag which describes whether a read is assigned to a
-      gene. Defaults to the same value as given for --gene-tag
+      gene. Defaults to the same value as given for ``--gene-tag``
 
---skip-tags-regex (string)
-      Used in conjunction with the ``--assigned-status-tag`` option. Skip any reads
-      where the tag matches this regex.
-      Default matches anything which starts with "__" or "Unassigned":
-      ("^[__|Unassigned]")
+"""""""""""""""""""""
+``--skip-tags-regex``
+"""""""""""""""""""""
+      Use in conjunction with the ``--assigned-status-tag`` option to
+      skip any reads where the tag matches this regex.  Default
+      (``"^[__|Unassigned]"``) matches anything which starts with "__"
+      or "Unassigned":
 
---per-contig
+""""""""""""""""
+``--per-contig``
+""""""""""""""""
       Deduplicate per contig (field 3 in BAM; RNAME).
       All reads with the same contig will be considered to have the
       same alignment position. This is useful if you have aligned to a
       reference transcriptome with one transcript per gene. If you
       have aligned to a transcriptome with more than one transcript
       per gene, you can supply a map between transcripts and gene
-      using the --gene-transcript-map option
+      using the ``--gene-transcript-map`` option
 
---gene-transcript-map (string)
+"""""""""""""""""""""""""
+``--gene-transcript-map``
+"""""""""""""""""""""""""
       File mapping genes to transcripts (tab separated), e.g::
 
           gene1   transcript1
           gene1   transcript2
           gene2   transcript3
 
---per-cell (string)
+""""""""""""""
+``--per-cell``
+""""""""""""""
       Reads will only be grouped together if they have the same cell
       barcode. Can be combined with ``--per-gene``.
 
+SAM/BAM Options
+---------------
 
-Debug options
--------------
+"""""""""""""""""""""
+``--mapping-quality``
+"""""""""""""""""""""
+      Minimium mapping quality (MAPQ) for a read to be retained. Default is 0.
 
---subset (float, [0-1])
+""""""""""""""""""""
+``--unmapped-reads``
+""""""""""""""""""""
+     How should unmapped reads be handled. Options are:
+      - discard (default)
+          Discard all unmapped reads
+      - use
+          If read2 is unmapped, deduplicate using read1 only. Requires
+          ``--paired``
+      - output
+          Output unmapped reads/read pairs without UMI
+          grouping/deduplication. Only available in umi_tools group
+
+""""""""""""""""""""
+``--chimeric-pairs``
+""""""""""""""""""""
+     How should chimeric read pairs be handled. Options are:
+      - discard
+          Discard all chimeric read pairs
+      - use (default)
+          Deduplicate using read1 only
+      - output
+          Output chimeric read pairs without UMI
+          grouping/deduplication.  Only available in umi_tools group
+
+""""""""""""""""""""
+``--unpaired-reads``
+""""""""""""""""""""
+     How should unpaired reads be handled. Options are:
+      - discard
+          Discard all unpaired reads
+      - use (default)
+          Deduplicate using read1 only
+      - output
+          Output unpaired reads without UMI
+          grouping/deduplication. Only available in umi_tools group
+
+""""""""""""""""
+``--ignore-umi``
+""""""""""""""""
+      Ignore the UMI and group reads using mapping coordinates only
+
+""""""""""""
+``--subset``
+""""""""""""
       Only consider a fraction of the reads, chosen at random. This is useful
       for doing saturation analyses.
 
---chrom (string)
-      Only consider a single chromosome. This is useful for debugging purposes
+"""""""""""
+``--chrom``
+"""""""""""
+      Only consider a single chromosome. This is useful for
+      debugging/testing purposes
+
+
+Input/Output Options
+---------------------
+
+"""""""""""""""""""""""
+``--in-sam, --out-sam``
+"""""""""""""""""""""""
+      By default, inputs are assumed to be in BAM format and outputs are written
+      in BAM format. Use these options to specify the use of SAM format for
+      input or output.
+
+""""""""""""
+``--paired``
+""""""""""""
+       BAM is paired end - output both read pairs. This will also
+       force the use of the template length to determine reads with
+       the same mapping coordinates.
+
+"""""""""""""""""""
+``--no-sort-order``
+"""""""""""""""""""
+      Don't sort the output
 
 '''
 
@@ -317,7 +436,9 @@ GROUP_DEDUP_GENERIC_OPTIONS = '''
 Group/Dedup options
 -------------------
 
---no-sort-output
+""""""""""""""""""""
+``--no-sort-output``
+""""""""""""""""""""
        By default, output is sorted. This involves the
        use of a temporary unsorted file since reads are considered in
        the order of their start position which may not be the same
@@ -326,28 +447,10 @@ Group/Dedup options
        when it has been sorted to the outfile. Use this option to turn
        off sorting.
 
---spliced-is-unique
-       Causes two reads that start in the same position on the same
-       strand and having the same UMI to be considered unique if one is spliced
-       and the other is not. (Uses the 'N' cigar operation to test for
-       splicing)
 
---soft-clip-threshold (int)
-       Mappers that soft clip will sometimes do so rather than mapping a
-       spliced read if there is only a small overhang over the exon
-       junction. By setting this option, you can treat reads with at least
-       this many bases soft-clipped at the 3' end as spliced.
-
---multimapping-detection-method (string, choice)
-       If the sam/bam contains tags to identify multimapping reads, you can
-       specify for use when selecting the best read at a given loci.
-       Supported tags are "NH", "X0" and "XT". If not specified, the read
-       with the highest mapping quality will be selected
-
---read-length
-      Use the read length as a criteria when deduping, for e.g sRNA-Seq
-
---buffer-whole-contig
+"""""""""""""""""""""""""
+``--buffer-whole-contig``
+"""""""""""""""""""""""""
       forces dedup to parse an entire contig before yielding any reads
       for deduplication. This is the only way to absolutely guarantee
       that all reads with the same start position are grouped together
@@ -355,6 +458,6 @@ Group/Dedup options
       read, not the alignment coordinate on which the reads are
       sorted. However, by default, dedup reads for another 1000bp
       before outputting read groups which will avoid any reads being
-      missed with short read sequencing (<1000bp)
+      missed with short read sequencing (<1000bp).
 
 '''

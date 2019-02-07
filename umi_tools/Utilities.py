@@ -676,7 +676,7 @@ def Start(parser=None,
 
     if add_extract_options:
 
-        group = OptionGroup(parser, "barcode extraction options")
+        group = OptionGroup(parser, "fastq barcode extraction options")
 
         group.add_option("--extract-method",
                          dest="extract_method", type="choice",
@@ -693,29 +693,8 @@ def Start(parser=None,
                          help="file name for read pairs")
         parser.add_option_group(group)
 
-    if add_umi_grouping_options:
-        group = OptionGroup(parser, "UMI grouping options")
-
-        group.add_option("--method", dest="method", type="choice",
-                         choices=("adjacency", "directional",
-                                  "percentile", "unique", "cluster"),
-                         default="directional",
-                         help="method to use for umi grouping [default=%default]")
-
-        group.add_option("--edit-distance-threshold", dest="threshold",
-                         type="int",
-                         default=1,
-                         help="Edit distance theshold at which to join two UMIs "
-                         "when grouping UMIs. [default=%default]")
-
-        parser.add_option_group(group)
-
     if add_sam_options:
-        group = OptionGroup(parser, "input options")
-
-        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                         help="Input file is in sam format [default=%default]",
-                         default=False)
+        group = OptionGroup(parser, "Barcode extraction options")
 
         group.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
                          choices=("read_id", "tag", "umis"), default="read_id",
@@ -755,18 +734,43 @@ def Start(parser=None,
                          help="concatenate cell barcode in tag separated by delimiter",
                          default=None)
 
-        group.add_option("--paired", dest="paired", action="store_true",
-                         default=False,
-                         help="paired BAM. [default=%default]")
+        parser.add_option_group(group)
 
-        group.add_option("--mapping-quality", dest="mapping_quality",
+    if add_umi_grouping_options:
+        group = OptionGroup(parser, "UMI grouping options")
+
+        group.add_option("--method", dest="method", type="choice",
+                         choices=("adjacency", "directional",
+                                  "percentile", "unique", "cluster"),
+                         default="directional",
+                         help="method to use for umi grouping [default=%default]")
+
+        group.add_option("--edit-distance-threshold", dest="threshold",
                          type="int",
-                         help="Minimum mapping quality for a read to be retained"
-                         " [default=%default]",
-                         default=0)
+                         default=1,
+                         help="Edit distance theshold at which to join two UMIs "
+                         "when grouping UMIs. [default=%default]")
+
+        group.add_option("--spliced-is-unique", dest="spliced",
+                         action="store_true",
+                         help="Treat a spliced read as different to an unspliced"
+                         " one [default=%default]",
+                         default=False)
+
+        group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
+                         type="float",
+                         help="number of bases clipped from 5' end before "
+                         "read is counted as spliced [default=%default]",
+                         default=4)
+
+        group.add_option("--read-length", dest="read_length",
+                         action="store_true", default=False,
+                         help="use read length in addition to position and UMI "
+                         "to identify possible duplicates [default=%default]")
 
         parser.add_option_group(group)
 
+    if add_sam_options:
         group = OptionGroup(parser, "single-cell RNA-Seq options")
 
         group.add_option("--per-gene", dest="per_gene", action="store_true",
@@ -781,7 +785,7 @@ def Start(parser=None,
 
         group.add_option("--assigned-status-tag", dest="assigned_tag",
                          type="string",
-                         help="Bam tag describing whether read is assigned to a gene"
+                         help="Bam tag describing whether read is assigned to a gene "
                          "By defualt, this is set as the same tag as --gene-tag",
                          default=None)
 
@@ -831,32 +835,17 @@ def Start(parser=None,
                          "amongst reads with the same position and umi "
                          "[default=%default]")
 
-        group.add_option("--spliced-is-unique", dest="spliced",
-                         action="store_true",
-                         help="Treat a spliced read as different to an unspliced"
-                         " one [default=%default]",
-                         default=False)
-
-        group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
-                         type="float",
-                         help="number of bases clipped from 5' end before"
-                         "read is counted as spliced [default=%default]",
-                         default=4)
-
-        group.add_option("--read-length", dest="read_length",
-                         action="store_true", default=False,
-                         help="use read length in addition to position and UMI"
-                         "to identify possible duplicates [default=%default]")
-
         parser.add_option_group(group)
 
     # options added separately here to maintain better output order
     if add_sam_options:
         group = OptionGroup(parser, "SAM/BAM options")
 
-        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                         help="Output alignments in sam format [default=%default]",
-                         default=False)
+        group.add_option("--mapping-quality", dest="mapping_quality",
+                         type="int",
+                         help="Minimum mapping quality for a read to be retained"
+                         " [default=%default]",
+                         default=0)
 
         group.add_option("--no-sort-output", dest="no_sort_output",
                          action="store_true", default=False,
@@ -869,19 +858,22 @@ def Start(parser=None,
                          type="choice",
                          choices=("discard", "use", "output"),
                          default="discard",
-                         help=("How to handle unmapped reads [default=%default]"))
+                         help=("How to handle unmapped reads. Options are "
+                               "'discard', 'use' or 'correct' [default=%default]"))
 
         group.add_option("--chimeric-pairs", dest="chimeric_pairs",
                          type="choice",
                          choices=("discard", "use", "output"),
                          default="use",
-                         help=("How to handle chimeric read pairs [default=%default]"))
+                         help=("How to handle chimeric read pairs. Options are "
+                               "'discard', 'use' or 'correct' [default=%default]"))
 
         group.add_option("--unpaired-reads", dest="unpaired_reads",
                          type="choice",
                          choices=("discard", "use", "output"),
                          default="use",
-                         help=("How to handle unpaired reads [default=%default]"))
+                         help=("How to handle unpaired reads. Options are "
+                               "'discard', 'use' or 'correct' [default=%default]"))
 
         group.add_option("--ignore-umi", dest="ignore_umi",
                          action="store_true", help="Ignore UMI and dedup"
@@ -895,19 +887,19 @@ def Start(parser=None,
                          help="Use only a fraction of reads, specified by subset",
                          default=None)
 
+        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
+                         help="Input file is in sam format [default=%default]",
+                         default=False)
+
+        group.add_option("--paired", dest="paired", action="store_true",
+                         default=False,
+                         help="paired input BAM. [default=%default]")
+
+        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
+                         help="Output alignments in sam format [default=%default]",
+                         default=False)
+
         parser.add_option_group(group)
-
-    if quiet:
-        parser.set_defaults(loglevel=0)
-    else:
-        parser.set_defaults(loglevel=1)
-
-    parser.set_defaults(
-        timeit_file=None,
-        timeit_name='all',
-        timeit_header=None,
-        random_seed=None,
-    )
 
     if add_pipe_options:
         group = OptionGroup(parser, "input/output options")
@@ -983,6 +975,18 @@ def Start(parser=None,
 
     # restore user defaults
     parser.defaults.update(user_defaults)
+
+    if quiet:
+        parser.set_defaults(loglevel=0)
+    else:
+        parser.set_defaults(loglevel=1)
+
+    parser.set_defaults(
+        timeit_file=None,
+        timeit_name='all',
+        timeit_header=None,
+        random_seed=None,
+    )
 
     if return_parser:
         return parser
