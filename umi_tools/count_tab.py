@@ -67,6 +67,7 @@ import umi_tools.Utilities as U
 import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
@@ -107,10 +108,10 @@ def main(argv=None):
     # set the method with which to extract umis from reads
     if options.per_cell:
         bc_getter = partial(
-            umi_methods.get_cell_umi_read_string, sep=options.bc_sep)
+            sam_methods.get_cell_umi_read_string, sep=options.bc_sep)
     else:
         bc_getter = partial(
-            umi_methods.get_umi_read_string, sep=options.bc_sep)
+            sam_methods.get_umi_read_string, sep=options.bc_sep)
 
     if options.per_cell:
         options.stdout.write("%s\t%s\t%s\n" % ("cell", "gene", "count"))
@@ -121,7 +122,7 @@ def main(argv=None):
     # specified options.method
     processor = network.UMIClusterer(options.method)
 
-    for gene, counts in umi_methods.get_gene_count_tab(
+    for gene, counts in sam_methods.get_gene_count_tab(
             options.stdin,
             bc_getter=bc_getter):
 

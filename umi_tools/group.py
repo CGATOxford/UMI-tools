@@ -92,7 +92,7 @@ import pysam
 import umi_tools.Utilities as U
 import umi_tools.Documentation as Documentation
 import umi_tools.network as network
-import umi_tools.umi_methods as umi_methods
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
@@ -199,16 +199,16 @@ def main(argv=None):
         inreads = infile.fetch(reference=options.chrom)
     else:
         if options.per_gene and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
+            metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
         else:
             inreads = infile.fetch(until_eof=output_unmapped)
 
-    bundle_iterator = umi_methods.get_bundles(
+    bundle_iterator = sam_methods.get_bundles(
         options,
         all_reads=True,
         return_read2=True,
@@ -272,7 +272,7 @@ def main(argv=None):
                             gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
-                            umi_methods.get_read_position(
+                            sam_methods.get_read_position(
                                 read, options.soft_clip_threshold)[1],
                             gene,
                             umi.decode(),

@@ -104,6 +104,8 @@ except ImportError:
 import umi_tools.Utilities as U
 import umi_tools.Documentation as Documentation
 import umi_tools.umi_methods as umi_methods
+import umi_tools.extract_methods as extract_methods
+import umi_tools.whitelist_methods as whitelist_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
@@ -256,7 +258,7 @@ def main(argv=None):
     read1s = umi_methods.fastqIterate(options.stdin)
 
     # set up read extractor
-    ReadExtractor = umi_methods.ExtractFilterAndUpdate(
+    ReadExtractor = extract_methods.ExtractFilterAndUpdate(
         options.extract_method,
         options.pattern,
         options.pattern2,
@@ -271,7 +273,7 @@ def main(argv=None):
         options.either_read_resolve)
 
     if options.filter_cell_barcode:
-        cell_whitelist, false_to_true_map = umi_methods.getUserDefinedBarcodes(
+        cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
             options.whitelist, options.error_correct_cell)
 
         ReadExtractor.cell_whitelist = cell_whitelist

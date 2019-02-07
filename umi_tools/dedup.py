@@ -68,7 +68,7 @@ import umi_tools.Utilities as U
 import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
-
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
@@ -225,7 +225,7 @@ def main(argv=None):
     # specified options.method
     processor = network.ReadDeduplicator(options.method)
 
-    bundle_iterator = umi_methods.get_bundles(
+    bundle_iterator = sam_methods.get_bundles(
         options,
         metacontig_contig=metacontig2contig)
 

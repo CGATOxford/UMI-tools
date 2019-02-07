@@ -150,6 +150,8 @@ import collections
 import umi_tools.Utilities as U
 import umi_tools.Documentation as Documentation
 import umi_tools.umi_methods as umi_methods
+import umi_tools.extract_methods as extract_methods
+import umi_tools.whitelist_methods as whitelist_methods
 
 # python 3 doesn't require izip
 try:
@@ -264,7 +266,7 @@ def main(argv=None):
     read1s = umi_methods.fastqIterate(options.stdin)
 
     # set up read extractor
-    ReadExtractor = umi_methods.ExtractFilterAndUpdate(
+    ReadExtractor = extract_methods.ExtractFilterAndUpdate(
         method=options.extract_method,
         pattern=options.pattern,
         pattern2=options.pattern2,
@@ -348,7 +350,7 @@ def main(argv=None):
                 options.subset_reads,
                 options.cell_number))
 
-    cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
+    cell_whitelist, true_to_false_map = whitelist_methods.getCellWhitelist(
         cell_barcode_counts,
         options.expect_cells,
         options.cell_number,
@@ -360,7 +362,7 @@ def main(argv=None):
                len(cell_whitelist))
 
     if options.ed_above_threshold:
-        cell_whitelist, true_to_false_map = umi_methods.errorDetectAboveThreshold(
+        cell_whitelist, true_to_false_map = whitelist_methods.errorDetectAboveThreshold(
             cell_barcode_counts,
             cell_whitelist,
             true_to_false_map,
