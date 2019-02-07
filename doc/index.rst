@@ -37,7 +37,7 @@ UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/ear
    Single_cell_tutorial
    regex
    faq
-
+   release_notes
 
 Tools
 -----
