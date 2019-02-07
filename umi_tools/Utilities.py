@@ -847,10 +847,6 @@ def Start(parser=None,
                          " [default=%default]",
                          default=0)
 
-        group.add_option("--no-sort-output", dest="no_sort_output",
-                         action="store_true", default=False,
-                         help="Don't Sort the output")
-
         group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
                          default=False, help=optparse.SUPPRESS_HELP)
 
@@ -898,6 +894,10 @@ def Start(parser=None,
         group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
                          help="Output alignments in sam format [default=%default]",
                          default=False)
+
+        group.add_option("--no-sort-output", dest="no_sort_output",
+                         action="store_true", default=False,
+                         help="Don't Sort the output")
 
         parser.add_option_group(group)
 

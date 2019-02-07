@@ -38,7 +38,7 @@ will be retained from a group of duplicated reads:
 Otherwise a read is chosen at random.
 
 
-dedup-specific options
+Dedup-specific options
 ----------------------
 """""""""""""""""""""""""""
 ``--output-stats=[PREFIX]``
