@@ -256,6 +256,7 @@ import random
 import uuid
 import tempfile
 import regex
+import umi_tools
 
 from builtins import bytes, chr
 
@@ -344,7 +345,11 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
 
     def format_usage(self, usage):
 
-        return self._formatter(optparse._("Usage: %s\n") % usage)
+        msg='''
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/\n'''
+
+        return self._formatter(optparse._(usage)) + msg
 
     def format_option(self, option):
 
@@ -474,7 +479,7 @@ def callbackShortHelp(option, opt, value, parser):
     '''output short help (only command line options).'''
     # clear usage and description
     parser.set_description(None)
-    parser.set_usage(None)
+    #parser.set_usage(None)
     # output help
     parser.print_help()
     # exit

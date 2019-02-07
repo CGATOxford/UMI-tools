@@ -124,8 +124,9 @@ GENERIC_DOCSTRING_GDC = '''
 Extracting barcodes
 -------------------
 
-It is assumed that the FASTQ files were processed with extract_umi.py
-before mapping and thus the UMI is the last word of the read name. e.g::
+It is assumed that the FASTQ files were processed with `umi_tools
+extract` before mapping and thus the UMI is the last word of the read
+name. e.g::
 
     @HISEQ:87:00000000_AATT
 
@@ -422,11 +423,6 @@ Input/Output Options
        BAM is paired end - output both read pairs. This will also
        force the use of the template length to determine reads with
        the same mapping coordinates.
-
-"""""""""""""""""""
-``--no-sort-order``
-"""""""""""""""""""
-      Don't sort the output
 
 '''
 

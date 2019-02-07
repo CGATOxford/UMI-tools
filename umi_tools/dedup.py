@@ -2,10 +2,8 @@
 dedup - Deduplicate reads using UMI and mapping coordinates
 ===========================================================
 
-TS: THE RELEASE DOES NOT RENDER...
 
 :Author: Ian Sudbery, Tom Smith
-:Release: $Id$
 :Date: |today|
 :Tags: Python UMI
 
@@ -21,7 +19,13 @@ manner by building networks of related UMIs (see
 
 Usage::
 
-    umi_tools dedup --stdin=INFILE --log=LOGFILE > OUTFILE
+    umi_tools dedup --stdin=INFILE --log=LOGFILE [OPTIONS] > OUTFILE
+
+or
+
+::
+
+    cat INFILE | umi_tools dedup --logfile=LOGFILE [OPTIONS] > OUTFILE
 
 
 Selecting the representative read
@@ -87,6 +91,15 @@ import umi_tools.sam_methods as sam_methods
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
 
+usage = '''
+dedup - Deduplicate reads using UMI and mapping coordinates
+
+Usage: umi_tools dedup [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.bam]
+
+       note: If --stdin/--stdout are ommited standard in and standard
+             out are used for input and output. To generate a valid
+             BAM file on standard out, please redirect log with
+             --log=LOGFILE or --log2stderr ''' 
 
 def detect_bam_features(bamfile, n_entries=1000):
     ''' read the first n entries in the bam file and identify the tags
@@ -136,7 +149,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
     group = U.OptionGroup(parser, "dedup-specific options")
 
     group.add_option("--output-stats", dest="stats", type="string",

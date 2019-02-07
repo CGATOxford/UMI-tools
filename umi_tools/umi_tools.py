@@ -51,8 +51,7 @@ def main(argv=None):
         return
 
     elif argv[2] in ["--help", "-h", "--help-extended"]:
-        print("For full UMI-tools documentation, see "
-              "https://umi-tools.readthedocs.io/en/latest/\n")
+        print("UMI-Tools: Version %s" % __version__)
 
     command = argv[1]
 
