@@ -2,11 +2,6 @@
 whitelist_methods.py - Methods for whitelisting cell barcodes
 =============================================================
 
-:Author: Tom Smith, Ian Sudbery
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 '''
 
 

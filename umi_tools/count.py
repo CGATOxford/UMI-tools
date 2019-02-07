@@ -1,13 +1,11 @@
 '''
-count - Count reads per gene from BAM using UMIs
-===================================================
+========================================================================
+count - Count reads per gene from BAM using UMIs and mapping coordinates
+========================================================================
 
-Purpose
--------
+*Count the number of reads per gene based on the mapping co-ordinate and the UMI attached to the read*
 
-The purpose of this command is to count the number of reads per gene
-based on the mapping co-ordinate and the UMI attached to the
-read. This tool is only designed to work with library preparation
+This tool is only designed to work with library preparation
 methods where the fragmentation occurs after amplification, as per
 most single cell RNA-Seq methods (e.g 10x, inDrop, Drop-seq, SCRB-seq
 and CEL-seq2). Since the precise mapping co-ordinate is not longer
@@ -19,13 +17,13 @@ UMIs is acceptably low.
 
 If you want to count reads per gene for library preparations which
 fragment prior to amplification (e.g bulk RNA-Seq), please use
-umi_tools dedup to remove the duplicate reads as this will use the
+``umi_tools dedup`` to remove the duplicate reads as this will use the
 full information from the mapping co-ordinate. Then use a read
 counting tool such as FeatureCounts or HTSeq to count the reads per
 gene.
 
 In the rare case of bulk RNA-Seq using a library preparation method
-with fragmentation after amplification, one can still use `count` but
+with fragmentation after amplification, one can still use ``count`` but
 note that it has not been tested on bulk RNA-Seq.
 
 This tool deviates from group and dedup in that the ``--per-gene`` option
@@ -62,6 +60,7 @@ Usage: umi_tools count [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.tsv]
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
              redirect log with --log=LOGFILE or --log2stderr '''
+
 
 def main(argv=None):
     """script main.

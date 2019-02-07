@@ -1,38 +1,26 @@
-'''Documentation.py - Generic docstrings for the commands
-=========================================================
-The :mod:`Documentation` module contains the generic docstrings for
-the commands
-'''
-
-'''
-``-I, --stdin`` (string, filename)
-      input file name [default = stdin]. The input file must be sorted and indexed.
-
-``-S, --stdout`` (string, filename)
-      output file name [default = stdout]
-
-``-L, --log`` (string, filename) log file name [default = stdout]
-      .. note::
-         In order to get a valid sam/bam file you need to redirect logging
-         information or turn it off logging via -v 0. You can redirect the
-         logging to a file with ``-L <logfile>`` or use the ``--log2stderr`` option
-         to send the logging to stderr.
-
-``-E, --error`` (string, filename)
-       file with error information [default = stderr].
-'''
-
 # generic docstring for whitelist/extract
 GENERIC_DOCSTRING_WE = '''
 Barcode extraction
 ------------------
 
-There are two methods enabled to extract the umi barcode (+/- cell
-barcode). For both methods, the patterns should be provided using the
-``--bc-pattern`` and ``--bc-pattern2`` options. The method is specified using
-the ``--extract-method`` option
+""""""""""""""""
+``--bc-pattern``
+""""""""""""""""
+      Pattern for barcode(s) on read 1. See ``--extract-method``
 
--'string':
+"""""""""""""""""
+``--bc-pattern2``
+"""""""""""""""""
+      Pattern for barcode(s) on read 2. See ``--extract-method``
+
+""""""""""""""""""""
+``--extract-method``
+""""""""""""""""""""
+      There are two methods enabled to extract the umi barcode (+/-
+      cell barcode). For both methods, the patterns should be provided
+      using the ``--bc-pattern`` and ``--bc-pattern2`` options.x
+
+ - ``string``
        This should be used where the barcodes are always in the same
        place in the read.
 
@@ -61,7 +49,7 @@ the ``--extract-method`` option
 
        where 'TT' is the cell barcode and 'AAGG' is the UMI.
 
--'regex':
+ - ``regex``
        This method allows for more flexible barcode extraction and
        should be used where the cell barcodes are variable in
        length. Alternatively, the regex option can also be used to
@@ -105,16 +93,19 @@ the ``--extract-method`` option
        processing with dedup, group or count commands
 
 
-Additional whitelist/extract options
--------------------------------------
-
---3prime
+""""""""""""
+``--3prime``
+""""""""""""
        By default the barcode is assumed to be on the 5' end of the
        read, but use this option to sepecify that it is on the 3' end
-       instead. This option only works with --extract-method=string
+       instead. This option only works with ``--extract-method=string``
        since 3' encoding can be specified explicitly with a regex, e.g
-       `.*(?P<umi_1>.{5})$`
+       ``.*(?P<umi_1>.{5})$``
 
+""""""""""""""
+``--read2-in``
+""""""""""""""
+        Filename for read pairs
 '''
 
 

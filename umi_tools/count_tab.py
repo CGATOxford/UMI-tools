@@ -76,6 +76,7 @@ Usage: umi_tools count_tab [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.tsv
              generate a valid BAM file on standard out, please
              redirect log with --log=LOGFILE or --log2stderr '''
 
+
 def main(argv=None):
     """script main.
 

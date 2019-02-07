@@ -345,7 +345,7 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
 
     def format_usage(self, usage):
 
-        msg='''
+        msg = '''
 
 For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/\n'''
 
@@ -479,7 +479,7 @@ def callbackShortHelp(option, opt, value, parser):
     '''output short help (only command line options).'''
     # clear usage and description
     parser.set_description(None)
-    #parser.set_usage(None)
+    # parser.set_usage(None)
     # output help
     parser.print_help()
     # exit
