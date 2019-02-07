@@ -119,7 +119,7 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage
+                            usage=usage,
                             description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "group-specific options")
