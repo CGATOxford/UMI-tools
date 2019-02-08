@@ -51,7 +51,7 @@ Identifying the true cell barcodes
 ----------------------------------
 
 In the absence of the ``--set-cell-number`` option, ``whitelist`` uses
-the distribution of counts per CB or unique UMIs per CB
+the distribution of read counts per CB or unique UMIs per CB
 (``--method=[reads|umis]``) to identify the cut-off for 'true' UMIs
 (the 'knee'). See this blog post for a more detailed explanation:
 

@@ -37,6 +37,7 @@ UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/ear
    Single_cell_tutorial
    regex
    faq
+   common_options
    release_notes
 
 Tools
@@ -93,6 +94,9 @@ enabled - The recommended method is *directional*.
    dedup <reference/dedup>
    count <reference/count>
    count_tab <reference/count_tab>
+
+Each tool has a set of :doc:`common_options` for input/output,
+profiling and debugging.
 
 See :doc:`QUICK_START` for a quick tutorial on
 the most common usage pattern.
