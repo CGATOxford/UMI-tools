@@ -1,18 +1,11 @@
 '''
+===========================================================
 dedup - Deduplicate reads using UMI and mapping coordinates
 ===========================================================
 
+*Deduplicate reads based on the mapping co-ordinate and the UMI attached to the read*
 
-:Author: Ian Sudbery, Tom Smith
-:Date: |today|
-:Tags: Python UMI
-
-Purpose
--------
-
-The purpose of this command is to deduplicate BAM files based on the
-first mapping co-ordinate and the UMI attached to the read. The
-identification of duplicate reads is performed in an error-aware
+The identification of duplicate reads is performed in an error-aware
 manner by building networks of related UMIs (see
 ``--method``). ``dedup`` can also handle cell barcoded input (see
 ``--per-cell``).
@@ -20,13 +13,6 @@ manner by building networks of related UMIs (see
 Usage::
 
     umi_tools dedup --stdin=INFILE --log=LOGFILE [OPTIONS] > OUTFILE
-
-or
-
-::
-
-    cat INFILE | umi_tools dedup --logfile=LOGFILE [OPTIONS] > OUTFILE
-
 
 Selecting the representative read
 ---------------------------------
@@ -96,10 +82,10 @@ dedup - Deduplicate reads using UMI and mapping coordinates
 
 Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
-       note: If --stdin/--stdout are ommited standard in and standard
-             out are used for input and output. To generate a valid
-             BAM file on standard out, please redirect log with
-             --log=LOGFILE or --log2stderr ''' 
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
+
 
 def detect_bam_features(bamfile, n_entries=1000):
     ''' read the first n entries in the bam file and identify the tags

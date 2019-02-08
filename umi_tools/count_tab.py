@@ -2,11 +2,6 @@
 count_tab - Count reads per gene from flatfile using UMIs
 =================================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 Purpose
 -------
 

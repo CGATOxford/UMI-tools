@@ -1,21 +1,39 @@
 '''
+================================
 extract - Extract UMI from fastq
-====================================================
+================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
+*Extract UMI barcode from a read and add it to the read name, leaving
+any sample barcode in place*
 
-Purpose
--------
-
-Extract UMI barcode from a read and add it to the read name, leaving
-any sample barcode in place. Can deal with paired end reads and UMIs
+Can deal with paired end reads and UMIs
 split across the paired ends. Can also optionally extract cell
 barcodes and append these to the read name also. See the section below
 for an explanation for how to encode the barcode pattern(s) to
 specficy the position of the UMI +/- cell barcode.
+
+Usage:
+------
+
+For single ended reads, the following reads from stdin and outputs to
+stdout::
+
+        umi_tools extract --extract-method=string
+        --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
+
+For paired end reads, the following reads end one from stdin and end
+two from FASTQIN and outputs end one to stdin and end two to
+FASTQOUT::
+
+        umi_tools extract --extract-method=string
+        --bc-pattern=[PATTERN] --bc-pattern2=[PATTERN]
+        --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
+
+Using regex and filtering against a whitelist of cell barcodes::
+
+        umi_tools extract --extract-method=regex --filter-cell-barcode
+        --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
+        -L extract.log [OPTIONS]
 
 
 Filtering and correcting cell barcodes
@@ -31,60 +49,93 @@ Cell barcodes which do not match the whitelist (user-generated or
 automatically generated) can also be optionally corrected using the
 ``--error-correct-cell`` option.
 
-The whitelist should be in the following format (tab-separated)::
+"""""""""""""""""""""""""
+``--filter-cell-barcode``
+"""""""""""""""""""""""""
+     Filter cell barcodes against a user-supplied whitelist (see
+     ``--whitelist``)
 
-    AAAAAA	AGAAAA
-    AAAATC
-    AAACAT
-    AAACTA	AAACTN,GAACTA
-    AAATAC
-    AAATCA	GAATCA
-    AAATGT	AAAGGT,CAATGT
+""""""""""""""""""""""""
+``--error-correct-cell``
+""""""""""""""""""""""""
+     Error correct cell barcodes to the whitelist (see ``--whitelist``)
 
-Where column 1 is the whitelisted cell barcodes and column 2 is
-the list (comma-separated) of other cell barcodes which should be
-corrected to the barcode in column 1. If the ``--error-correct-cell``
-option is not used, this column will be ignored. Any additional columns
-in the whitelist input, such as the counts columns from the output of
-umi_tools whitelist, will be ignored.
+"""""""""""""""
+``--whitelist``
+"""""""""""""""
+     Whitelist of accepted cell barcodes. The whitelist should be in
+     the following format (tab-separated)::
+
+        AAAAAA    AGAAAA
+        AAAATC
+        AAACAT
+        AAACTA    AAACTN,GAACTA
+        AAATAC
+        AAATCA    GAATCA
+        AAATGT    AAAGGT,CAATGT
+
+    Where column 1 is the whitelisted cell barcodes and column 2 is
+    the list (comma-separated) of other cell barcodes which should be
+    corrected to the barcode in column 1. If the ``--error-correct-cell``
+    option is not used, this column will be ignored. Any additional columns
+    in the whitelist input, such as the counts columns from the output of
+    umi_tools whitelist, will be ignored.
+
+"""""""""""""""
+``--blacklist``
+"""""""""""""""
+    BlackWhitelist of cell barcodes to discard
+
+""""""""""""""""""""""
+``--subset-reads=[N]``
+""""""""""""""""""""""
+    Only parse the first N reads
+
+""""""""""""""""""""""""""""""
+``--quality-filter-threshold``
+""""""""""""""""""""""""""""""
+    Remove reads where any UMI base quality score falls below this threshold
+
+"""""""""""""""""""""""""
+``--quality-filter-mask``
+"""""""""""""""""""""""""
+    If a UMI base has a quality below this threshold, replace the base with 'N'
+
+""""""""""""""""""""""
+``--quality-encoding``
+""""""""""""""""""""""
+    Quality score encoding. Choose from:
+     - 'phred33' [33-77]
+     - 'phred64' [64-106]
+     - 'solexa' [59-106]
+
+"""""""""""""""""""""
+``--reconcile-pairs``
+"""""""""""""""""""""
+    Allow read 2 infile to contain reads not in read 1 infile. This
+    enables support for upstream protocols where read one contains
+    cell barcodes, and the read pairs have been filtered and corrected
+    without regard to the read2s
+
 
 
 Experimental options
 --------------------
+
+.. note:: These options have not been extensively testing to ensure behaviour is as expected. If you have some suitable input files which we can use for testing, please `contact us <https://github.com/CGATOxford/UMI-tools/issues>`_.
+
 If you have a library preparation method where the UMI may be in
-either read, you can use --either-read --extract-method
---bc-pattern=[PATTERN1] --bc-pattern2=[PATTERN2] to search for the UMI
-in either. See the section 'regex' in umi_tools extract --help for
-further details about using a regex pattern. Where both patterns
-match, the default behaviour is to discard both reads. If you want to
-select the read with the UMI with highest sequence quality, provide
---either-read-resolve=quality.
+either read, you can use the following options to search for the UMI
+in either read::
 
-Usage:
-------
+       --either-read --extract-method --bc-pattern=[PATTERN1] --bc-pattern2=[PATTERN2]
 
-For single ended reads::
-
-        umi_tools extract --extract-method=string
-        --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
-
-reads from stdin and outputs to stdout.
-
-For paired end reads::
-
-        umi_tools extract --extract-method=string
-        --bc-pattern=[PATTERN] --bc-pattern2=[PATTERN]
-        --read2-in=[FASTQIN] --read2-out=[FASTQOUT] -L extract.log [OPTIONS]
-
-reads end one from stdin and end two from FASTQIN and outputs end one to stdin
-and end two to FASTQOUT.
+Where both patterns match, the default behaviour is to discard both
+reads. If you want to select the read with the UMI with highest
+sequence quality, provide ``--either-read-resolve=quality.``
 
 
-Using regex and filtering against a whitelist of cell barcodes::
 
-        umi_tools extract --extract-method=regex --filter-cell-barcode
-        --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
-        -L extract.log [OPTIONS]
 
 '''
 from __future__ import absolute_import
@@ -177,7 +228,7 @@ def main(argv=None):
                      help=("A whitelist of accepted cell barcodes"))
     group.add_option("--blacklist",
                      dest="blacklist", type="string",
-                     help=("A blacklist of accepted cell barcodes"))
+                     help=("A blacklist of rejected cell barcodes"))
     group.add_option("--subset-reads", "--reads-subset",
                      dest="reads_subset", type="int",
                      help=("Only extract from the first N reads. If N is "

@@ -2,11 +2,6 @@
 umi_methods.py - Methods for dealing with UMIs
 =========================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 '''
 
 from __future__ import absolute_import

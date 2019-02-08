@@ -2,11 +2,6 @@
 extract_methods.py - Methods for extracting UMIs and cell barcodes
 ===================================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 '''
 import collections
 import umi_tools.Utilities as U
