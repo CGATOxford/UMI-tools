@@ -59,6 +59,14 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 
+usage='''
+count - Count reads per gene from BAM using UMIs
+
+Usage: umi_tools count [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_TSV[.gz]]
+
+       note: If --stdin/--stdout are ommited standard in and standard
+             out are used for input and output. Output will be compressed if
+             a filename provided to --stdout ends in .gz '''
 
 def main(argv=None):
     """script main.
@@ -71,7 +79,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "count-specific options")
 

@@ -349,7 +349,7 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
 
 For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/\n'''
 
-        return self._formatter(optparse._(usage)) + msg
+        return optparse._(usage) + msg
 
     def format_option(self, option):
 

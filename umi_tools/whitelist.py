@@ -164,7 +164,21 @@ except ImportError:
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
 
+usage = '''
+whitelist - Identify the true cell barcodes
 
+Usage:
+ 
+   Single-end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]]
+
+   Paired end: 
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz] 
+
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in ends in .gz
+         ''' 
 def main(argv=None):
     """script main.
 
@@ -176,7 +190,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "whitelist-specific options")
 
