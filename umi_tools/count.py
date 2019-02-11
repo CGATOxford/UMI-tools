@@ -55,7 +55,7 @@ __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 usage = '''
 count - Count reads per-gene using UMI and mapping coordinates
 
-Usage: umi_tools count [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.tsv]
+Usage: umi_tools count [OPTIONS] --stdin=IN_BAM [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please

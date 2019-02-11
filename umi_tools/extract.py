@@ -160,16 +160,23 @@ import umi_tools.whitelist_methods as whitelist_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
-
 usage = '''
-extract - Extracts barcodes from reads
+extract - Extract UMI from fastq
 
-Usage: umi_tools whitelist [OPTIONS] [--stdin=INFILE.fastq] [--stdout=OUTFILE.fastq]
+Usage:
+ 
+   Single-end:
+      umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]]
 
-       note: If --stdin or --stdout are ommited, standard in is input
-             and standard out is output.
-'''
+   Paired end: 
+      umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]] --read2-in=IN2_FASTQ[.gz] --read2-out=OUT2_FASTQ[.gz]
 
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  To generate a valid BAM file on
+         standard out, please redirect log with --log=LOGFILE or
+         --log2stderr. Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in/read2-out ends in .gz
+         ''' 
 
 def main(argv=None):
     """script main.

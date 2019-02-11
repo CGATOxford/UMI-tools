@@ -195,10 +195,17 @@ __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
 usage = '''
 whitelist - Generates a whitelist of accepted cell barcodes
 
-Usage: umi_tools whitelist [OPTIONS] [--stdin=INFILE.fastq] [--stdout=OUTFILE.tsv]
+Usage:
+ 
+   Single-end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]]
 
-       note: If --stdin or --stdout are ommited, standard in is input
-             and standard out is output.
+   Paired end: 
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz] 
+
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in ends in .gz
 '''
 
 

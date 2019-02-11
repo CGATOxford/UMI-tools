@@ -80,7 +80,7 @@ __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
 usage = '''
 dedup - Deduplicate reads using UMI and mapping coordinates
 
-Usage: umi_tools dedup [OPTIONS] [--stdin=INFILE.bam] [--outfile=OUTFILE.bam]
+Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
