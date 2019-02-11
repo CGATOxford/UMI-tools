@@ -225,10 +225,10 @@ def main(argv=None):
 
     else:
         if options.per_contig and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
+            metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
         else:
