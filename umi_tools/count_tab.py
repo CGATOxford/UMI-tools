@@ -1,11 +1,6 @@
 '''
-count_tab.py - Count reads per gene from flatfile using UMIs
+count_tab - Count reads per gene from flatfile using UMIs
 =================================================================
-
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
 
 Purpose
 -------
@@ -19,16 +14,18 @@ first column is the read identifier (including UMI) and the second
 column is the assigned gene. The input must be sorted by the gene
 identifier.
 
-Input template:
-read_id[SEP]_UMI    gene
+Input template::
 
-Example:
-NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA     ENSG00000279457.3
-NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG     ENSG00000225972.1
+    read_id[SEP]_UMI    gene
+
+Example::
+
+    NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA     ENSG00000279457.3
+    NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG     ENSG00000225972.1
 
 You can perform any required file transformation and pipe the output
 directly to count_tab. For example to pipe output from featureCounts
-with the '-R CORE' option you can do the following:
+with the '-R CORE' option you can do the following::
 
     awk '$2=="Assigned" {print $1"\t"$4}' my.bam.featureCounts | sort -k2 |
     umi_tools count_tab -S gene_counts.tsv -L count.log
@@ -37,19 +34,20 @@ The tab file is assumed to contain each read id once only. For paired
 end reads with featureCounts you must include the "-p" option so each
 read id is included once only.
 
-Per-cell counting can be enable with --per-cell. For per-cell
+Per-cell counting can be enable with ``--per-cell``. For per-cell
 counting, the input must be in the following format (tab separated),
 where the first column is the read identifier (including UMI and Cell
 Barcode) and the second column is the assigned gene. The input must be
 sorted by the gene identifier:
 
-Input template:
-read_id[SEP]_UMI_CB    gene
+Input template::
 
-Example:
+    read_id[SEP]_UMI_CB    gene
 
-NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
-NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1
+Example::
+
+    NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
+    NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1
 
 '''
 
@@ -61,11 +59,23 @@ from builtins import dict
 from functools import partial
 
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
+
+usage = '''
+count_tab - Count reads per gene from flatfile using UMIs
+
+Usage: umi_tools count_tab [OPTIONS] [--stdin=IN_TSV[.gz]] [--stdout=OUT_TSV[.gz]]
+
+       note: If --stdin/--stdout are ommited standard in and standard
+             out are used for input and output. Input/Output will be
+             (de)compressed if a filename provided to --stdin/--stdout
+             ends in .gz '''
 
 
 def main(argv=None):
@@ -79,7 +89,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "count_tab-specific options")
 
@@ -103,10 +114,10 @@ def main(argv=None):
     # set the method with which to extract umis from reads
     if options.per_cell:
         bc_getter = partial(
-            umi_methods.get_cell_umi_read_string, sep=options.bc_sep)
+            sam_methods.get_cell_umi_read_string, sep=options.bc_sep)
     else:
         bc_getter = partial(
-            umi_methods.get_umi_read_string, sep=options.bc_sep)
+            sam_methods.get_umi_read_string, sep=options.bc_sep)
 
     if options.per_cell:
         options.stdout.write("%s\t%s\t%s\n" % ("cell", "gene", "count"))
@@ -117,7 +128,7 @@ def main(argv=None):
     # specified options.method
     processor = network.UMIClusterer(options.method)
 
-    for gene, counts in umi_methods.get_gene_count_tab(
+    for gene, counts in sam_methods.get_gene_count_tab(
             options.stdin,
             bc_getter=bc_getter):
 

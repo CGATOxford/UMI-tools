@@ -1,8 +1,7 @@
-UMI-Tools quick start guide
+Quick start guide
 =============================
 
-This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the `Single cell tutorial <Single_cell_tutorial.md>`_
-
+This quick start guide uses an iCLIP dataset as an example. If you want to apply UMI-tools in a single cell RNA-Seq analysis, please see the [Single cell tutorial](Single_cell_tutorial.md)
 
 - [UMI-Tools quick start guide](#umi-tools-quick-start-guide)
   * [Step 1: Install `UMI-Tools`](#step-1--install--umi-tools-)
@@ -12,9 +11,7 @@ This quick start guide uses an iCLIP dataset as an example. If you want to apply
   * [Step 5: Deduplication](#step-5--deduplication)
   * [Common variations](#common-variations)
     + [Paired-end sequencing](#paired-end-sequencing)
-    + [Mapping to the transcriptome](#mapping-to-the-transcriptome)
     + [Read grouping](#read-grouping)
-    + [Bespoke UMI extraction](#bespoke-umi-extraction)
     + [Other options](#other-options)
 
 The following steps will guide you through a short example of how to
@@ -42,7 +39,7 @@ The easiest way to install `UMI-Tools` is using your favorite python
 package manager, either `pip` or `conda`. If you don't know which you
 have installed, we recommend trying both, starting with `conda`:
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda umi_tools
 
 Alternatively, `pip`:
 

@@ -1,0 +1,3 @@
+Command to make test files for umi_tools extract --either-read testing:
+
+cd tests; paste <(zcat indrop.fastq.1.gz) <(zcat indrop.fastq.2.gz)|paste - - - - - - - -| awk -F "\t" 'BEGIN{OFS="\n"; srand(0)} {if(rand()>0.5) {print $1,$3,$5,$7 > "delete_me"; print $2,$4,$6,$8 > "delete_me2"} else {print $2,$4,$6,$8 > "delete_me"; print $1,$3,$5,$7 > "delete_me2"}}'; gzip delete_me2 -c > indrop.fastq.2_either_read.gz; gzip delete_me -c > indrop.fastq.1_either_read.gz; rm delete_me delete_me2

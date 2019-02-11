@@ -1,87 +1,24 @@
-'''
-whitelist.py - Identify the true cell barcodes
-====================================================
+'''==================================================
+whitelist - Identify the likely true cell barcodes
+==================================================
 
-:Author: Tom Smith, Ian Sudbery
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
-Purpose
--------
-
-Extract cell barcodes and identify the most likely true barcodes using
-the 'knee' method.
-
-Identifying the true cell barcodes
-----------------------------------
-
-In the absence of the --set-cell-number options (see below),
-we use the distribution of counts per cell barcode to identify the
-cut-off for 'true' UMIs (the 'knee'). See this blog post for a more
-detailed explanation:
-
-https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
-
-Counts per cell barcode can be performed using either read or unique
-UMI counts. Use --method=[read|umis] to set the counting method.
-
-The process of selecting the "best" local minima is not completely
-foolproof. We recommend users always run whitelist with the
---plot-prefix option to visualise the set of thresholds considered for
-defining cell barcodes. This option will also generate a table
-containing the thresholds which were rejected if you want to manually
-adjust the threshold.
-
-In addition, if you have some prior expectation on the maximum number
-of cells which may have been sequenced, you can provide this using the
-option --expect-cells (see below).
-
-If you don't mind if whitelist cannot identify a suitable threshold as
-you intend to inspect the plots and identify the threshold manually,
-provide the following options: --allow-threshold-error
---plot-prefix=[PLOT_PREFIX]
-
-whitelist-specific options
---------------------------
-
---plot-prefix
-        Use this option to indicate the prefix for the plots and table
-        describing the set of thresholds considered for defining cell barcodes
-
---set-cell-number
-        Use this option to explicity set the number of cell barcodes
-        which should be accepted. Note that the exact number of cell
-        barcodes in the outputted whitelist may be slightly less than
-        this if there are multiple cells observed with the same
-        frequency at the threshold between accepted and rejected cell
-        barcodes.
-
---expect-cells=[EXPECTED_CELLS]
-        An upper limit estimate for the number of inputted cells. The knee
-        method will now select the first threshold (order ascendingly)
-        which results in the number of cell barcodes accepted being <=
-        EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
-
---allow-threshold-error
-        This is useful if you what the command to exit with just a
-        warning if a suitable threshold cannot be selected
+*Extract cell barcodes and identify the most likely true cell barcodes*
 
 Usage:
 ------
 
-For single ended reads:
+For single ended reads, the following reads from stdin and outputs to stdout::
+
         umi_tools whitelist --bc-pattern=[PATTERN] -L extract.log
         [OPTIONS]
 
-reads from stdin and outputs to stdout.
+For paired end reads where the cell barcodes is split across the read
+pairs, the following reads end one from stdin and end two from FASTQIN
+and outputs to stdin::
 
-For paired end reads where the cell barcodes is split across the read pairs:
         umi_tools whitelist --bc-pattern=[PATTERN]
         --bc-pattern2=[PATTERN] --read2-in=[FASTQIN] -L extract.log
         [OPTIONS]
-
-reads end one from stdin and end two from FASTQIN and outputs to stdin
 
 
 Output:
@@ -95,7 +32,7 @@ The whitelist is outputted as 4 tab-separated columns:
     3. Count for whitelisted cell barcodes
     4. Count(s) for the other cell barcode(s) (comma-separated)
 
-example output:
+example output::
 
     AAAAAA      AGAAAA          146	1
     AAAATC		        22
@@ -108,7 +45,130 @@ example output:
     AACAAT		        18
     AACATA		        24
 
-If --error-correct-threshold is set to 0, columns 2 and 4 will be empty.
+If ``--error-correct-threshold`` is set to 0, columns 2 and 4 will be empty.
+
+Identifying the true cell barcodes
+----------------------------------
+
+In the absence of the ``--set-cell-number`` option, ``whitelist`` uses
+the distribution of read counts per CB or unique UMIs per CB
+(``--method=[reads|umis]``) to identify the cut-off for 'true' UMIs
+(the 'knee'). See this blog post for a more detailed explanation:
+
+https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
+
+Counts per cell barcode can be performed using either read or unique
+UMI counts. Use ``--method=[read|umis]`` to set the counting method.
+
+The process of selecting the "best" local minima is not completely
+foolproof. We recommend users always run whitelist with the
+``--plot-prefix`` option to visualise the set of thresholds considered
+for defining cell barcodes. This option will also generate a table
+containing the thresholds which were rejected if you want to manually
+adjust the threshold. In addition, if you expect that a local minima
+will not be found, you can use the ``-allow-threshold-error`` option
+to allow ``whitelist`` to proceed proceed past this stage.
+
+In addition, if you have some prior expectation on the maximum number
+of cells which may have been sequenced, you can provide this using the
+option ``--expect-cells`` (see below).
+
+If you don't mind if whitelist cannot identify a suitable threshold as
+you intend to inspect the plots and identify the threshold manually,
+provide the following options: ``--allow-threshold-error``,
+``--plot-prefix=[PLOT_PREFIX]``
+
+Finally, in some dataset there may be a risk that CBs above the
+selected threshold are actually errors from another CB. We can detect
+potential instances of this by looking for CBs within one error
+(substition, insertion or deletion) of another CB with higher
+counts. One can then either take a conservate approach (remove CB with
+lower counts), or a more relaxed approach (correct CB with lower
+counts to CB with higher counts). Note that correction is only
+possible for substitutions since insertions & deletions may also affect
+the UMI so these are always discarded. See
+``--ed-above-threshold=[discard/correct]`` below. Of course, the risk
+with the relaxed approach is that this may erroneously merge two truly
+different CBs together and create an in-silico "doublet". The end of
+the log file (--log) will detail the number of reads from CBs above
+the threshold which may be errors. In most cases, we expect the number
+of reads to be a very small fraction of the total reads and therefore
+recommend taking the conservative approach. See
+https://cgatoxford.wordpress.com/2017/05/23/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq-part-2/
+for an analysis of errors in barcodes above the knee threshold.
+
+
+whitelist-specific options
+--------------------------
+
+"""""""""""""""""
+``--plot-prefix``
+"""""""""""""""""
+        Use this option to indicate the prefix for the plots and table
+        describing the set of thresholds considered for defining cell barcodes
+
+"""""""""""""""""""""
+``--set-cell-number``
+"""""""""""""""""""""
+        Use this option to explicity set the number of cell barcodes
+        which should be accepted. Note that the exact number of cell
+        barcodes in the outputted whitelist may be slightly less than
+        this if there are multiple cells observed with the same
+        frequency at the threshold between accepted and rejected cell
+        barcodes.
+
+""""""""""""""""""
+``--expect-cells``
+""""""""""""""""""
+        An upper limit estimate for the number of inputted cells. The knee
+        method will now select the first threshold (order ascendingly)
+        which results in the number of cell barcodes accepted being <=
+        EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
+
+"""""""""""""""""""""""""""
+``--allow-threshold-error``
+"""""""""""""""""""""""""""
+        This is useful if you what the command to exit with just a
+        warning if a suitable threshold cannot be selected
+
+"""""""""""""""""""""""""""""
+``--error-correct-threshold``
+"""""""""""""""""""""""""""""
+       Hamming distance for correction of barcodes to whitelist
+       barcodes. This value will also be used for error detection
+       above the knee if required (``--ed-above-threshold``)
+
+""""""""""""
+``--method``
+""""""""""""
+       "reads" or "umis". Use either reads or unique UMI counts per cell
+
+""""""""""""""""""""""""""""""""""""""""""
+``--ed-above-threshold=[discard|correct]``
+""""""""""""""""""""""""""""""""""""""""""
+        Detect CBs above the threshold which may be sequence
+        errors:
+            - "discard"
+                  Discard all putative error CBs
+            - "correct"
+                  Correct putative substituion errors in CBs above the
+                  threshold. Discard putative insertions/deletions. Note that
+                  correction is only possible when the CB contains only
+                  substituions since insertions and deletions may cause errors
+                  in the UMI sequence too
+
+        Where a CB could be corrected to two other CBs, correction is
+        not possible. In these cases, the CB will be discarded
+        regardless of which option is used.
+
+""""""""""""""""""
+``--subset-reads``
+""""""""""""""""""
+        Use the first N reads to automatically identify the true cell
+        barcodes. If N is greater than the number of reads, all reads
+        will be used. Default is 100000000 (100 Million).
+
+
 
 '''
 import sys
@@ -116,7 +176,10 @@ import regex
 import collections
 
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.umi_methods as umi_methods
+import umi_tools.extract_methods as extract_methods
+import umi_tools.whitelist_methods as whitelist_methods
 
 # python 3 doesn't require izip
 try:
@@ -127,7 +190,23 @@ except ImportError:
     izip = zip
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_WE
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
+
+usage = '''
+whitelist - Generates a whitelist of accepted cell barcodes
+
+Usage:
+
+   Single-end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]]
+
+   Paired end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz]
+
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in ends in .gz
+'''
 
 
 def main(argv=None):
@@ -141,7 +220,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "whitelist-specific options")
 
@@ -158,8 +238,10 @@ def main(argv=None):
     group.add_option("--error-correct-threshold",
                      dest="error_correct_threshold",
                      type="int",
-                     help=("Hamming distance for correction of "
-                           "barcodes to whitelist barcodes"))
+                     help=("Hamming distance for correction of barcodes to "
+                           "whitelist barcodes. This value will also be used "
+                           "for error detection above the knee if required "
+                           "(--ed-above-threshold)"))
     group.add_option("--method",
                      dest="method",
                      choices=["reads", "umis"],
@@ -178,6 +260,12 @@ def main(argv=None):
                      type="int",
                      help=("Specify the number of cell barcodes to accept"))
 
+    parser.add_option("--ed-above-threshold",
+                      dest="ed_above_threshold", type="choice",
+                      choices=["discard", "correct"],
+                      help=("Detect CBs above the threshold which may be "
+                            "sequence errors from another CB and either "
+                            "'discard' or 'correct'. Default=discard"))
     parser.add_option_group(group)
 
     parser.set_defaults(method="reads",
@@ -193,7 +281,8 @@ def main(argv=None):
                         subset_reads=100000000,
                         expect_cells=False,
                         allow_threshold_error=False,
-                        cell_number=False)
+                        cell_number=False,
+                        ed_above_threshold=None)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -207,77 +296,8 @@ def main(argv=None):
         U.error("Cannot supply both --expect-cells and "
                 "--cell-number options")
 
-    if not options.pattern and not options.pattern2:
-        if not options.read2_in:
-            U.error("Must supply --bc-pattern for single-end")
-        else:
-            U.error("Must supply --bc-pattern and/or --bc-pattern2 "
-                    "if paired-end ")
+    extract_cell, extract_umi = U.validateExtractOptions(options)
 
-    if options.pattern2:
-        if not options.read2_in:
-            U.error("must specify a paired fastq ``--read2-in``")
-
-        if not options.pattern2:
-            options.pattern2 = options.pattern
-
-    extract_cell = False
-    extract_umi = False
-
-    # If the pattern is a regex we can compile the regex(es) prior to
-    # ExtractFilterAndUpdate instantiation
-    if options.extract_method == "regex":
-        if options.pattern:
-            try:
-                options.pattern = regex.compile(options.pattern)
-            except regex.error:
-                U.error("--bc-pattern '%s' is not a "
-                        "valid regex" % options.pattern)
-
-        if options.pattern2:
-            try:
-                options.pattern2 = regex.compile(options.pattern2)
-            except regex.Error:
-                U.error("--bc-pattern2 '%s' is not a "
-                        "valid regex" % options.pattern2)
-
-    # check whether the regex contains a umi group(s) and cell groups(s)
-    if options.extract_method == "regex":
-        if options.pattern:
-            for group in options.pattern.groupindex:
-                if group.startswith("cell_"):
-                    extract_cell = True
-                elif group.startswith("umi_"):
-                    extract_umi = True
-        if options.pattern2:
-            for group in options.pattern2.groupindex:
-                if group.startswith("cell_"):
-                    extract_cell = True
-                elif group.startswith("umi_"):
-                    extract_umi = True
-
-    # check whether the pattern string contains umi/cell bases
-    elif options.extract_method == "string":
-        if options.pattern:
-            if "C" in options.pattern:
-                extract_cell = True
-            if "N" in options.pattern:
-                extract_umi = True
-        if options.pattern2:
-            if "C" in options.pattern2:
-                extract_cell = True
-            if "N" in options.pattern2:
-                extract_umi = True
-
-    if not extract_umi:
-        if options.extract_method == "string":
-            U.error("barcode pattern(s) do not include any umi bases "
-                    "(marked with 'Ns') %s, %s" % (
-                        options.pattern, options.pattern2))
-        elif options.extract_method == "regex":
-            U.error("barcode regex(es) do not include any umi groups "
-                    "(starting with 'umi_') %s, %s" (
-                        options.pattern, options.pattern2))
     if not extract_cell:
         if options.extract_method == "string":
             U.error("barcode pattern(s) do not include any cell bases "
@@ -291,7 +311,7 @@ def main(argv=None):
     read1s = umi_methods.fastqIterate(options.stdin)
 
     # set up read extractor
-    ReadExtractor = umi_methods.ExtractFilterAndUpdate(
+    ReadExtractor = extract_methods.ExtractFilterAndUpdate(
         method=options.extract_method,
         pattern=options.pattern,
         pattern2=options.pattern2,
@@ -375,12 +395,24 @@ def main(argv=None):
                 options.subset_reads,
                 options.cell_number))
 
-    cell_whitelist, true_to_false_map = umi_methods.getCellWhitelist(
+    cell_whitelist, true_to_false_map = whitelist_methods.getCellWhitelist(
         cell_barcode_counts,
         options.expect_cells,
         options.cell_number,
         options.error_correct_threshold,
         options.plot_prefix)
+
+    if cell_whitelist:
+        U.info("Top %s cell barcodes passed the selected threshold" %
+               len(cell_whitelist))
+
+    if options.ed_above_threshold:
+        cell_whitelist, true_to_false_map = whitelist_methods.errorDetectAboveThreshold(
+            cell_barcode_counts,
+            cell_whitelist,
+            true_to_false_map,
+            errors=options.error_correct_threshold,
+            resolution_method=options.ed_above_threshold)
 
     if cell_whitelist:
         U.info("Writing out whitelist")
@@ -420,13 +452,13 @@ def main(argv=None):
     U.info("Parsed %i reads" % n_reads)
     U.info("%i reads matched the barcode pattern" % n_cell_barcodes)
     U.info("Found %i unique cell barcodes" % len(cell_barcode_counts))
+
     if cell_whitelist:
-        U.info("Top %s cell barcodes passed the selected threshold" %
-               len(cell_whitelist))
         U.info("Found %i total reads matching the selected cell barcodes" %
                total_correct_barcodes)
         U.info("Found %i total reads which can be error corrected to the "
                "selected cell barcodes" % total_corrected_barcodes)
+
     U.Stop()
 
 if __name__ == "__main__":

@@ -2,11 +2,6 @@
 network.py - Network methods for dealing with UMIs
 =========================================================
 
-:Author: Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
 '''
 
 from __future__ import absolute_import

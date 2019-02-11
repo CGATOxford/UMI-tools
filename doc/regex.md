@@ -1,10 +1,10 @@
-﻿# Specifiying cell bar code and UMI
+﻿# Specifiying cell barcode and UMI
 
 There are two ways to specify the location of cell barcodes and UMI bases when using `whitelist` and `extract`: string/basic (default) or regex. Sting or basic mode is simple and easy to understand and can be used for most techniques, like iCLIP, 10x chromium or Drop-seq. The regex mode is a little harder to explain, but allows a great deal of flexibility in specifying the layout of your read.
 
 ## Basic string mode
 
-In the default mode basic mode we specify the location of barcodes and UMIs in a read using a simple string. `N`s specify the location of bases to be treated as UMIs, `C`s as bases to treated as cell barcode and `X`s as bases that are neither and that should be retained on the read. By default this pattern is applied to the 5' end of the read, but we can tell `extract` to look on the 3' end of the read using `--3-prime`. 
+In the default basic mode we specify the location of barcodes and UMIs in a read using a simple string. `N`s specify the location of bases to be treated as UMIs, `C`s as bases to treated as cell barcode and `X`s as bases that are neither and that should be retained on the read. By default this pattern is applied to the 5' end of the read, but we can tell `extract` to look on the 3' end of the read using `--3-prime`. 
 
 So for example in 10x Chromium, read one consists of 16 bases of cell barcode followed by 10 bases of UMI, so the correct pattern to use is `CCCCCCCCCCCCCCCCNNNNNNNNNN`:
 
@@ -51,9 +51,10 @@ Regexes provide a number of advantages over the simpler "string" extraction meth
 The regex must contain named capture groups to define how the barcodes are encoded in the read. Named capture groups are a non-standard regex feature available in the python regex dialect. A capture group is a sub part of a pattern enclosed in brackets. Matches to sub-pattern are "captured" and can be extracted for reuse. So the pattern `(.{4})TTTTT` will match any four characters followed by 5 Ts, and return what those 4 characters were. In most cases we refer to a capture group by its positions (1st group, 2nd group etc). *Named* capture groups allow use to give names to each group using a `(?P<name>` syntax. Thus, `(?P<prefix>.{4})TTTTT` matches the same as the pattern above, but the captured group is given the name "prefix". 
 
 When passing a regex to `whitelist`/`extract`, the allowable groups in the regex are:
-    - umi_n = UMI positions, where n can be any value (required)
-    - cell_n = cell barcode positions, where n can be any value (optional)
-    - discard_n = positions to discard, where n can be any value (optional)
+
+   * umi_n = UMI positions, where n can be any value (required)
+   * cell_n = cell barcode positions, where n can be any value (optional)
+   * discard_n = positions to discard, where n can be any value (optional)
  
  We specify fuzzy matching by adding something like `{s<=X}` after a group. This specifies that the group should be matched with up to X **s**ubstitutions. The allowed error types are `s`: substitutions, `i`: insertions, `d`:deletions, `e`: any error (or the Levenshtein distance). See the  [`regex`](https://pypi.org/project/regex/) package documentation for more details.
  

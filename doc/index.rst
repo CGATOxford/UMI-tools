@@ -8,12 +8,10 @@
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
-UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
-
 .. note::
 
    **Important update**: We now recommend the use of `alevin`
-   10x Chromium and Drop-seq droplet-based scRNA-Seq. `alevin` is an
+   for 10x Chromium and Drop-seq droplet-based scRNA-Seq. `alevin` is an
    accurate, fast and convenient end-to-end tool to go from fastq ->
    count matrix and extends the UMI error correction in `UMI-tools`
    within a framework that also enables quantification of droplet
@@ -27,6 +25,9 @@ Welcome to the UMI-tools documentation. UMI-tools contains tools for
 dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags
 (RMTs) and single cell RNA-Seq cell barcodes.
 
+UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
+
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
@@ -37,7 +38,8 @@ dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags
    regex
    faq
    API
-
+   common_options
+   release_notes
 
 Tools
 -----
@@ -49,8 +51,8 @@ for alignment.
 * whitelist:
    **Builds a whitelist of the 'real' cell barcodes**
       This is useful for droplet-based single cell RNA-Seq where the
-      identity of the true cell barcodes is unknown. Whitelist can
-      then be used to filter with extract (see below)
+      identity of the true cell barcodes is unknown. The whitelist can
+      then be used to filter cell barcodes with extract (see below)
 
 * extract:
    **Flexible removal of UMI sequences from fastq reads.**
@@ -71,32 +73,37 @@ enabled - The recommended method is *directional*.
 
 * group: 
    **Groups PCR duplicates using the same methods available through `dedup`.**
-      This is useful when you want to manually interrogate the PCR duplicates
+      This is useful when you want to manually interrogate the PCR
+      duplicates or perform bespoke downstream processing such as
+      generating consensus sequences
    
 * count:
    **Groups and deduplicates PCR duplicates and counts the unique molecules per gene**
       Use this when you want to obtain a matrix with unique molecules
-      per gene, per cell, for scRNA-Seq.
+      per gene, per cell, for scRNA-Seq
 
 * count_tab:
    **As per count except input is a flatfile**
 
 .. toctree::
    :maxdepth: 1
-   :caption: Reference:
+   :caption: Commands:
 
-   reference/whitelist
-   reference/extract
-   reference/group
-   reference/dedup
-   reference/count
-   refernece/count_tab
+   whitelist <reference/whitelist>
+   extract <reference/extract>
+   group <reference/group>
+   dedup <reference/dedup>
+   count <reference/count>
+   count_tab <reference/count_tab>
 
-See `QUICK_START <QUICK_START.md>`_ for a quick tutorial on
+Each tool has a set of :doc:`common_options` for input/output,
+profiling and debugging.
+
+See :doc:`QUICK_START` for a quick tutorial on
 the most common usage pattern.
 
 If you want to use UMI-tools in single-cell RNA-Seq data processing,
-see `Single_cell_tutorial <.Single_cell_tutorial.md>`_
+see :doc:`Single_cell_tutorial`
 
 The ``dedup``, ``group``, and ``count`` / ``count_tab`` commands make use of network-based methods to resolve similar UMIs with the same alignment coordinates. For a background regarding these methods see:
 
@@ -133,7 +140,7 @@ Enter repository and run:
 
    $ python setup.py install
 
-For more detail see `INSTALL.rst <INSTALL.rst>`_
+For more detail see :doc:`INSTALL`
 
 
 To get detailed help on umi_tools run

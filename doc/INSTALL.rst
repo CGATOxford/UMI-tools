@@ -15,17 +15,17 @@ Quick Start
 
 Try one of the following::
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda -c conda-forge umi_tools
 
 or::
 
     $ pip install umi_tools
 
 or grab a zip of the `latest release`_ from github and unpack
-(replace ``wget`` with ``curl -O``) for OS X::
+(replace `0.5.5` with version number; replace ``wget`` with ``curl -O`` for OS X)::
 
-    $ unzip v0.2.4.zip
-    $ cd UMI-tools-0.2.4
+    $ unzip v0.5.5.zip
+    $ cd UMI-tools-0.5.5
     $ python setup.py install --user
 
 If these options don't work, see below.
@@ -48,7 +48,7 @@ etc. You can read more `about conda here`_.
 
 2. Type::
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda -c conda-forge umi_tools
 
 That's it, simple as that.
 

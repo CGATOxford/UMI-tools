@@ -1,79 +1,77 @@
 '''
-group.py - Group reads based on their UMI
-=========================================
+==============================================================
+Group - Group reads based on their UMI and mapping coordinates
+==============================================================
 
-:Author: Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
-
-Purpose
--------
-
-The purpose of this command is to identify groups of reads based on
-their genomic coordinate and UMI.
+*Identify groups of reads based on their genomic coordinate and UMI*
 
 The group command can be used to create two types of outfile: a tagged
 BAM or a flatfile describing the read groups
 
-To generate the tagged-BAM file, use the option --output-bam and
-provide a filename with the -S option. Alternatively, if you do not
-provide a filename, the bam file will be outputted to the stdout. If
-you have provided the --log/-L option to send the logging output
-elsewhere, you can pipe the output from the group command directly to
-e.g samtools view like so:
+To generate the tagged-BAM file, use the option ``--output-bam`` and
+provide a filename with the ``--stdout``/``-S`` option. Alternatively,
+if you do not provide a filename, the bam file will be outputted to
+the stdout. If you have provided the ``--log``/``-L`` option to send
+the logging output elsewhere, you can pipe the output from the group
+command directly to e.g samtools view like so::
 
-umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam
---log=group.log --paired | samtools view - |less
+    umi_tools group -I inf.bam --group-out=grouped.tsv --output-bam
+    --log=group.log --paired | samtools view - |less
 
 The tagged-BAM file will have two tagged per read:
-UG = Unique_id. 0-indexed unique id number for each group of reads
-     with the same genomic position and UMI or UMIs inferred to be
-     from the same true UMI + errors
-BX = Final UMI. The inferred true UMI for the group
+
+ - UG
+   Unique_id. 0-indexed unique id number for each group of reads
+   with the same genomic position and UMI or UMIs inferred to be
+   from the same true UMI + errors
+ - BX
+   Final UMI. The inferred true UMI for the group
 
 To generate the flatfile describing the read groups, include the
---group-out=<filename> option. The columns of the read groups file are
+``--group-out=<filename>`` option. The columns of the read groups file are
 below. The first five columns relate to the read. The final 3 columns
 relate to the group.
 
   - read_id
-    read identifier
+      read identifier
 
   - contig
-    alignment contig
+      alignment contig
 
   - position
-    Alignment position. Note that this position is not the start
-    position of the read in the BAM file but the start of the read
-    taking into account the read strand and cigar
+      Alignment position. Note that this position is not the start
+      position of the read in the BAM file but the start of the read
+      taking into account the read strand and cigar
 
   - gene
-    The gene assignment for the read. Note, this will be NA unless the
-    --per-gene option is specified
+      The gene assignment for the read. Note, this will be NA unless the
+      --per-gene option is specified
 
   - umi
-    The read UMI
+      The read UMI
 
   - umi_count
-    The number of times this UMI is observed for reads at the same
-    position
+      The number of times this UMI is observed for reads at the same
+      position
 
   - final_umi
-    The inferred true UMI for the group
+      The inferred true UMI for the group
 
   - final_umi_count
-    The total number of reads within the group
+      The total number of reads within the group
 
   - unique_id
-    The unique id for the group
+      The unique id for the group
 
 
-dedup-specific options
+group-specific options
 ----------------------
 
---group-out (string, filename)
+"""""""""""
+--group-out
+"""""""""""
    Outfile name for file mapping read id to read group
+
 
 '''
 import sys
@@ -87,12 +85,22 @@ from future.utils import iteritems
 import pysam
 
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.network as network
-import umi_tools.umi_methods as umi_methods
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
-__doc__ = __doc__ + U.GROUP_DEDUP_GENERIC_OPTIONS
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
+
+usage = '''
+group - Group reads based on their UMI
+
+Usage: umi_tools group --output-bam [OPTIONS] [--stdin=INFILE.bam] [--stdout=OUTFILE.bam]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 
 def main(argv=None):
@@ -106,7 +114,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
 
     group = U.OptionGroup(parser, "group-specific options")
 
@@ -119,10 +128,6 @@ def main(argv=None):
                      help=("output a bam file with read groups tagged using the UG tag"
                            "[default=%default]"))
 
-    group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
-                     default=False,
-                     help=("Retain all unmapped reads in output[default=%default]"))
-
     parser.add_option("--umi-group-tag", dest="umi_group_tag",
                       type="string", help="tag for the outputted umi group",
                       default='BX')
@@ -132,7 +137,7 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=True)
 
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
@@ -190,29 +195,34 @@ def main(argv=None):
     gene_tag = options.gene_tag
     metacontig2contig = None
 
+    if options.unmapped_reads in ["use", "output"]:
+        output_unmapped = True
+    else:
+        output_unmapped = False
+
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
     else:
         if options.per_gene and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
+            metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
         else:
-            inreads = infile.fetch(until_eof=options.output_unmapped)
+            inreads = infile.fetch(until_eof=output_unmapped)
 
-    bundle_iterator = umi_methods.get_bundles(
+    bundle_iterator = sam_methods.get_bundles(
         options,
         all_reads=True,
         return_read2=True,
-        return_unmapped=options.output_unmapped,
+        return_unmapped=output_unmapped,
         metacontig_contig=metacontig2contig)
 
     for bundle, key, status in bundle_iterator(inreads):
 
-        # write out read2s and unmapped (if these options are set)
+        # write out read2s and unmapped/chimeric (if these options are set)
         if status == 'single_read':
             # bundle is just a single read here
             nInput += 1
@@ -267,7 +277,7 @@ def main(argv=None):
                             gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
                             read.query_name, read.reference_name,
-                            umi_methods.get_read_position(
+                            sam_methods.get_read_position(
                                 read, options.soft_clip_threshold)[1],
                             gene,
                             umi.decode(),
@@ -298,13 +308,13 @@ def main(argv=None):
            (nOutput, unique_id))
 
     U.info("Total number of positions deduplicated: %i" %
-           processor.UMIClusterer.positions)
-    if processor.UMIClusterer.positions > 0:
+           processor.positions)
+    if processor.positions > 0:
         U.info("Mean number of unique UMIs per position: %.2f" %
-               (float(processor.UMIClusterer.total_umis_per_position) /
-                processor.UMIClusterer.positions))
+               (float(processor.total_umis_per_position) /
+                processor.positions))
         U.info("Max. number of unique UMIs per position: %i" %
-               processor.UMIClusterer.max_umis_per_position)
+               processor.max_umis_per_position)
     else:
         U.warn("The BAM did not contain any valid "
                "reads/read pairs for deduplication")
