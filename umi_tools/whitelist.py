@@ -196,12 +196,12 @@ usage = '''
 whitelist - Generates a whitelist of accepted cell barcodes
 
 Usage:
- 
+
    Single-end:
       umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]]
 
-   Paired end: 
-      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz] 
+   Paired end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz]
 
    note: If -I/-S are ommited standard in and standard out are used
          for input and output.  Input/Output will be (de)compressed if a

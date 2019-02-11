@@ -164,11 +164,11 @@ usage = '''
 extract - Extract UMI from fastq
 
 Usage:
- 
+
    Single-end:
       umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]]
 
-   Paired end: 
+   Paired end:
       umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]] --read2-in=IN2_FASTQ[.gz] --read2-out=OUT2_FASTQ[.gz]
 
    note: If -I/-S are ommited standard in and standard out are used
@@ -176,7 +176,8 @@ Usage:
          standard out, please redirect log with --log=LOGFILE or
          --log2stderr. Input/Output will be (de)compressed if a
          filename provided to -S/-I/--read2-in/read2-out ends in .gz
-         ''' 
+         '''
+
 
 def main(argv=None):
     """script main.

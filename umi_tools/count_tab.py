@@ -67,14 +67,14 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 
-usage='''
+usage = '''
 count_tab - Count reads per gene from flatfile using UMIs
 
 Usage: umi_tools count_tab [OPTIONS] [--stdin=IN_TSV[.gz]] [--stdout=OUT_TSV[.gz]]
 
        note: If --stdin/--stdout are ommited standard in and standard
-             out are used for input and output. Input/Output will be 
-             (de)compressed if a filename provided to --stdin/--stdout 
+             out are used for input and output. Input/Output will be
+             (de)compressed if a filename provided to --stdin/--stdout
              ends in .gz '''
 
 
