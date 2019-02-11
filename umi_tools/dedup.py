@@ -1,48 +1,51 @@
 '''
-dedup.py - Deduplicate reads that are coded with a UMI
-=========================================================
+===========================================================
+dedup - Deduplicate reads using UMI and mapping coordinates
+===========================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
+*Deduplicate reads based on the mapping co-ordinate and the UMI attached to the read*
 
-Purpose
--------
+The identification of duplicate reads is performed in an error-aware
+manner by building networks of related UMIs (see
+``--method``). ``dedup`` can also handle cell barcoded input (see
+``--per-cell``).
 
-The purpose of this command is to deduplicate BAM files based
-on the first mapping co-ordinate and the UMI attached to the read.
+Usage::
+
+    umi_tools dedup --stdin=INFILE --log=LOGFILE [OPTIONS] > OUTFILE
 
 Selecting the representative read
 ---------------------------------
-
-The following criteria are applied to select the read that will be retained
-from a group of duplicated reads:
+For every group of duplicate reads, a single representative read is
+retained.The following criteria are applied to select the read that
+will be retained from a group of duplicated reads:
 
 1. The read with the lowest number of mapping coordinates (see
---multimapping-detection-method option)
+``--multimapping-detection-method`` option)
+
 2. The read with the highest mapping quality
 
 Otherwise a read is chosen at random.
 
 
-dedup-specific options
+Dedup-specific options
 ----------------------
-
---output-stats (string, filename_prefix)
+"""""""""""""""""""""""""""
+``--output-stats=[PREFIX]``
+"""""""""""""""""""""""""""
        Output edit distance statistics and UMI usage statistics
        using this prefix.
 
        Output files are:
 
-       "[prefix]_stats_per_umi_per_position.tsv"
+       [PREFIX]_stats_per_umi_per_position.tsv
            Histogram of counts per position per UMI pre- and post-deduplication
 
-       "[prefix]_stats_per_umi_per.tsv"
+       [PREFIX_stats_per_umi_per.tsv
            Table of stats per umi. Number of times UMI was observed,
            total counts and median counts, pre- and post-deduplication
 
-       "[prefix]_stats_edit_distance.tsv"
+       [PREFIX]_stats_edit_distance.tsv
            Edit distance between UMIs at each position. Positions with a
            single UMI are reported seperately. Pre- and post-deduplication and
            inluding null expectations from random sampling of UMIs from the
@@ -65,13 +68,23 @@ import numpy as np
 
 import umi_tools
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
-
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
-__doc__ = __doc__ + U.GROUP_DEDUP_GENERIC_OPTIONS
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
+
+usage = '''
+dedup - Deduplicate reads using UMI and mapping coordinates
+
+Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 
 def detect_bam_features(bamfile, n_entries=1000):
@@ -122,7 +135,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
     group = U.OptionGroup(parser, "dedup-specific options")
 
     group.add_option("--output-stats", dest="stats", type="string",
@@ -211,10 +225,10 @@ def main(argv=None):
 
     else:
         if options.per_contig and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
+            metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
         else:
@@ -224,7 +238,7 @@ def main(argv=None):
     # specified options.method
     processor = network.ReadDeduplicator(options.method)
 
-    bundle_iterator = umi_methods.get_bundles(
+    bundle_iterator = sam_methods.get_bundles(
         options,
         metacontig_contig=metacontig2contig)
 
