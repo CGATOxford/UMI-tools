@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 import numpy as np
+import numpy.matlib as npm
+
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 
@@ -294,8 +296,9 @@ def getKneeEstimateDistance(cell_barcode_counts,
         # the unit vector that points in the direction of the line (this gives us
         # the length of the projection of vecFromFirst onto the line). If we
         # multiply the scalar product by the unit vector, we have vecFromFirstParallel
+
         scalarProduct = np.sum(
-            vecFromFirst * np.matlib.repmat(lineVecNorm, nPoints, 1), axis=1)
+            vecFromFirst * npm.repmat(lineVecNorm, nPoints, 1), axis=1)
         vecFromFirstParallel = np.outer(scalarProduct, lineVecNorm)
         vecToLine = vecFromFirst - vecFromFirstParallel
 
