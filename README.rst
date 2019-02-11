@@ -2,6 +2,8 @@
 
 UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
 
+For full documentation see https://umi-tools.readthedocs.io/en/latest/
+
 Tools for dealing with Unique Molecular Identifiers
 ====================================================
 
@@ -97,16 +99,18 @@ For more detail see `INSTALL.rst <./doc/INSTALL.rst>`_
 Help
 ----- 
 
+For full documentation see https://umi-tools.readthedocs.io/en/latest/
+
 See `QUICK_START.md <./doc/QUICK_START.md>`_ and
 `Single_cell_tutorial.md <./doc/Single_cell_tutorial.md>`_ for tutorials on the most common usage patterns.
 
-To get detailed help on umi_tools run
+To get help on umi_tools run
 
 .. code:: bash
 
    $ umi_tools --help
 
-To get help on a specific [COMMAND] run
+To get help on the options for a specific [COMMAND], run
 
 .. code:: bash
 
