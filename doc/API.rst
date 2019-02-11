@@ -25,9 +25,13 @@ We pass this to our cluster, and it will return to us a list of lists, with each
 
   [["ATAT", "GTAT"], ["CCAT"]]
 
-`ATAT` are only a single base apart, and the count of `ATAT` is greater than twice that (-1) of of `GTAT`. `CCAT` is two base edits away from the others and so is in a seperate cluster. The order of the UMIs in the groups is meaningful: we predict that `ATAT` was the "true" UMI and so it is listed first.
+`ATAT` and `GTAT` are only a single base apart, and the count of
+`ATAT` is >= 2n-1, where n is the count of `GTAT`. `CCAT` is two base
+edits away from the others and so is in a seperate cluster. The order
+of the UMIs in the groups is meaningful: we predict that `ATAT` was
+the "true" UMI and so it is listed first.
 
-Thus if you were in the bussiness of deduplicating reads, you'd keep one read associated with the `ATAT` and `CCAT` UMIs, and discard the reads associated with `GTAT`. Or if you were, for example, building a tools to geneate concensus read sequences, then you'd build one consensus from the reads with `ATAT` and `GTAT` and a different consensus read from the reads with teh `CCAT` UMI.
+Thus if you were in the bussiness of deduplicating reads, you'd keep one read associated with the `ATAT` and `CCAT` UMIs, and discard the reads associated with `GTAT`. Or if you were, for example, building a tools to geneate concensus read sequences, then you'd build one consensus from the reads with `ATAT` and `GTAT` and a different consensus read from the reads with the `CCAT` UMI.
 
 Note that the `threshold` argument to the `UMIClusterer` allows the use of different edit distance threshold (although it is optional and the default is 1).
 
