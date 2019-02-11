@@ -36,6 +36,7 @@ dealing with Unique Molecular Identifiers (UMIs)/Random Molecular Tags
    Single_cell_tutorial
    regex
    faq
+   API
 
 
 Tools
