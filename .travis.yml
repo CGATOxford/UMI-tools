@@ -17,9 +17,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype; fi
   - pip install cython
-  - pip install pandas==0.19
+  - pip install pandas
   - pip install scipy
-  - pip install matplotlib==2.2.3  # can remove once py2 support dropped
 install:
   - python setup.py install
 
