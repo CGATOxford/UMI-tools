@@ -197,7 +197,7 @@ def main(argv=None):
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
 
     if options.paired:
-        outfile = umi_methods.TwoPassPairWriter(infile, outfile)
+        outfile = sam_methods.TwoPassPairWriter(infile, outfile)
 
     nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
