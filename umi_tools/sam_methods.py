@@ -411,9 +411,9 @@ class get_bundles:
                 try:
                     umi, cell = self.barcode_getter(read)
                 except KeyError:
-                    error_msg = "Read skipped, missing umi and/or cell tag"  
+                    error_msg = "Read skipped, missing umi and/or cell tag"
                     if self.read_events[error_msg] == 0:
-                        
+
                         # pysam renamed .tostring -> to_string in 0.14
                         # .tostring requies access to the parent AlignmentFile
                         try:

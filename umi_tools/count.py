@@ -139,7 +139,7 @@ def main(argv=None):
     # specified options.method
 
     processor = network.UMIClusterer(options.method)
-    
+
     for bundle, key, status in bundle_iterator(inreads):
         if status == "single_read":
             continue
