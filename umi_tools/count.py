@@ -135,6 +135,11 @@ def main(argv=None):
         only_count_reads=True,
         metacontig_contig=metacontig2contig)
 
+    # set up UMIClusterer functor with methods specific to
+    # specified options.method
+
+    processor = network.UMIClusterer(options.method)
+
     for bundle, key, status in bundle_iterator(inreads):
         if status == "single_read":
             continue
@@ -150,14 +155,8 @@ def main(argv=None):
             input_reads += 1000000
             U.info("Parsed %i input reads" % input_reads)
 
-        # set up UMIClusterer functor with methods specific to
-        # specified options.method
-
-        processor = network.UMIClusterer(options.method)
-
         # group the umis
         groups = processor(
-            umis,
             counts,
             threshold=options.threshold)
 

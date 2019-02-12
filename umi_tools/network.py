@@ -346,10 +346,11 @@ class UMIClusterer:
             self.get_connected_components = self._get_connected_components_null
             self.get_groups = self._group_unique
 
-    def __call__(self, umis, counts, threshold):
-        '''Counts is a dictionary that maps UMIs to their counts'''
+    def __call__(self, umis, threshold):
+        '''umis is a dictionary that maps UMIs to their counts'''
 
-        umis = list(umis)
+        counts = umis
+        umis = list(umis.keys())
 
         self.positions += 1
 
@@ -399,7 +400,7 @@ class ReadDeduplicator:
         umis = bundle.keys()
         counts = {umi: bundle[umi]["count"] for umi in umis}
 
-        clusters = self.UMIClusterer(umis, counts, threshold)
+        clusters = self.UMIClusterer(counts, threshold)
 
         final_umis = [cluster[0] for cluster in clusters]
         umi_counts = [sum(counts[umi] for umi in cluster)
