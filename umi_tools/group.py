@@ -219,7 +219,11 @@ def main(argv=None):
         return_read2=True,
         return_unmapped=output_unmapped,
         metacontig_contig=metacontig2contig)
-
+    
+    # set up UMIClusterer functor with methods specific to
+    # specified options.method
+    processor = network.UMIClusterer(options.method)
+    
     for bundle, key, status in bundle_iterator(inreads):
 
         # write out read2s and unmapped/chimeric (if these options are set)
@@ -246,13 +250,8 @@ def main(argv=None):
             input_reads += 1000000
             U.info("Parsed %i input reads" % input_reads)
 
-        # set up UMIClusterer functor with methods specific to
-        # specified options.method
-        processor = network.UMIClusterer(options.method)
-
         # group the umis
         groups = processor(
-            umis,
             counts,
             threshold=options.threshold)
 

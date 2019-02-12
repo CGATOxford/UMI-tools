@@ -139,7 +139,6 @@ def main(argv=None):
 
             # group the umis
             groups = processor(
-                umis,
                 counts[cell],
                 threshold=options.threshold)
 
