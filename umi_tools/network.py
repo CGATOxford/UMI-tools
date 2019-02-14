@@ -408,6 +408,7 @@ class ReadDeduplicator:
 
         return (reads, final_umis, umi_counts)
 
+
 class CellClusterer:
     '''A functor that clusters a dictionary of cell barcodes and their counts.
     The primary return value is either a list of representative UMIs
