@@ -66,7 +66,7 @@ whitelist_scrb_seq:
       stdin: scrb_seq_fastq.1.gz
       outputs: [stdout]
       references: [scrb_whitelist.tsv]
-      options: whitelist --bc-pattern=CCCCCCNNNNNNNNNN  -L test.log --stdin=scrb_seq_fastq.1.gz
+      options: whitelist --bc-pattern=CCCCCCNNNNNNNNNN  -L test.log --plot-prefix=knee_plots
 
 whitelist_indrop:
       stdin: indrop.fastq.1.gz
@@ -74,22 +74,23 @@ whitelist_indrop:
       references: [indrop_whitelist.tsv]
       options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
 
+whitelist_indrop_density:
+      stdin: indrop.fastq.1.gz
+      outputs: [stdout]
+      references: [indrop_whitelist_density.tsv]
+      options: whitelist --knee-method=density --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --plot-prefix=knee_plots
+
 whitelist_indrop_set_cell:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist_user.tsv]
-      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --set-cell-number=607
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --set-cell-number=1000
 
-whitelist_indrop_expect_cells:
+whitelist_indrop_expect_cells_density:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
-      references: [indrop_whitelist_user.tsv]
-      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --expect-cells=6000
-
-# TS: Note the 2 whitelist tests above all generate the same
-# output. Ideally, would have input which generates different output
-# for these tests. Also the input is so small that the plot output for
-# this data is not very convincing. Consider expanding input?
+      references: [indrop_whitelist_user_density.tsv]
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --knee-method=density --expect-cells=6000
 
 whitelist_indrop_3_errors:
       stdin: indrop.fastq.1.gz

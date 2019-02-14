@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 import numpy as np
+import numpy.matlib as npm
+
 from scipy.stats import gaussian_kde
 from scipy.signal import argrelextrema
 
@@ -23,11 +25,12 @@ import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
 
 
-def getKneeEstimate(cell_barcode_counts,
-                    expect_cells=False,
-                    cell_number=False,
-                    plotfile_prefix=None):
-    ''' estimate the number of "true" cell barcodes
+def getKneeEstimateDensity(cell_barcode_counts,
+                           expect_cells=False,
+                           cell_number=False,
+                           plotfile_prefix=None):
+    ''' estimate the number of "true" cell barcodes using a gaussian
+    density-based method
 
     input:
          cell_barcode_counts = dict(key = barcode, value = count)
@@ -242,6 +245,164 @@ def getKneeEstimate(cell_barcode_counts,
     return final_barcodes
 
 
+def getKneeEstimateDistance(cell_barcode_counts,
+                            cell_number=False,
+                            plotfile_prefix=None):
+    ''' estimate the number of "true" cell barcodes via a knee method
+    which finds the point with maximum distance
+
+    input:
+         cell_barcode_counts = dict(key = barcode, value = count)
+         cell_number (optional) = define number of cell barcodes to accept
+         plotfile_prefix = (optional) prefix for plots
+
+    returns:
+         List of true barcodes
+    '''
+
+    def getKneeDistance(values):
+        '''
+        This function is based on
+        https://stackoverflow.com/questions/2018178/finding-the-best-trade-off-point-on-a-curve
+
+        and https://dataplatform.cloud.ibm.com/analytics/notebooks/54d79c2a-f155-40ec-93ec-ed05b58afa39/view?access_token=6d8ec910cf2a1b3901c721fcb94638563cd646fe14400fecbb76cea6aaae2fb1
+
+        The idea is to draw a line from the first to last point on the
+        cumulative counts curve and then find the point on the curve
+        which is the maximum distance away from this line
+        '''
+
+        # get coordinates of all the points
+        nPoints = len(values)
+        allCoord = np.vstack((range(nPoints), values)).T
+
+        # get the first point
+        firstPoint = allCoord[0]
+        # get vector between first and last point - this is the line
+        lineVec = allCoord[-1] - allCoord[0]
+        lineVecNorm = lineVec / np.sqrt(np.sum(lineVec**2))
+
+        # find the distance from each point to the line:
+        # vector between all points and first point
+        vecFromFirst = allCoord - firstPoint
+
+        # To calculate the distance to the line, we split vecFromFirst into two
+        # components, one that is parallel to the line and one that is perpendicular
+        # Then, we take the norm of the part that is perpendicular to the line and
+        # get the distance.
+        # We find the vector parallel to the line by projecting vecFromFirst onto
+        # the line. The perpendicular vector is vecFromFirst - vecFromFirstParallel
+        # We project vecFromFirst by taking the scalar product of the vector with
+        # the unit vector that points in the direction of the line (this gives us
+        # the length of the projection of vecFromFirst onto the line). If we
+        # multiply the scalar product by the unit vector, we have vecFromFirstParallel
+
+        scalarProduct = np.sum(
+            vecFromFirst * npm.repmat(lineVecNorm, nPoints, 1), axis=1)
+        vecFromFirstParallel = np.outer(scalarProduct, lineVecNorm)
+        vecToLine = vecFromFirst - vecFromFirstParallel
+
+        # distance to line is the norm of vecToLine
+        distToLine = np.sqrt(np.sum(vecToLine ** 2, axis=1))
+
+        # knee/elbow is the point with max distance value
+        idxOfBestPoint = np.argmax(distToLine)
+
+        return(distToLine, idxOfBestPoint)
+
+    counts = [x[1] for x in cell_barcode_counts.most_common()]
+    values = list(np.cumsum(counts))
+
+    # We need to perform the distance knee iteratively with reduced
+    # number of CBs since it's sensitive to the number of CBs input
+    # and overestimates if too many CBs are used
+    previous_idxOfBestPoint = 0
+    distToLine, idxOfBestPoint = getKneeDistance(values)
+    if idxOfBestPoint == 0:
+        raise ValueError("Something's gone wrong here!!")
+
+    max_iterations = 100
+    iterations = 0
+    while idxOfBestPoint - previous_idxOfBestPoint != 0:
+        previous_idxOfBestPoint = idxOfBestPoint
+        iterations += 1
+        if iterations > max_iterations:
+            break
+        distToLine, idxOfBestPoint = getKneeDistance(values[:idxOfBestPoint*3])
+
+    knee_final_barcodes = [x[0] for x in cell_barcode_counts.most_common()[
+        :idxOfBestPoint+1]]
+
+    if cell_number:
+        threshold = counts[cell_number]
+        final_barcodes = set([
+            x for x, y in cell_barcode_counts.items() if y > threshold])
+    else:
+        final_barcodes = knee_final_barcodes
+
+    if plotfile_prefix:
+
+        # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
+        CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                          '#f781bf', '#a65628', '#984ea3',
+                          '#999999', '#e41a1c', '#dede00']
+
+        user_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[2], ls="dashed",
+            markersize=15, label='User-defined')
+        selected_line = mlines.Line2D(
+            [], [], color=CB_color_cycle[0], ls="dashed", markersize=15, label='Knee')
+
+        # plot of the original curve and its corresponding distances
+        plt.figure(figsize=(12, 6))
+        plt.plot(distToLine, label='Distance', color='r')
+        plt.plot(values, label='Cumulative', color='b')
+        plt.plot([idxOfBestPoint], values[idxOfBestPoint], marker='o',
+                 markersize=8, color="red", label='Knee')
+
+        if cell_number:
+            plt.axvline(x=cell_number, ls="dashed",
+                        color=CB_color_cycle[2], label="User-defined")
+
+        plt.legend()
+        plt.savefig("%s_cell_barcode_knee.png" % plotfile_prefix)
+
+        colours_selected = [CB_color_cycle[0] for x in range(0, len(final_barcodes))]
+        colours_rejected = ["black" for x in range(0, len(counts)-len(final_barcodes))]
+        colours = colours_selected + colours_rejected
+
+        fig = plt.figure()
+        fig3 = fig.add_subplot(111)
+        fig3.scatter(x=range(1, len(counts)+1), y=counts,
+                     c=colours, s=10, linewidths=0)
+        fig3.loglog()
+        fig3.set_xlim(0, len(counts)*1.25)
+        fig3.set_xlabel('Barcode index')
+        fig3.set_ylabel('Count')
+        fig3.axvline(x=len(knee_final_barcodes), ls="dashed", color=CB_color_cycle[0])
+
+        if cell_number:
+            fig3.axvline(x=cell_number, ls="dashed", color=CB_color_cycle[2])
+
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line, user_line],
+                              title="User threshold")
+        else:
+            lgd = fig3.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
+                              handles=[selected_line],
+                              title="Knee threshold")
+
+        fig.savefig("%s_cell_barcode_counts.png" % plotfile_prefix,
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        if not cell_number:
+            with U.openFile("%s_cell_thresholds.tsv" % plotfile_prefix, "w") as outf:
+                outf.write("count\n")
+                outf.write("%s\n" % idxOfBestPoint)
+
+    return(final_barcodes)
+
+
 def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
@@ -275,13 +436,22 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
 
 
 def getCellWhitelist(cell_barcode_counts,
+                     knee_method="distance",
                      expect_cells=False,
                      cell_number=False,
                      error_correct_threshold=0,
                      plotfile_prefix=None):
 
-    cell_whitelist = getKneeEstimate(
-        cell_barcode_counts, expect_cells, cell_number, plotfile_prefix)
+    if knee_method == "distance":
+            cell_whitelist = getKneeEstimateDistance(
+                cell_barcode_counts, cell_number, plotfile_prefix)
+
+    elif knee_method == "density":
+        cell_whitelist = getKneeEstimateDensity(
+            cell_barcode_counts, expect_cells, cell_number, plotfile_prefix)
+
+    else:
+        raise ValueError("knee_method must be 'distance' or 'density'")
 
     U.info("Finished - whitelist determination")
 

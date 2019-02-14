@@ -50,35 +50,45 @@ If ``--error-correct-threshold`` is set to 0, columns 2 and 4 will be empty.
 Identifying the true cell barcodes
 ----------------------------------
 
-In the absence of the ``--set-cell-number`` option, ``whitelist`` uses
-the distribution of read counts per CB or unique UMIs per CB
-(``--method=[reads|umis]``) to identify the cut-off for 'true' UMIs
-(the 'knee'). See this blog post for a more detailed explanation:
+In the absence of the ``--set-cell-number`` option, ``whitelist``
+finds the knee in the curve for the cumulative read counts per CB or
+unique UMIs per CB (``--method=[reads|umis]``). This point is referred
+to as the 'knee'. Previously this point was identified using the
+distribution of read counts per CB or unique UMIs per CB. The old
+behaviour can be activated using ``--knee-method=density``
+
+See this blog post for a more detailed exploration of the previous method:
 
 https://cgatoxford.wordpress.com/2017/05/18/estimating-the-number-of-true-cell-barcodes-in-single-cell-rna-seq/
 
 Counts per cell barcode can be performed using either read or unique
 UMI counts. Use ``--method=[read|umis]`` to set the counting method.
 
-The process of selecting the "best" local minima is not completely
-foolproof. We recommend users always run whitelist with the
-``--plot-prefix`` option to visualise the set of thresholds considered
-for defining cell barcodes. This option will also generate a table
-containing the thresholds which were rejected if you want to manually
-adjust the threshold. In addition, if you expect that a local minima
-will not be found, you can use the ``-allow-threshold-error`` option
-to allow ``whitelist`` to proceed proceed past this stage.
+The process of selecting the "best" local minima with
+``--knee-method=density`` is not completely foolproof. We recommend
+users always run whitelist with the ``--plot-prefix`` option to
+visualise the set of thresholds considered for defining cell
+barcodes. This option will also generate a table containing the
+thresholds which were rejected if you want to manually adjust the
+threshold. In addition, if you expect that a local minima will not be
+found, you can use the ``--allow-threshold-error`` option to allow
+``whitelist`` to proceed proceed past this stage. In addition, if you
+have some prior expectation on the maximum number of cells which may
+have been sequenced, you can provide this using the option
+``--expect-cells`` (see below).
 
-In addition, if you have some prior expectation on the maximum number
-of cells which may have been sequenced, you can provide this using the
-option ``--expect-cells`` (see below).
+If you don't mind if ``whitelist --knee-method=density`` cannot
+identify a suitable threshold as you intend to inspect the plots and
+identify the threshold manually, provide the following options:
+``--allow-threshold-error``, ``--plot-prefix=[PLOT_PREFIX]``
 
-If you don't mind if whitelist cannot identify a suitable threshold as
-you intend to inspect the plots and identify the threshold manually,
-provide the following options: ``--allow-threshold-error``,
-``--plot-prefix=[PLOT_PREFIX]``
+We expect that the default distance-based knee method should be more
+robust than the density-based method. However, we haven't extensively
+tested this method. If you have a dataset where you believe the
+density-based method is better, please share this information with us:
+https://github.com/CGATOxford/UMI-tools/issues
 
-Finally, in some dataset there may be a risk that CBs above the
+Finally, in some datasets there may be a risk that CBs above the
 selected threshold are actually errors from another CB. We can detect
 potential instances of this by looking for CBs within one error
 (substition, insertion or deletion) of another CB with higher
@@ -101,11 +111,24 @@ for an analysis of errors in barcodes above the knee threshold.
 whitelist-specific options
 --------------------------
 
-"""""""""""""""""
-``--plot-prefix``
-"""""""""""""""""
-        Use this option to indicate the prefix for the plots and table
-        describing the set of thresholds considered for defining cell barcodes
+""""""""""""
+``--method``
+""""""""""""
+       "reads" or "umis". Use either reads or unique UMI counts per cell
+
+""""""""""""
+``--knee-method``
+""""""""""""
+       "distance" or "density". Two methods are available to detect
+       the 'knee' in the cell barcode count distributions. "distance"
+       identifies the maximum distance between the cumulative
+       distribution curve and a straight line between the first and
+       last points on the cumulative distribution curve. "density"
+       transforms the counts per UMI into a gaussian density and then
+       finds the local minima which separates "real" from "error" cell
+       barcodes. The gaussian method was the only method available
+       prior to UMI-tools v1.0.0. "distance" is now the default
+       method.
 
 """""""""""""""""""""
 ``--set-cell-number``
@@ -120,10 +143,13 @@ whitelist-specific options
 """"""""""""""""""
 ``--expect-cells``
 """"""""""""""""""
-        An upper limit estimate for the number of inputted cells. The knee
-        method will now select the first threshold (order ascendingly)
-        which results in the number of cell barcodes accepted being <=
-        EXPECTED_CELLS and > EXPECTED_CELLS * 0.1.
+        An upper limit estimate for the number of inputted cells. The
+        knee method will now select the first threshold (order
+        ascendingly) which results in the number of cell barcodes
+        accepted being <= EXPECTED_CELLS and > EXPECTED_CELLS *
+        0.1. Note: This is not compatible with the default
+        ``--knee-method=distance`` since there is always as single
+        solution using this method.
 
 """""""""""""""""""""""""""
 ``--allow-threshold-error``
@@ -138,10 +164,11 @@ whitelist-specific options
        barcodes. This value will also be used for error detection
        above the knee if required (``--ed-above-threshold``)
 
-""""""""""""
-``--method``
-""""""""""""
-       "reads" or "umis". Use either reads or unique UMI counts per cell
+"""""""""""""""""
+``--plot-prefix``
+"""""""""""""""""
+        Use this option to indicate the prefix for the plots and table
+        describing the set of thresholds considered for defining cell barcodes
 
 """"""""""""""""""""""""""""""""""""""""""
 ``--ed-above-threshold=[discard|correct]``
@@ -246,6 +273,10 @@ def main(argv=None):
                      dest="method",
                      choices=["reads", "umis"],
                      help=("Use reads or unique umi counts per cell"))
+    group.add_option("--knee-method",
+                     dest="knee_method",
+                     choices=["distance", "density"],
+                     help=("Use distance or density methods for detection of knee"))
     group.add_option("--expect-cells",
                      dest="expect_cells",
                      type="int",
@@ -269,6 +300,7 @@ def main(argv=None):
     parser.add_option_group(group)
 
     parser.set_defaults(method="reads",
+                        knee_method="distance",
                         extract_method="string",
                         filter_cell_barcodes=False,
                         whitelist_tsv=None,
@@ -292,9 +324,16 @@ def main(argv=None):
                               add_umi_grouping_options=False,
                               add_sam_options=False)
 
-    if options.expect_cells and options.cell_number:
-        U.error("Cannot supply both --expect-cells and "
-                "--cell-number options")
+    if options.expect_cells:
+        if options.knee_method == "distance":
+            U.error("Cannot use --expect-cells with 'distance' knee "
+                    "method. Switch to --knee-method=density if you want to "
+                    "provide an expectation for the number of "
+                    "cells. Alternatively, if you know the number of cell "
+                    "barcodes, use --cell-number")
+        if options.cell_number:
+            U.error("Cannot supply both --expect-cells and "
+                    "--cell-number options")
 
     extract_cell, extract_umi = U.validateExtractOptions(options)
 
@@ -397,6 +436,7 @@ def main(argv=None):
 
     cell_whitelist, true_to_false_map = whitelist_methods.getCellWhitelist(
         cell_barcode_counts,
+        options.knee_method,
         options.expect_cells,
         options.cell_number,
         options.error_correct_threshold,

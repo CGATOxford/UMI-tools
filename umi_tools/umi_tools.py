@@ -28,7 +28,7 @@ To use a specific tool, type::
 from __future__ import absolute_import
 import os
 import sys
-import imp
+import importlib
 from umi_tools import __version__
 
 
@@ -55,8 +55,7 @@ def main(argv=None):
 
     command = argv[1]
 
-    (file, pathname, description) = imp.find_module(command, [path, ])
-    module = imp.load_module(command, file, pathname, description)
+    module = importlib.import_module("umi_tools." + command, "umi_tools")
     # remove 'umi-tools' from sys.argv
     del sys.argv[0]
     module.main(sys.argv)
