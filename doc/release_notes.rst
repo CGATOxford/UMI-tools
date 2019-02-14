@@ -2,6 +2,46 @@ Release notes
 =============
 
 
+1.0.0
+-----
+
+This release is intended to be a stable release with no plans for significant updates to UMI-tools functionality in the near future. As part of this release, much of the code base has been refactored. It is possible this may have introduced bugs which have not been picked up by the regression testing. If so, please raise an issue and we'll try and rectify with a minor release update ASAP.
+
+**Documentation**
+
+UMI-tools documentation is now available online: https://umi-tools.readthedocs.io/en/latest/index.html
+
+Along with the previous documentation, the readthedocs pages also include new pages:
+
+ - FAQ
+ - Making use of our Alogrithmns: The API
+
+**New knee method for whitelist**
+
+ - The method to detect the "knee" in whitelist has been updated (`#317 <https://github.com/CGATOxford/UMI-tools/issues/317>`_). This method should always identify a threshold and is now set as the default method. Note that this knee method appears to be slightly more conservative (fewer cells above threshold) but having identified the knee, one can always re-run whitelist and use ``--set-cell-number`` to expand the whitelist if desired
+ - The old method is still available via ``--knee-method=density``
+ - In addition, to run the old knee method but allow whitelist to exit without error even if a suitable knee point isn't identified, use the new ``--allow-threshold-error`` option (`#249 <https://github.com/CGATOxford/UMI-tools/issues/249>`_)
+ - Putative errors in CBs above the knee can be detected using ``--ed-above-threshold`` (`#309 <https://github.com/CGATOxford/UMI-tools/issues/309>`_)
+
+**Explicit options for handling chimeric & inproper read pairs** (`#312 <https://github.com/CGATOxford/UMI-tools/issues/312>`_)
+
+The behaviour for chimeric read pairs, inproper read pairs and unmapped reads can now be explictly set with the ``--chimeric-pairs, --unpaired-reads and --unmapped-reads.
+
+**New options**
+
+ - ``--temp-dir``: Set the directory for temporary files (`#254 <https://github.com/CGATOxford/UMI-tools/issues/254>`_)
+ - ``--either-read`` & ``--either-read-resolve``: Extract the UMI from either read (`#175 <https://github.com/CGATOxford/UMI-tools/issues/175>`_)
+
+**Misc**
+
+ - Updates python testing version to 3.6.7 and drops python 2 testing
+ - Replace deprecated imp import (`#318 <https://github.com/CGATOxford/UMI-tools/issues/318>`_)
+ - Debug error with pysam <0.14 (`#319 <https://github.com/CGATOxford/UMI-tools/issues/319>`_)
+ - Refactor module files
+ - Moves documentation into dedicated module
+
+
+
 0.5.5
 -----
 
@@ -10,9 +50,7 @@ Release notes
 Mainly minor debugs and improved detection of incorrect command line options. Minor updates to documentation.
 
  - Resolves issues correctly skipping reads which have not been
-   assigned (`#191
-   <https://github.com/CGATOxford/UMI-tools/issues/191>`_ & `#273
-   <https://github.com/CGATOxford/UMI-tools/issues/273>`_).
+   assigned (`#191 <https://github.com/CGATOxford/UMI-tools/issues/191>`_ & `#273 <https://github.com/CGATOxford/UMI-tools/issues/273>`_).
 
 This involves the addition of the ``--assigned-status-tag`` option
 
