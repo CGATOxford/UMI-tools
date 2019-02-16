@@ -24,8 +24,8 @@ or::
 or grab a zip of the `latest release`_ from github and unpack
 (replace `0.5.5` with version number; replace ``wget`` with ``curl -O`` for OS X)::
 
-    $ unzip v0.5.5.zip
-    $ cd UMI-tools-0.5.5
+    $ unzip 1.0.0.zip
+    $ cd UMI-tools-1.0.0
     $ python setup.py install --user
 
 If these options don't work, see below.
@@ -195,8 +195,8 @@ Depedencies from conda/PyPI manager
     `master branch`_ (which should contain the lastest development
     version) and unpack the zip or tar and enter the directory::
 
-        $ unzip v0.2.4.zip
-        $ cd UMI-tools-0.2.4
+        $ unzip 1.0.0.zip
+        $ cd UMI-tools-1.0.0
 
     or clone the repository::
 
