@@ -7,3 +7,4 @@ six
 regex
 scipy
 matplotlib
+python>=3.5
