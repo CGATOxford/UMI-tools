@@ -731,14 +731,32 @@ def Start(parser=None,
 
         group.add_option("--cell-tag-split", dest="cell_tag_split",
                          type="string",
-                         help=("split cell barcode in tag and take the first element"
-                               "for e.g 10X GEM tags"),
+                         help=("split cell barcode in tag and take the first"
+                               "element for e.g 10X GEM tags"),
                          default='-')
 
         group.add_option("--cell-tag-delimiter", dest="cell_tag_delim",
                          type="string",
                          help="concatenate cell barcode in tag separated by delimiter",
                          default=None)
+
+        group.add_option("--filter-umi",
+                         dest="filter_umi",
+                         action="store_true",
+                         #help="Filter the UMIs"
+                         help=optparse.SUPPRESS_HELP)
+
+        group.add_option("--umi-whitelist", dest="umi_whitelist",
+                         type="string", default=None,
+                         #help="A whitelist of accepted UMIs"
+                         #"[default=%default]"
+                         help=optparse.SUPPRESS_HELP)
+
+        group.add_option("--umi-whitelist-paired", dest="umi_whitelist_paired",
+                         type="string", default=None,
+                         #help="A whitelist of accepted UMIs for "
+                         #"read2[default=%default]"
+                         help=optparse.SUPPRESS_HELP)
 
         parser.add_option_group(group)
 
