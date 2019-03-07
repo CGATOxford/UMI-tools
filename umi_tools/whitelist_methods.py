@@ -5,6 +5,7 @@ whitelist_methods.py - Methods for whitelisting cell barcodes
 '''
 
 
+import itertools
 import collections
 import matplotlib
 import copy
@@ -467,29 +468,135 @@ def getCellWhitelist(cell_barcode_counts,
     return cell_whitelist, true_to_false_map
 
 
-def getUserDefinedBarcodes(whitelist_tsv, getErrorCorrection=False):
-    cell_whitelist = []
+def getUserDefinedBarcodes(whitelist_tsv, whitelist_tsv2=None,
+                           getErrorCorrection=False,
+                           deriveErrorCorrection=False,
+                           threshold=1):
+    '''
+    whitelist_tsv: tab-separated file with whitelisted barcodes. First
+    field should be whitelist barcodes. Second field [optional] should
+    be comma-separated barcodes which are to be corrected to the
+    barcode in the first field.
 
-    if getErrorCorrection:
+    whitelist_tsv2: as above but for read2s
+    getErrorCorrection: extract the second field in whitelist_tsv and
+    return a map of non-whitelist:whitelist
+
+    deriveErrorCorrection: return a map of non-whitelist:whitelist
+    using a simple edit distance threshold
+    '''
+
+    base2errors = {"A": ["T", "C", "G", "N"],
+                   "T": ["A", "C", "G", "N"],
+                   "C": ["T", "A", "G", "N"],
+                   "G": ["T", "C", "A", "N"]}
+
+    whitelist = []
+
+    if getErrorCorrection or deriveErrorCorrection:
         false_to_true_map = {}
     else:
         false_to_true_map = None
 
-    with U.openFile(whitelist_tsv, "r") as inf:
+    def singleBarcodeGenerator(whitelist_tsv):
+        with U.openFile(whitelist_tsv, "r") as inf:
+            for line in inf:
+                if line.startswith('#'):
+                    continue
+                line = line.strip().split("\t")
+                yield(line[0])
 
-        for line in inf:
-            if line.startswith('#'):
-                continue
+    def pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2):
 
-            line = line.strip().split("\t")
-            whitelist_barcode = line[0]
-            cell_whitelist.append(whitelist_barcode)
+        whitelist1 = []
+        whitelist2 = []
 
-            if getErrorCorrection:
-                for error_barcode in line[1].split(","):
-                    false_to_true_map[error_barcode] = whitelist_barcode
+        with U.openFile(whitelist_tsv, "r") as inf:
+            for line in inf:
+                if line.startswith('#'):
+                    continue
 
-    return set(cell_whitelist), false_to_true_map
+                line = line.strip().split("\t")
+                whitelist1.append(line[0])
+
+        with U.openFile(whitelist_tsv2, "r") as inf2:
+            for line in inf2:
+                if line.startswith('#'):
+                    continue
+
+                line = line.strip().split("\t")
+                whitelist2.append(line[0])
+
+        for w1, w2 in itertools.product(whitelist1, whitelist2):
+            yield(w1 + w2)
+
+    if deriveErrorCorrection:
+
+        if whitelist_tsv2:
+            whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
+        else:
+            whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
+
+        for whitelist_barcode in whitelist_barcodes:
+            whitelist.append(whitelist_barcode)
+
+            # for every possible combination of positions for error(s)
+            for positions in itertools.product(
+                    range(0, len(whitelist_barcode)), repeat=threshold):
+
+                m_bases = [base2errors[whitelist_barcode[x]] for x in positions]
+
+                # for every possible combination of errors
+                for m in itertools.product(*m_bases):
+                    error_barcode = list(whitelist_barcode)
+
+                    # add errors
+                    for pos, error_base in zip(positions, m):
+                        error_barcode[pos] = error_base
+
+                    error_barcode = "".join(error_barcode)
+
+                    # if error barcode has already been seen, must be within
+                    # threshold edit distance of >1 whitelisted barcodes
+                    if error_barcode in false_to_true_map:
+                        # don't report multiple times for the same barcode
+                        if false_to_true_map[error_barcode]:
+                            U.info("Error barcode %s can be assigned to more than "
+                                   "one possible true barcode: %s or %s" % (
+                                       error_barcode,
+                                       false_to_true_map[error_barcode],
+                                       whitelist_barcode))
+                        false_to_true_map[error_barcode] = None
+                    else:
+                        false_to_true_map[error_barcode] = whitelist_barcode
+
+    elif getErrorCorrection:
+        assert not whitelist_tsv2, ("Can only extract errors from the whitelist "
+                                    "if a single whitelist is given")
+        with U.openFile(whitelist_tsv, "r") as inf:
+
+            for line in inf:
+
+                if line.startswith('#'):
+                    continue
+
+                line = line.strip().split("\t")
+                whitelist_barcode = line[0]
+                whitelist.append(whitelist_barcode)
+
+                if getErrorCorrection:
+                    for error_barcode in line[1].split(","):
+                        false_to_true_map[error_barcode] = whitelist_barcode
+
+    else:  # no error correction
+        if whitelist_tsv2:
+            whitelist_barcodes = pairedBarcodeGenerator(whitelist_tsv, whitelist_tsv2)
+        else:
+            whitelist_barcodes = singleBarcodeGenerator(whitelist_tsv)
+
+        whitelist = [x for x in whitelist_barcodes]
+
+    return set(whitelist), false_to_true_map
 
 
 def checkError(barcode, whitelist, errors=1):

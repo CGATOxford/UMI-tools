@@ -236,7 +236,7 @@ def main(argv=None):
 
     # set up ReadCluster functor with methods specific to
     # specified options.method
-    processor = network.ReadDeduplicator(options.method)
+    processor = network.ReadDeduplicator(options)
 
     bundle_iterator = sam_methods.get_bundles(
         options,

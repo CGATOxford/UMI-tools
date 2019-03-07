@@ -343,7 +343,8 @@ def main(argv=None):
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
-            options.whitelist, options.error_correct_cell)
+            options.whitelist,
+            getErrorCorrection=options.error_correct_cell)
 
         ReadExtractor.cell_whitelist = cell_whitelist
         ReadExtractor.false_to_true_map = false_to_true_map
