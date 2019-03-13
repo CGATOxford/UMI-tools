@@ -57,7 +57,6 @@ import sys
 import collections
 import re
 import os
-import itertools
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
