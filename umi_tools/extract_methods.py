@@ -414,6 +414,48 @@ class ExtractFilterAndUpdate:
 
         return cell
 
+
+    def filterUMIBarcode(self, umi):
+        ''' Filter out umi barcodes not in the whitelist, with optional
+        umi barcode error correction and update read_counts and
+        umi_whitelist_counts counters'''
+
+        if umi not in self.umi_whitelist:  # if umi not in whitelist
+
+            corrected_umi = None  # need to try and correct UMI
+
+            if self.umi_false_to_true_map:  # if there is a error correction map
+
+                if umi in self.umi_false_to_true_map:  # and umi in map
+
+                    # Get corrected UMI
+                    # Will be None if not correctable to single whitelist UMI
+                    corrected_umi = self.umi_false_to_true_map[umi]
+
+                    if corrected_umi:  # if correctable
+                        self.read_counts['False UMI barcode. Error-corrected'] += 1
+                        self.umi_whitelist_counts[corrected_umi]["error"] += 1
+
+                    else:  # Not correctable to single whitelist UMI
+                        self.read_counts[
+                            ("False UMI barcode. Not correctable - "
+                             "within threshold to more than one whitelisted UMI")] += 1
+
+                else:  # Not correctable to any whitelist UMI
+                    self.read_counts[
+                        ("False UMI barcode. Not correctable - not within "
+                         "threshold to whitelisted UMI")] += 1
+
+            else:  # no error correction map so log simply as filtered
+                self.read_counts['Filtered umi barcode'] += 1
+
+            return corrected_umi
+
+        else:  # umi in whitelist
+            self.umi_whitelist_counts[umi]["no_error"] += 1
+
+            return umi
+
     def __init__(self,
                  method="string",
                  pattern=None,
@@ -423,6 +465,7 @@ class ExtractFilterAndUpdate:
                  quality_encoding=None,
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
+                 filter_umi_barcode=False,
                  filter_cell_barcode=False,
                  retain_umi=False,
                  either_read=False,
@@ -436,10 +479,15 @@ class ExtractFilterAndUpdate:
         self.quality_encoding = quality_encoding
         self.quality_filter_threshold = quality_filter_threshold
         self.quality_filter_mask = quality_filter_mask
+        self.filter_umi_barcodes = filter_umi_barcode
         self.filter_cell_barcodes = filter_cell_barcode
         self.retain_umi = retain_umi
         self.either_read = either_read
         self.either_read_resolve = either_read_resolve
+
+        self.umi_whitelist = None  # These will be updated if required
+        self.umi_false_to_true_map = None  # These will be updated if required
+        self.umi_whitelist_counts = None # These will be updated if required
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
@@ -496,6 +544,11 @@ class ExtractFilterAndUpdate:
 
         if self.quality_filter_mask:
             umi = self.maskQuality(umi, umi_quals)
+
+        if self.filter_umi_barcodes:
+            umi = self.filterUMIBarcode(umi)
+            if umi is None:
+                return None
 
         if self.filter_cell_barcodes:
             cell = self.filterCellBarcode(cell)

@@ -57,6 +57,7 @@ import sys
 import collections
 import re
 import os
+import itertools
 
 # required to make iteritems python2 and python3 compatible
 from builtins import dict
@@ -257,7 +258,7 @@ def main(argv=None):
             barcode_getter=bundle_iterator.barcode_getter)
 
     for bundle, key, status in bundle_iterator(inreads):
-
+        
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
         while nOutput >= output_reads + 100000:
@@ -267,15 +268,6 @@ def main(argv=None):
         while nInput >= input_reads + 1000000:
             input_reads += 1000000
             U.info("Parsed %i input reads" % input_reads)
-
-        if options.stats:
-            # generate pre-dudep stats
-            average_distance = umi_methods.get_average_umi_distance(bundle.keys())
-            pre_cluster_stats.append(average_distance)
-            cluster_size = len(bundle)
-            random_umis = read_gn.getUmis(cluster_size)
-            average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-            pre_cluster_stats_null.append(average_distance_null)
 
         if options.ignore_umi:
             for umi in bundle:
@@ -289,13 +281,25 @@ def main(argv=None):
                 bundle=bundle,
                 threshold=options.threshold)
 
+            # with UMI filtering, it's possible reads
+            if len(reads) == 0:
+                continue
+
             for read in reads:
                 outfile.write(read)
                 nOutput += 1
 
             if options.stats:
 
-                # collect pre-dudupe stats
+                # generate pre-dudep stats
+                average_distance = umi_methods.get_average_umi_distance(bundle.keys())
+
+                pre_cluster_stats.append(average_distance)
+                cluster_size = len(bundle)
+                random_umis = read_gn.getUmis(cluster_size)
+                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
+                pre_cluster_stats_null.append(average_distance_null)
+
                 stats_pre_df_dict['UMI'].extend(bundle)
                 stats_pre_df_dict['counts'].extend(
                     [bundle[UMI]['count'] for UMI in bundle])
@@ -321,7 +325,6 @@ def main(argv=None):
         os.unlink(out_name)  # delete the tempfile
 
     if options.stats:
-
         # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)

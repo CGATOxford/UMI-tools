@@ -230,6 +230,28 @@ def main(argv=None):
     group.add_option("--blacklist",
                      dest="blacklist", type="string",
                      help=("A blacklist of rejected cell barcodes"))
+    group.add_option("--filter-umi",
+                     dest="filter_umi",
+                     action="store_true",
+                     #help="Filter the UMIs"
+                     help=optparse.SUPPRESS_HELP)
+    group.add_option("--umi-whitelist", dest="umi_whitelist",
+                     type="string", default=None,
+                     #help="A whitelist of accepted UMIs [default=%default]"
+                     help=optparse.SUPPRESS_HELP)
+    group.add_option("--umi-whitelist-paired", dest="umi_whitelist_paired",
+                     type="string", default=None,
+                     #help="A whitelist of accepted UMIs for read2[default=%default]"
+                     help=optparse.SUPPRESS_HELP)
+    group.add_option("--correct-umi-threshold", dest="correct_umi_threshold",
+                     type="int", default=0,
+                     #help="Correct errors in UMIs to the whitelist(s) provided"
+                     #"if within threshold [default=%default]"
+                     help=optparse.SUPPRESS_HELP)
+    group.add_option("--umi-correct-log", dest="umi_correct_log",
+                     type="string", default=None,
+                     #help="File logging UMI error correction",
+                     help=optparse.SUPPRESS_HELP)
     group.add_option("--subset-reads", "--reads-subset",
                      dest="reads_subset", type="int",
                      help=("Only extract from the first N reads. If N is "
@@ -241,7 +263,6 @@ def main(argv=None):
                            "are not present in read1 input. This allows cell "
                            "barcode filtering of read1s without "
                            "considering read2s"))
-
     parser.add_option_group(group)
 
     group = U.OptionGroup(parser, "[EXPERIMENTAl] barcode extraction options")
@@ -308,6 +329,25 @@ def main(argv=None):
                     "requires --bc-pattern=[PATTERN1] and"
                     "--bc-pattern2=[PATTERN2]")
 
+    if options.filter_umi:
+
+        if not options.umi_whitelist:
+                U.error("must provide a UMI whitelist (--umi-whitelist) if using "
+                        "--filter-umi option")
+        if options.pattern2 and not options.umi_whitelist_paired:
+                U.error("must provide a UMI whitelist for paired end "
+                        "(--umi-whitelist-paired) if using --filter-umi option"
+                        "with paired end data")
+        if not extract_umi:
+            if options.extract_method == "string":
+                U.error("barcode pattern(s) do not include any umi bases "
+                        "(marked with 'Ns') %s, %s" % (
+                            options.pattern, options.pattern2))
+            elif options.extract_method == "regex":
+                U.error("barcode regex(es) do not include any umi groups "
+                        "(starting with 'umi_') %s, %s" (
+                            options.pattern, options.pattern2))
+
     if options.filter_cell_barcodes:
 
         if not options.whitelist:
@@ -336,10 +376,26 @@ def main(argv=None):
         options.quality_encoding,
         options.quality_filter_threshold,
         options.quality_filter_mask,
+        options.filter_umi,
         options.filter_cell_barcode,
         options.retain_umi,
         options.either_read,
         options.either_read_resolve)
+
+    if options.filter_umi:
+        umi_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
+            options.umi_whitelist,
+            options.umi_whitelist_paired,
+            deriveErrorCorrection=True,
+            threshold=options.correct_umi_threshold)
+
+        U.info("Length of whitelist: %i" % len(umi_whitelist))
+        U.info("Length of 'correctable' whitelist: %i" % len(false_to_true_map))
+
+        ReadExtractor.umi_whitelist = umi_whitelist
+        ReadExtractor.umi_false_to_true_map = false_to_true_map
+        ReadExtractor.umi_whitelist_counts = collections.defaultdict(
+            lambda: collections.Counter())
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
@@ -430,6 +486,14 @@ def main(argv=None):
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))
+
+    if options.umi_correct_log:
+        with U.openFile(options.umi_correct_log, "w") as outf:
+            outf.write("umi\tcount_no_errors\tcount_errors\n")
+            for umi, counts in ReadExtractor.umi_whitelist_counts.items():
+                outf.write("%s\t%i\t%i\n" % (
+                    umi, counts["no_error"], counts["error"]))
+        outf.close()
 
     U.Stop()
 
