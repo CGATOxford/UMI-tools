@@ -697,6 +697,17 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        group.add_option("--read-name-suffix-strip",
+                         dest="read_strip", action="store_true",
+                         help="Strip suffixes from read1 and read2")
+        group.add_option("--read1-suffix",
+                         dest="read1_suffix", type="string", default="/1",
+                         help="suffix on read1 to remove before checking "
+                         "read pairs are in order")
+        group.add_option("--read2-suffix",
+                         dest="read2_suffix", type="string", default="/2",
+                         help="suffix on read2 to remove before checking "
+                         "read pairs are in order")
         parser.add_option_group(group)
 
     if add_sam_options:

@@ -34,6 +34,12 @@ extract_scrb_seq_string:
       references: [scrb_extract.fastq]
       options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-stdout  -L test.log --whitelist=<DIR>/scrb_seq_barcodes
 
+extract_scrb_seq_suffix:
+      stdin: scrb_seq_fastq_old_style.1.gz
+      outputs: [stdout]
+      references: [scrb_extract_old_style_output.fastq]
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq_old_style.2.gz --bc-pattern=CCCCCCNNNNNNNNNN  --filter-cell-barcode --read2-stdout  -L test.log --whitelist=<DIR>/scrb_seq_barcodes --read-name-suffix-strip --read1-suffix="/1" --read2-suffix="/2"
+
 extract_indrop_fuzzy:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
