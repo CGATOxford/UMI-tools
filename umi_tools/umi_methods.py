@@ -140,8 +140,6 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
                     pair_id2 = pair_id2[:-read2_suffix_length]
 
         if not pair_id == pair_id2:
-            print(read1.identifier.split()[0], pair_id)
-            print(read2.identifier.split()[0], pair_id2)
             raise ValueError("\nRead pairs do not match\n%s != %s" % (
                 pair_id, pair_id2))
 
