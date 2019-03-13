@@ -258,7 +258,7 @@ def main(argv=None):
             barcode_getter=bundle_iterator.barcode_getter)
 
     for bundle, key, status in bundle_iterator(inreads):
-        
+
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
         while nOutput >= output_reads + 100000:

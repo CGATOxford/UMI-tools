@@ -414,7 +414,6 @@ class ExtractFilterAndUpdate:
 
         return cell
 
-
     def filterUMIBarcode(self, umi):
         ''' Filter out umi barcodes not in the whitelist, with optional
         umi barcode error correction and update read_counts and
@@ -487,7 +486,7 @@ class ExtractFilterAndUpdate:
 
         self.umi_whitelist = None  # These will be updated if required
         self.umi_false_to_true_map = None  # These will be updated if required
-        self.umi_whitelist_counts = None # These will be updated if required
+        self.umi_whitelist_counts = None  # These will be updated if required
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
