@@ -339,7 +339,10 @@ def main(argv=None):
         options.filter_cell_barcode,
         options.retain_umi,
         options.either_read,
-        options.either_read_resolve)
+        options.either_read_resolve,
+        options.read_strip,
+        options.read1_suffix,
+        options.read2_suffix)
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
