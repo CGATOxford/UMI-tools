@@ -302,9 +302,11 @@ def main(argv=None):
         U.error("Must supply both --filtered-out and --filtered-out2"
                 "to write out filtered reads for paired end")
 
-    if options.filtered_out and not options.extract_method == "regex":
+    if (options.filtered_out and not options.extract_method == "regex" and
+        not filter_cell_barcodes):
         U.error("Reads will not be filtered unless extract method is"
-                "set to regex (--extract-method=regex)")
+                "set to regex (--extract-method=regex) or cell"
+                "barcodes are filtered (--filter-cell-barcode)")
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
