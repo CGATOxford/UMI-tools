@@ -235,6 +235,14 @@ def main(argv=None):
                      help=("Only extract from the first N reads. If N is "
                            "greater than the number of reads, all reads will "
                            "be used"))
+    group.add_option("--filtered-out",
+                     dest="filtered_out", type="string",
+                     help=("Write out reads not matching regex pattern"
+                           "to this file"))
+    group.add_option("--filtered-out2",
+                     dest="filtered_out2", type="string",
+                     help=("Write out paired reads not matching regex"
+                           "pattern to this file"))
     group.add_option("--reconcile-pairs",
                      dest="reconcile", action="store_true",
                      help=("Allow the presences of reads in read2 input that "
@@ -272,6 +280,8 @@ def main(argv=None):
                         read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,
+                        filtered_out=None,
+                        filtered_out2=None,
                         reconcile=False,
                         either_read=False,
                         either_read_resolve="discard")
@@ -285,7 +295,16 @@ def main(argv=None):
                               add_sam_options=False)
 
     if options.retain_umi and not options.extract_method == "regex":
-        raise ValueError("option --retain-umi only works with --extract-method=regex")
+        U.error("option --retain-umi only works with --extract-method=regex")
+
+    if ((options.read2_in and options.filtered_out) and not options.filtered_out2) or (
+            options.filtered_out2 and not options.filtered_out):
+        U.error("Must supply both --filtered-out and --filtered-out2"
+                "to write out filtered reads for paired end")
+
+    if options.filtered_out and not options.extract_method == "regex":
+        U.error("Reads will not be filtered unless extract method is"
+                "set to regex (--extract-method=regex)")
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
@@ -337,6 +356,8 @@ def main(argv=None):
         options.quality_filter_threshold,
         options.quality_filter_mask,
         options.filter_cell_barcode,
+        options.filtered_out,
+        options.filtered_out2,
         options.retain_umi,
         options.either_read,
         options.either_read_resolve)
@@ -426,6 +447,9 @@ def main(argv=None):
 
     if options.read2_out:
         read2_out.close()
+
+    # If writing out filtered reads, need to close the files
+    ReadExtractor.close()
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))

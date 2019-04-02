@@ -1066,14 +1066,14 @@ def validateExtractOptions(options):
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
-            U.error("Must supply --bc-pattern for single-end")
+            raise ValueError("Must supply --bc-pattern for single-end")
         else:
-            U.error("Must supply --bc-pattern and/or --bc-pattern2 "
-                    "if paired-end ")
+            raise ValueError("Must supply --bc-pattern and/or --bc-pattern2 "
+                             "if paired-end ")
 
     if options.pattern2:
         if not options.read2_in:
-            U.error("must specify a paired fastq ``--read2-in``")
+            raise ValueError("must specify a paired fastq ``--read2-in``")
 
         if not options.pattern2:
             options.pattern2 = options.pattern
@@ -1088,15 +1088,15 @@ def validateExtractOptions(options):
             try:
                 options.pattern = regex.compile(options.pattern)
             except regex.error:
-                U.error("--bc-pattern '%s' is not a "
-                        "valid regex" % options.pattern)
+                raise ValueError("--bc-pattern '%s' is not a "
+                                 "valid regex" % options.pattern)
 
         if options.pattern2:
             try:
                 options.pattern2 = regex.compile(options.pattern2)
             except regex.Error:
-                U.error("--bc-pattern2 '%s' is not a "
-                        "valid regex" % options.pattern2)
+                raise ValueError("--bc-pattern2 '%s' is not a "
+                                 "valid regex" % options.pattern2)
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
@@ -1128,13 +1128,13 @@ def validateExtractOptions(options):
 
     if not extract_umi:
         if options.extract_method == "string":
-            U.error("barcode pattern(s) do not include any umi bases "
-                    "(marked with 'Ns') %s, %s" % (
-                        options.pattern, options.pattern2))
+            raise ValueError("barcode pattern(s) do not include any umi bases "
+                             "(marked with 'Ns') %s, %s" % (
+                                 options.pattern, options.pattern2))
         elif options.extract_method == "regex":
-            U.error("barcode regex(es) do not include any umi groups "
-                    "(starting with 'umi_') %s, %s" (
-                        options.pattern, options.pattern2))
+            raise ValueError("barcode regex(es) do not include any umi groups "
+                             "(starting with 'umi_') %s, %s" (
+                                 options.pattern, options.pattern2))
 
     return(extract_cell, extract_umi)
 

@@ -221,6 +221,12 @@ class ExtractFilterAndUpdate:
             if not match:
                 self.read_counts['regex does not match read1'] += 1
                 if not self.either_read:
+                    if self.filtered_out:
+                        self.filtered_out.write(str(read1) + "\n")
+                    # if no pattern 2 but want to write out filtered
+                    # read2s, need to do so here
+                    if read2 and not self.pattern2 and self.filtered_out2:
+                        self.filtered_out2.write(str(read2) + "\n")
                     return None
             else:
                 self.read_counts['regex matches read1'] += 1
@@ -233,8 +239,14 @@ class ExtractFilterAndUpdate:
                 # match also failed
                 if self.either_read:
                     if not match:
+                        if self.filtered_out:
+                            self.filtered_out.write(str(read1) + "\n")
+                        if self.filtered_out2:
+                            self.filtered_out2.write(str(read2) + "\n")
                         return None
                 else:
+                    if self.filtered_out2:
+                        self.filtered_out2.write(str(read2) + "\n")
                     return None
             else:
                 self.read_counts['regex matches read2'] += 1
@@ -244,6 +256,10 @@ class ExtractFilterAndUpdate:
 
             if match and match2 and self.either_read_resolve == "discard":
                 self.read_counts['regex matches both. discarded'] += 1
+                if self.filtered_out:
+                    self.filtered_out.write(str(read1) + "\n")
+                if self.filtered_out2:
+                    self.filtered_out2.write(str(read2) + "\n")
                 return None
 
             if match:
@@ -414,6 +430,14 @@ class ExtractFilterAndUpdate:
 
         return cell
 
+    def _close_filtered_out(self):
+        self.filtered_out.close()
+        if self.filtered_out2:
+            self.filtered_out2.close()
+
+    def _close_null(self):
+        pass
+
     def __init__(self,
                  method="string",
                  pattern=None,
@@ -424,6 +448,8 @@ class ExtractFilterAndUpdate:
                  quality_filter_threshold=False,
                  quality_filter_mask=False,
                  filter_cell_barcode=False,
+                 filtered_out=None,
+                 filtered_out2=None,
                  retain_umi=False,
                  either_read=False,
                  either_read_resolve="discard"):
@@ -440,6 +466,18 @@ class ExtractFilterAndUpdate:
         self.retain_umi = retain_umi
         self.either_read = either_read
         self.either_read_resolve = either_read_resolve
+
+        if filtered_out:
+            self.filtered_out = U.openFile(filtered_out, "w")
+            self.close = self._close_filtered_out
+        else:
+            self.filtered_out = None
+            self.close = self._close_null
+
+        if filtered_out2:
+            self.filtered_out2 = U.openFile(filtered_out2, "w")
+        else:
+            self.filtered_out2 = None
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
@@ -470,7 +508,7 @@ class ExtractFilterAndUpdate:
                 self.cell_bases2 = [x for x in range(len(pattern2))
                                     if pattern2[x] is "C"]
 
-            self.getCellBarcode = self._getCellBarcodeString
+                self.getCellBarcode = self._getCellBarcodeString
             self.getBarcodes = self._getBarcodesString
 
         elif method == "regex":
@@ -500,6 +538,10 @@ class ExtractFilterAndUpdate:
         if self.filter_cell_barcodes:
             cell = self.filterCellBarcode(cell)
             if cell is None:
+                if self.filtered_out:
+                    self.filtered_out.write(str(read1) + "\n")
+                if self.filtered_out2:
+                    self.filtered_out2.write(str(read2) + "\n")
                 return None
 
         self.read_counts['Reads output'] += 1
