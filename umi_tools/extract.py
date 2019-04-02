@@ -358,8 +358,6 @@ def main(argv=None):
         options.quality_filter_threshold,
         options.quality_filter_mask,
         options.filter_cell_barcode,
-        options.filtered_out,
-        options.filtered_out2,
         options.retain_umi,
         options.either_read,
         options.either_read_resolve)
@@ -383,6 +381,9 @@ def main(argv=None):
     displayMax = 100000
     U.info("Starting barcode extraction")
 
+    if options.filtered_out:
+        filtered_out = U.openFile(options.filtered_out, "w")
+
     if options.read2_in is None:
         for read in read1s:
 
@@ -401,11 +402,17 @@ def main(argv=None):
                     break
 
             if not new_read:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
                 continue
 
             options.stdout.write(str(new_read) + "\n")
 
     else:
+
+        if options.filtered_out2:
+            filtered_out2 = U.openFile(options.filtered_out2, "w")
+
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
 
         if options.read2_out:
@@ -435,6 +442,10 @@ def main(argv=None):
                     break
 
             if not reads:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
+                if options.filtered_out2:
+                    filtered_out2.write(str(read2) + "\n")
                 continue
             else:
                 new_read1, new_read2 = reads
@@ -449,9 +460,10 @@ def main(argv=None):
 
     if options.read2_out:
         read2_out.close()
-
-    # If writing out filtered reads, need to close the files
-    ReadExtractor.close()
+    if options.filtered_out:
+        filtered_out.close()
+    if options.filtered_out2:
+        filtered_out2.close()
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))
