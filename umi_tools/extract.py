@@ -235,14 +235,6 @@ def main(argv=None):
                      help=("Only extract from the first N reads. If N is "
                            "greater than the number of reads, all reads will "
                            "be used"))
-    group.add_option("--filtered-out",
-                     dest="filtered_out", type="string",
-                     help=("Write out reads not matching regex pattern"
-                           "to this file"))
-    group.add_option("--filtered-out2",
-                     dest="filtered_out2", type="string",
-                     help=("Write out paired reads not matching regex"
-                           "pattern to this file"))
     group.add_option("--reconcile-pairs",
                      dest="reconcile", action="store_true",
                      help=("Allow the presences of reads in read2 input that "
@@ -280,8 +272,6 @@ def main(argv=None):
                         read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,
-                        filtered_out=None,
-                        filtered_out2=None,
                         reconcile=False,
                         either_read=False,
                         either_read_resolve="discard")
@@ -296,11 +286,6 @@ def main(argv=None):
 
     if options.retain_umi and not options.extract_method == "regex":
         U.error("option --retain-umi only works with --extract-method=regex")
-
-    if ((options.read2_in and options.filtered_out) and not options.filtered_out2) or (
-            options.filtered_out2 and not options.filtered_out):
-        U.error("Must supply both --filtered-out and --filtered-out2"
-                "to write out filtered reads for paired end")
 
     if (options.filtered_out and not options.extract_method == "regex" and
         not filter_cell_barcodes):

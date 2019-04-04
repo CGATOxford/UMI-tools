@@ -697,6 +697,15 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        group.add_option("--filtered-out",
+                         dest="filtered_out", type="string", default=None,
+                         help=("Write out reads not matching regex pattern"
+                               " to this file"))
+        group.add_option("--filtered-out2",
+                         dest="filtered_out2", type="string", default=None,
+                         help=("Write out paired reads not matching regex"
+                               " pattern to this file"))
+
         parser.add_option_group(group)
 
     if add_sam_options:
@@ -1077,6 +1086,14 @@ def validateExtractOptions(options):
 
         if not options.pattern2:
             options.pattern2 = options.pattern
+
+    if options.filtered_out2 and not options.read2_in:
+        raise ValueError("Cannot use --filtered-out2 without read2 input (--read2-in)")
+
+    if ((options.read2_in and options.filtered_out) and not options.filtered_out2) or (
+            options.filtered_out2 and not options.filtered_out):
+        raise ValueError("Must supply both --filtered-out and --filtered-out2"
+                         "to write out filtered reads for paired end")
 
     extract_cell = False
     extract_umi = False
