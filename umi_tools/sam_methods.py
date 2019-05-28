@@ -500,7 +500,7 @@ class get_bundles:
                 else:
                     r_length = 0
 
-                key = (read.is_reverse, self.options.spliced & is_spliced,
+                key = (read.is_reverse, self.options.spliced and is_spliced,
                        self.options.paired*read.tlen, r_length)
 
             # update dictionaries
