@@ -258,7 +258,10 @@ import tempfile
 import regex
 from umi_tools import __version__
 
-from builtins import bytes, chr
+try:
+    from builtins import bytes, chr # python3
+except:
+    pass # python2
 
 
 class DefaultOptions:
