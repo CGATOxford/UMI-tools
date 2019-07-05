@@ -574,6 +574,7 @@ class TwoPassPairWriter:
         self.infile = infile
         self.outfile = outfile
         self.read1s = set()
+        self.read1s_done = set()
         self.chrom = None
 
     def write(self, read, unique_id=None, umi=None, unmapped=False):
@@ -590,7 +591,8 @@ class TwoPassPairWriter:
             self.chrom = read.reference_name
 
         key = read.query_name, read.next_reference_name, read.next_reference_start
-        self.read1s.add(key)
+        if key not in self.read1s_done:
+            self.read1s.add(key)
 
         self.outfile.write(read)
 
@@ -609,6 +611,7 @@ class TwoPassPairWriter:
             if key in self.read1s:
                 self.outfile.write(read)
                 self.read1s.remove(key)
+                self.read1s_done.add(key)
 
         U.debug("%i mates remaining" % len(self.read1s))
 
@@ -623,7 +626,7 @@ class TwoPassPairWriter:
         found = 0
         for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
 
-            if read.is_unmapped:
+            if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
 
             key = read.query_name, read.reference_name, read.reference_start
