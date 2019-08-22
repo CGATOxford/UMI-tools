@@ -18,35 +18,40 @@ sys.setrecursionlimit(10000)
 
 
 def breadth_first_search(node, adj_list):
-    searched = set()
-    queue = set()
-    queue.update((node,))
-    searched.update((node,))
+    searched = {node: None}
+    queue = [node]
 
-    while len(queue) > 0:
-        node = queue.pop()
+    while queue:
+        node = queue.pop(0)
         for next_node in adj_list[node]:
             if next_node not in searched:
-                queue.update((next_node,))
-                searched.update((next_node,))
+                queue.append(next_node)
+                searched[next_node] = None
 
-    return searched
+    return list(searched.keys())
 
 
-def recursive_search(node, adj_list):
-    children = adj_list[node]
-    children = [x for x in children if x not in recursive_search.component]
-    for child in children:
-        recursive_search.component.update((child,))
-        recursive_search.component.update(
-            recursive_search(child, adj_list))
+def recursive_search(node_list, adj_list):
+    if not node_list:
+        return []
+
+    subnode_list = []
+    for node in node_list:
+        subnode_list += adj_list[node]
+    subnode_list = [x for x in subnode_list if x not in recursive_search.component]
+
+    recursive_search.component.update(dict.fromkeys(subnode_list))
+    recursive_search.component.update(
+        recursive_search(subnode_list, adj_list)
+    )
+
     return recursive_search.component
 
 
 def breadth_first_search_recursive(node, adj_list):
     try:
-        recursive_search.component = set((node,))
-        return recursive_search(node, adj_list)
+        recursive_search.component = {node: None}
+        return list(recursive_search([node], adj_list).keys())
 
     except RecursionError as error:
         U.info('Recursion Error: %s' % error)
@@ -57,12 +62,13 @@ def remove_umis(adj_list, cluster, nodes):
     '''removes the specified nodes from the cluster and returns
     the remaining nodes '''
 
-    # list incomprehension: for x in nodes: for node in adj_list[x]: yield node
-    nodes_to_remove = set([node
-                           for x in nodes
-                           for node in adj_list[x]] + nodes)
+    nodes_to_remove = dict.fromkeys(nodes)
+    for x in nodes:
+        for node in adj_list[x]:
+            nodes_to_remove[node] = None
 
-    return cluster - nodes_to_remove
+    remaining = [x for x in cluster if x not in nodes_to_remove]
+    return remaining
 
 
 def get_substr_slices(umi_length, idx_size):
@@ -86,12 +92,12 @@ def build_substr_idx(umis, umi_length, min_edit):
     to reduce the number of pairwise comparisons.
     '''
     substr_idx = collections.defaultdict(
-        lambda: collections.defaultdict(set))
+        lambda: collections.defaultdict(dict))
     slices = get_substr_slices(umi_length, min_edit + 1)
     for idx in slices:
         for u in umis:
             u_sub = u[slice(*idx)]
-            substr_idx[idx][u_sub].add(u)
+            substr_idx[idx][u_sub][u] = None
     return substr_idx
 
 
@@ -102,11 +108,12 @@ def iter_nearest_neighbours(umis, substr_idx):
     each in a set of umis.
     '''
     for i, u in enumerate(umis, 1):
-        neighbours = set()
+        neighbours = dict()
         for idx, substr_map in substr_idx.items():
             u_sub = u[slice(*idx)]
-            neighbours = neighbours.union(substr_map[u_sub])
-        neighbours.difference_update(umis[:i])
+            neighbours.update(substr_map[u_sub])    # previously: neighbours.union(substr_map[u_sub])
+        for umi in umis[:i]:    # previously: neighbours.difference_update(umis[:i])
+            neighbours.pop(umi, None)
         for nbr in neighbours:
             yield u, nbr
 
@@ -283,13 +290,16 @@ class UMIClusterer:
                 lead_umis = self._get_best_min_account(cluster,
                                                        adj_list, counts)
                 observed.update(lead_umis)
-
+                cluster_group = []
                 for lead_umi in lead_umis:
-                    connected_nodes = set(adj_list[lead_umi])
-                    groups.append([lead_umi] +
-                                  list(connected_nodes - observed))
-                    observed.update(connected_nodes)
+                    cluster_group.append(lead_umi)
+                    connected_nodes = adj_list[lead_umi]
+                    for connected_node in connected_nodes:
+                        if connected_node not in observed:
+                            cluster_group.append(connected_node)
 
+                    groups.append(cluster_group)
+                    observed.update(connected_nodes)
         return groups
 
     def _group_cluster(self, clusters, adj_list, counts):
