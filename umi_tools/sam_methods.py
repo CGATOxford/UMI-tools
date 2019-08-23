@@ -623,7 +623,7 @@ class TwoPassPairWriter:
         found = 0
         for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
 
-            if read.is_unmapped:
+            if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
 
             key = read.query_name, read.reference_name, read.reference_start
