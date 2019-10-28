@@ -9,7 +9,14 @@ CentOS) and Mac OSX. We do not currently support Windows.
 There are three possible ways to install UMI-tools: conda, pip or from
 source, in decending order of ease.
 
-
+.. note::
+   As of version 1.0.0 UMI-tools requires python 3.5 or better. If you are
+   still using python 2.7, we recommend you switch to python 3. If you
+   use `conda` it is possible to have both python 2 and python 3 environments.
+   If you can't do this and really need 2.7, we recommend you use UMI-tools
+   0.5.5, but note that this will not be updated. 
+   
+   
 Quick Start
 -------------
 
