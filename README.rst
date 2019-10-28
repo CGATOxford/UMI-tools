@@ -119,6 +119,6 @@ To get help on the options for a specific [COMMAND], run
 
 Dependencies
 ------------
-umi_tools is dependent on `numpy`, `pandas`, `scipy`, `cython`, `pysam`,
+umi_tools is dependent on `python>=3.5`, `numpy`, `pandas`, `scipy`, `cython`, `pysam`,
 `future`, `regex` and `matplotlib`
 
