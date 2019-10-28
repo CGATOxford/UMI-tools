@@ -62,7 +62,7 @@ system, will use your existing python environments, and plays nicely
 with the virtualenv system. On the downside, the installation of
 dependencies is not handled as cleanly as in conda. You will need
 
-* python version greater than 3.0
+* python version greater than 3.5
 * gcc or compatible c compiler 
 * zlib with development headers
 * the pip python package manager version at least 1.4
@@ -75,9 +75,10 @@ worth just trying::
 
     $ pip install umi_tools
 
-If you get a permissions error try adding ``--user`` to the ``pip``
-command. Note that ``umi_tools`` will now only be installed for the
-current user.
+If you also have python 2 on your system, you may need to use ``pip3``
+rather than ``pip``. If you get a permissions error try adding ``--user``
+to the ``pip`` command. Note that ``umi_tools`` will now only be 
+installed for the current user.
 
 If that doesn't work, then you need to find what is missing. You can
 check for gcc and pip by typing gcc or pip at a terminal
