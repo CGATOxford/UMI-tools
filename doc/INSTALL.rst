@@ -62,7 +62,7 @@ system, will use your existing python environments, and plays nicely
 with the virtualenv system. On the downside, the installation of
 dependencies is not handled as cleanly as in conda. You will need
 
-* python version greater than 2.7
+* python version greater than 3.0
 * gcc or compatible c compiler 
 * zlib with development headers
 * the pip python package manager version at least 1.4
