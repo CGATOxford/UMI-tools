@@ -23,7 +23,10 @@ will be retained from a group of duplicated reads:
 1. The read with the lowest number of mapping coordinates (see
 ``--multimapping-detection-method`` option)
 
-2. The read with the highest mapping quality
+2. The read with the highest mapping quality. Note that this is not
+the read sequencing quality and that if two reads have the same
+mapping quality then one will be picked at random regardless of the
+read quality.
 
 Otherwise a read is chosen at random.
 
