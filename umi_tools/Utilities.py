@@ -882,9 +882,9 @@ def Start(parser=None,
                          " only on position", default=False)
 
         group.add_option("--ignore-tlen", dest="ignore_tlen", action="store_true",
-                        default=False,
-                        help="Option to dedup paired end reads based solely on read1, "
-                        "whether or not the template length is the same")
+                         default=False,
+                         help="Option to dedup paired end reads based solely on read1, "
+                         "whether or not the template length is the same")
         
         group.add_option("--chrom", dest="chrom", type="string",
                          help="Restrict to one chromosome",
