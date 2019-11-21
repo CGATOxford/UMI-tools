@@ -881,6 +881,11 @@ def Start(parser=None,
                          action="store_true", help="Ignore UMI and dedup"
                          " only on position", default=False)
 
+        group.add_option("--ignore-tlen", dest="ignore_tlen", action="store_true",
+                        default=False,
+                        help="Option to dedup paired end reads based solely on read1, "
+                        "whether or not the template length is the same")
+        
         group.add_option("--chrom", dest="chrom", type="string",
                          help="Restrict to one chromosome",
                          default=None)
@@ -1240,6 +1245,11 @@ def validateSamOptions(options, group=False):
             raise ValueError("--unpaired-reads is only compatible "
                              "with paired end reads (--paired)")
 
+    if "--ignore-tlen" in command:
+        if not options.paired:
+            raise ValueError("--ignore-tlen is only compatible "
+                             "with paired end reads (--paired)")
+    
     # legacy support for --output-unmapped behaviour
     if options.output_unmapped:
         warn("--output-unmapped will be removed in the near future. "

@@ -501,7 +501,7 @@ class get_bundles:
                     r_length = 0
 
                 key = (read.is_reverse, self.options.spliced and is_spliced,
-                       self.options.paired*read.tlen, r_length)
+                       (not self.options.ignore_tlen)*self.options.paired*read.tlen, r_length)
 
             # update dictionaries
             key = (key, cell)

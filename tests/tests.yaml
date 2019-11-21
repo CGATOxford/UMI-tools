@@ -225,6 +225,12 @@ dedup_single_gene_tag:
       references: [single_gene_tag_py3.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --per-gene --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
+dedup_paired_ignore_tlen_tag:
+      stdin: paired.bam
+      outputs: [stdout]
+      references: [paired_ignore_tlen_tag.sam]
+      options: dedup -L test.log --random-seed=123456789 --paired --ignore-tlen --out-sam
+
 group_gene_tag:
       stdin: chr19_gene_tags.bam
       outputs: [group_dir_per_gene_py3.tsv, stdout]
