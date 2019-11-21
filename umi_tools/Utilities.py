@@ -1249,7 +1249,7 @@ def validateSamOptions(options, group=False):
         if not options.paired:
             raise ValueError("--ignore-tlen is only compatible "
                              "with paired end reads (--paired)")
-    
+
     # legacy support for --output-unmapped behaviour
     if options.output_unmapped:
         warn("--output-unmapped will be removed in the near future. "
