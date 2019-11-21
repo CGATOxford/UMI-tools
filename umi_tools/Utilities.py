@@ -885,7 +885,7 @@ def Start(parser=None,
                          default=False,
                          help="Option to dedup paired end reads based solely on read1, "
                          "whether or not the template length is the same")
-        
+
         group.add_option("--chrom", dest="chrom", type="string",
                          help="Restrict to one chromosome",
                          default=None)
