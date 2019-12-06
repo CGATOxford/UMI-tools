@@ -149,6 +149,7 @@ class random_read_generator:
         self.umis = collections.defaultdict(int)
         self.barcode_getter = barcode_getter
         self.random_fill_size = 100000  # Higher = faster, more memory
+        self.first_kerror = 1
         self.fill()
 
     def refill_random(self):
@@ -169,7 +170,10 @@ class random_read_generator:
             if read.is_read2:
                 continue
 
-            self.umis[self.barcode_getter(read)[0]] += 1
+            try:
+                self.umis[self.barcode_getter(read)[0]] += 1
+            except KeyError:
+                continue
 
         self.umis_counter = collections.Counter(self.umis)
         total_umis = sum(self.umis_counter.values())
