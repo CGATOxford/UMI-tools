@@ -13,9 +13,9 @@ To use the class, first create an instance, specifying the deduplication method.
 
 The returned instance is a *functor*. That is a class instance that can be called like a function. The function takes as its main argument a dictionary where the keys are UMI sequences and the value is the count of that UMI sequence. For example you might have reads with three different UMIs at one position: "ATAT", "GTAT", "CCAT". You may seen the first one 10 times, the second 5 times and the third 3 times::
 
-  umis = {"ATAT": 10,
-          "GTAT": 5,
-	  "CCAT": 3}
+  umis = {b"ATAT": 10,
+          b"GTAT": 5,
+	  b"CCAT": 3}
 
 We pass this to our cluster, and it will return to us a list of lists, with each sub-list being a cluster of UMIs which we predict arose from the same original molecule::
 
