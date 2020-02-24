@@ -52,12 +52,157 @@ The regex must contain named capture groups to define how the barcodes are encod
 
 When passing a regex to `whitelist`/`extract`, the allowable groups in the regex are:
 
-   * umi_n = UMI positions, where n can be any value (required)
-   * cell_n = cell barcode positions, where n can be any value (optional)
-   * discard_n = positions to discard, where n can be any value (optional)
+   * `umi_n` = UMI positions, where n can be any value (required)
+   * `cell_n` = cell barcode positions, where n can be any value (optional)
+   * `discard_n` = positions to discard, where n can be any value (optional)
  
  We specify fuzzy matching by adding something like `{s<=X}` after a group. This specifies that the group should be matched with up to X **s**ubstitutions. The allowed error types are `s`: substitutions, `i`: insertions, `d`:deletions, `e`: any error (or the Levenshtein distance). See the  [`regex`](https://pypi.org/project/regex/) package documentation for more details.
- 
+
+ ### Example: extracting UMIs
+
+Suppose we have a FASTQ file with reads with a 4 base UMI at their 5' end and a 4 base UMI at their 3' end. For example:
+
+```
+@EWSim-1.1-umi5-reada-umix
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAACGTA
++
+IHHHIIIHHHHIHHIIHIIHIIHHIHHHIIIIIIHIII
+@EWSim-2.1-umi5-reada-umiy
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAAATAT
++
+GABIFCD@ABEAA?EAHH?AFA@IEDGGA@CCDGFI@C
+@EWSim-3.1-umi5-readb-umix
+AAAATCTAGATTAGAAAGATTGACCTCATTAACGTA
++
+E?IHIIH@DAC?CIAGDCIIEF@BIEDG?EDH@I?A
+```
+
+To extract these UMIs, we can use the regular expression:
+
+```
+^(?P<umi_1>.{4}).+(?P<umi_2>.{4})$
+```
+
+To break this down:
+
+* `^(?P<umi_1>.{4})` matches the 4 bases at the start of the read and extracts this as a UMI, named `<umi_1>`.
+* `.+` matches all the bases between the first 4 bases and last 4 bases (`+` indicates that there must be at least one).
+* `(?P<umi_2>.{4})$` matches the 4 bases at the end of the read and extracts this as a UMI, named `<umi_2>`.
+
+Applying this to each example read in our FASTQ file would give the following values:
+
+```
+@EWSim-1.1-umi5-reada-umix
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAACGTA # Read
+AAAA                                   # <umi_1>
+    ATGGCATCCACCGATTTCTCCAAGATTGAA     # Read-post UMI extraction
+                                  CGTA # <umi_2>
+@EWSim-2.1-umi5-reada-umiy
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAAATAT # Read
+AAAA                                   # <umi_1>
+    ATGGCATCCACCGATTTCTCCAAGATTGAA     # Read-post UMI extraction
+                                  ATAT # <umi_2>
+@EWSim-3.1-umi5-readb-umix
+AAAATCTAGATTAGAAAGATTGACCTCATTAACGTA   # Read
+AAAA                                   # <umi_1>
+    TCTAGATTAGAAAGATTGACCTCATTAA       # Read-post UMI extraction
+                                CGTA   # <umi_2>
+```
+
+If we were to use `umi_tools extract` to extract these UMIs, using this regex, our resulting FASTQ file would look like the following:
+
+```
+@EWSim-1.1-umi5-reada-umix_AAAACGTA
+ATGGCATCCACCGATTTCTCCAAGATTGAA
++
+IIIHHHHIHHIIHIIHIIHHIHHHIIIIII
+@EWSim-2.1-umi5-reada-umiy_AAAAATAT
+ATGGCATCCACCGATTTCTCCAAGATTGAA
++
+FCD@ABEAA?EAHH?AFA@IEDGGA@CCDG
+@EWSim-3.1-umi5-readb-umix_AAAACGTA
+TCTAGATTAGAAAGATTGACCTCATTAA
++
+IIH@DAC?CIAGDCIIEF@BIEDG?EDH
+```
+
+The extracted UMIs are appended together (`<umi_1><umi2>`) and are appended to the end of the head header with a delimiter, `_`.
+
+ ### Example: extracting barcodes and UMIs
+
+Suppose we have a multiplexed FASTQ file with reads with a 4 base UMI at their 5' end and a 4 base UMI at their 3' end, and with a 3 base barcode at the 3' end. For example:
+
+```
+@EWSim-1.1-umi5-reada-umix-bar0.0
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAACGTAACG
++
+IHIHIIIHHIIHHIHIIHHHIIHIHIIIHIIIHHIIIIHIH
+@EWSim-2.1-umi5-reada-umiy-bar1.0
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAAATATGAC
++
+?I?DDIECDEIA?GBGEGGB?EG@GDFEG?GDB?A?IDIDA
+@EWSim-3.1-umi5-readb-umix-bar2.0
+AAAATCTAGATTAGAAAGATTGACCTCATTAACGTACGA
++
+?I?CGGIFCICHHCFFDFB@DDGA??BFDDHABBIF@GC
+```
+
+To extract these UMIs, and also the barcode, we can use the regular expression:
+
+```
+^(?P<umi_1>.{4}).+(?P<umi_2>.{4})(?P<cell_1>.{3})$
+```
+
+To break this down:
+
+* `^(?P<umi_1>.{4})` matches the 4 bases at the start of the read and extracts this as a UMI, named `<umi_1>`.
+* `.+` matches all the bases between the first 4 bases and last 7 bases (`+` indicates that there must be at least one).
+* `(?P<umi_2>.{4})$` matches the first 4 of the 7 bases at the end of the read and extracts this as a UMI, named `<umi_2>`.
+* `(?P<cell_1>.{4})$` matches the 3 bases at the end of the read and extracts this as a barcode, named `<cell_1>`.
+
+Applying this to each example read in our multiplexed FASTQ file would give the following values:
+
+```
+@EWSim-1.1-umi5-reada-umix-bar0.0
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAACGTAACG # Read
+AAAA                                      # <umi_1>
+    ATGGCATCCACCGATTTCTCCAAGATTGAA        # Read-post UMI extraction
+                                  CGTA    # <umi_2>
+				      ACG # <cell_1>
+@EWSim-2.1-umi5-reada-umiy-bar1.0
+AAAAATGGCATCCACCGATTTCTCCAAGATTGAAATATGAC # Read
+AAAA                                      # <umi_1>
+    ATGGCATCCACCGATTTCTCCAAGATTGAA        # Read-post UMI extraction
+                                  ATAT    # <umi_2>
+                                      GAC # <cell_1>
+@EWSim-3.1-umi5-readb-umix-bar2.0
+AAAATCTAGATTAGAAAGATTGACCTCATTAACGTACGA   # Read
+AAAA                                      # <umi_1>
+    TCTAGATTAGAAAGATTGACCTCATTAA        # Read-post UMI extraction
+                                CGTA      # <umi_2>
+                                    CGA   # <cell_1>
+```
+
+If we were to use `umi_tools extract` to extract these UMIs and barcode, using this regex, our resulting FASTQ file would look like the following:
+
+```
+@EWSim-1.1-umi5-reada-umix-bar0.0_ACG_AAAACGTA
+ATGGCATCCACCGATTTCTCCAAGATTGAA
++
+IIIHHIIHHIHIIHHHIIHIHIIIHIIIHH
+@EWSim-2.1-umi5-reada-umiy-bar1.0_GAC_AAAAATAT
+ATGGCATCCACCGATTTCTCCAAGATTGAA
++
+DIECDEIA?GBGEGGB?EG@GDFEG?GDB?
+@EWSim-3.1-umi5-readb-umix-bar2.0_CGA_AAAACGTA
+TCTAGATTAGAAAGATTGACCTCATTAA
++
+GGIFCICHHCFFDFB@DDGA??BFDDHA
+```
+
+The extracted UMIs are appended together (`<umi_1><umi2>`) and are then appended to the barcode, with a delimiter, `_`. Together the barcode and UMIs are then appended to the end of the read header, again with a delimiter `_`.
+
+
  ### Example: the inDrop barcode read
 Read 1 from the inDrop technique of Klein *et al* consists of a two part cell barcode separated by an a 22 base adapter sequence. The first part of the cell barcode can be between 8 and 12 bases in length, and the second part is always 8 bases long. A 6 base UMI follows the second part of the cell barcode, and this is then followed by at least three T bases. 
 
