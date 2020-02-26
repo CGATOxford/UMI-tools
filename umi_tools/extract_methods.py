@@ -456,12 +456,18 @@ class ExtractFilterAndUpdate:
                 self.joiner = self._joiner_5prime
 
             if pattern:
+                if len(pattern.replace("N", "").replace("X", "").replace("C", ""))>0:
+                    raise ValueError("barcode pattern (%s) should only contain "
+                                     "N/X/C characters" % pattern)
                 self.pattern_length = len(pattern)
                 self.umi_bases = [x for x in range(len(pattern)) if pattern[x] is "N"]
                 self.bc_bases = [x for x in range(len(pattern)) if pattern[x] is "X"]
                 self.cell_bases = [x for x in range(len(pattern)) if pattern[x] is "C"]
 
             if pattern2:
+                if len(pattern2.replace("N", "").replace("X", "").replace("C", ""))>0:
+                    raise ValueError("barcode pattern2 (%s) should only contain "
+                                     "N/X/C characters" % pattern2)
                 self.pattern_length2 = len(pattern2)
                 self.umi_bases2 = [x for x in range(len(pattern2))
                                    if pattern2[x] is "N"]
