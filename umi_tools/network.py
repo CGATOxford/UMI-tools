@@ -405,7 +405,7 @@ class ReadDeduplicator:
         final_umis = [cluster[0] for cluster in clusters]
         umi_counts = [sum(counts[umi] for umi in cluster)
                       for cluster in clusters]
-        reads = [bundle[umi]["read"] for umi in final_umis]
+        reads = [(bundle[umi]["read"], bundle[umi]["read2"]) for umi in final_umis]
 
         return (reads, final_umis, umi_counts)
 

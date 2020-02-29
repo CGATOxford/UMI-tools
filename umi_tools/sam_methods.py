@@ -126,6 +126,99 @@ def get_barcode_umis(read, cell_barcode=False):
                          "read tag")
 
 
+class get_readpairs:
+    # Used in place of a real read in incomplete pairs before they are completed
+    PendingMate = object()
+
+    # Read key. To allow for multi-mapping, we also use the mapping position
+    def get_pair_key(self, read):
+        return (read.qname, read.reference_start if not read.is_read2 == 0 else read.next_reference_start)
+
+    def drain_queue_forcibly(self):
+        # Forcibly convert incomplete queued pairs into singletons.
+        # These necessarily contains only a read1, but not read2, since we
+        # only queue a pair once we've observed read1.
+        while self.queue:
+            pair = self.queue.popleft()
+            if pair[1] is get_readpairs.PendingMate:
+                pair[1] = None
+                U.warn("inconsistent BAM file: only read1 of proper pair %s found on chromosome %s, treating as unpaired" %
+                       (str(self.get_pair_key(pair[0])), pair[0].reference_name))
+            yield pair
+        # Forcibly convert also incomplete unqueued pairs into singletons.
+        # These are the ones that contain only a read2 but no read1
+        for pair in self.incomplete_pairs.values():
+            if pair[0] is get_readpairs.PendingMate:
+                pair[0] = None
+                U.warn("inconsistent BAM file: only read2 of proper pair %s found on chromosome %s, treating as unpaired" %
+                       (str(self.get_pair_key(pair[1])), pair[1].reference_name))
+                yield pair
+        self.incomplete_pairs.clear()
+
+    def __call__(self, inreads):
+        self.queue = collections.deque()
+        self.incomplete_pairs = dict()
+        self.current_chr = None
+
+        for read in inreads:
+            read_chr = read.reference_name
+            # Read index. 0 for read1 and 1 for read2
+            read_i = int(read.is_read2)
+            pair_key = self.get_pair_key(read)
+
+            # Output leftover incomplete read pairs if the chrosomome changes
+            if self.current_chr is not None and self.current_chr != read_chr:
+                for queue_entry in self.drain_queue_forcibly():
+                    yield queue_entry
+            self.current_chr = read_chr
+
+            # Queue read, either as a singleton, or as part of a read pair.
+            # Proper pairs should always have both mates mapped to the same chromosome,
+            # but to avoid weird behaviour for broken BAM file, we re-check.
+            if ((not read.is_proper_pair) or
+                read.is_unmapped or
+                read.mate_is_unmapped or
+                (read.reference_id != read.next_reference_id)):
+                # Read is not part of a proper pair. Enqueue as singleton
+                pair = [None, None]
+                pair[read_i] = read
+                self.queue.append(pair)
+            else:
+                if pair_key in self.incomplete_pairs:
+                    # Read is part of an already queued (incomplete) read pair. Complete it.
+                    pair = self.incomplete_pairs.pop(pair_key)
+                    if pair[read_i] is not get_readpairs.PendingMate:
+                        U.warn("inconsistent BAM file: both mates of %s flagged to be read%d" %
+                               (str(pair_key), read_i+1))
+                        read_i = 1 - read_i
+                    pair[read_i] = read
+                else:
+                    # Read is part of a new read pair. Create incomplete pair
+                    pair = [get_readpairs.PendingMate, get_readpairs.PendingMate]
+                    pair[read_i] = read
+                    self.incomplete_pairs[pair_key] = pair
+                # Enqueue pair in the correct place for its 1st read
+                if read_i == 0:
+                    self.queue.append(pair)
+
+            # Output queued reads and readpairs up to the first incomplete pair
+            while self.queue and sum(1 for r in self.queue[0] if r is get_readpairs.PendingMate) == 0:
+                yield self.queue.popleft()
+
+        # Output leftover incomplete read pairs at the end of the input
+        for queue_entry in self.drain_queue_forcibly():
+            yield queue_entry
+
+
+class get_singletons:
+    def __call__(self, inreads):
+        for read in inreads:
+            if read.is_read2:
+                yield None, read
+            else:
+                yield read, None
+
+
 class get_bundles:
 
     ''' A functor - When called returns a dictionary of dictionaries,
@@ -208,7 +301,7 @@ class get_bundles:
         self.read_counts = collections.defaultdict(
             lambda: collections.defaultdict(dict))
 
-    def update_dicts(self, read, pos, key, umi):
+    def update_dicts(self, read, read2, pos, key, umi):
 
         # The content of the reads_dict depends on whether all reads
         # are being retained
@@ -219,9 +312,11 @@ class get_bundles:
                 self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
                 self.reads_dict[pos][key][umi]["read"] = [read]
+                self.reads_dict[pos][key][umi]["read2"] = [read2]
                 self.reads_dict[pos][key][umi]["count"] = 1
             else:
                 self.reads_dict[pos][key][umi]["read"].append(read)
+                self.reads_dict[pos][key][umi]["read2"].append(read2)
 
         elif self.only_count_reads:
             # retain all reads per key
@@ -236,18 +331,25 @@ class get_bundles:
                 self.reads_dict[pos][key][umi]["count"] += 1
             except KeyError:
                 self.reads_dict[pos][key][umi]["read"] = read
+                self.reads_dict[pos][key][umi]["read2"] = read2
                 self.reads_dict[pos][key][umi]["count"] = 1
                 self.read_counts[pos][key][umi] = 0
             else:
-                if self.reads_dict[pos][key][umi]["read"].mapq > read.mapq:
+                dict_r1 = self.reads_dict[pos][key][umi]["read"]
+                dict_r2 = self.reads_dict[pos][key][umi]["read2"]
+                dict_mapq = dict_r1.mapq + (dict_r2.mapq if dict_r2 is not None else 0)
+                read_mapq = read.mapq + (read2.mapq if read2 is not None else 0)
+                if dict_mapq > read_mapq:
                     return
 
-                if self.reads_dict[pos][key][umi]["read"].mapq < read.mapq:
+                if read_mapq > dict_mapq:
                     self.reads_dict[pos][key][umi]["read"] = read
+                    self.reads_dict[pos][key][umi]["read2"] = read2
                     self.read_counts[pos][key][umi] = 0
                     return
 
                 # TS: implemented different checks for multimapping here
+                # XXX: What to do in paired mode? Probably just complain...
                 if self.options.detection_method in ["NH", "X0"]:
                     tag = self.options.detection_method
                     if (self.reads_dict[pos][key][umi]["read"].opt(tag) <
@@ -270,6 +372,7 @@ class get_bundles:
 
                 if random.random() < prob:
                     self.reads_dict[pos][key][umi]["read"] = read
+                    self.reads_dict[pos][key][umi]["read2"] = read2
 
     def check_output(self):
 
@@ -311,14 +414,19 @@ class get_bundles:
         return do_output, out_keys
 
     def __call__(self, inreads):
+        if self.options.paired:
+            generator = get_readpairs()
+        else:
+            generator = get_singletons()
 
-        for read in inreads:
+        for read, read2 in generator(inreads):
 
-            if read.is_read2:
+            # Unpaired second reads are returned if the return_read2 option is set
+            if read is None:
                 if self.return_read2:
-                    if not read.is_unmapped or (
-                            read.is_unmapped and self.return_unmapped):
-                        yield read, None, "single_read"
+                    if not read2.is_unmapped or (
+                            read2.is_unmapped and self.return_unmapped):
+                        yield read2, None, "single_read"
                 continue
             else:
                 self.read_events['Input Reads'] += 1
@@ -356,13 +464,11 @@ class get_bundles:
 
                 # if read1 is unmapped, yield immediately or skip read
                 if self.return_unmapped:
-                    self.read_events['Input Reads'] += 1
                     yield read, None, "single_read"
                 continue
 
             if self.options.paired and read.mate_is_unmapped:
-                if not read.is_unmapped:
-                    self.read_events['Read 2 unmapped'] += 1
+                self.read_events['Read 2 unmapped'] += 1
 
                 # if paired end input and read2 is unmapped, skip unless
                 # options.unmapped_reads == "use", in which case TLEN will be 0
@@ -396,7 +502,8 @@ class get_bundles:
                     continue
 
             if self.options.mapping_quality:
-                if read.mapq < self.options.mapping_quality:
+                if ((read.mapq < self.options.mapping_quality) or
+                    (read2 is not None and read2.mapq < self.options.mapping_quality)):
                     self.read_events['< MAPQ threshold'] += 1
                     continue
 
@@ -500,12 +607,23 @@ class get_bundles:
                 else:
                     r_length = 0
 
-                key = (read.is_reverse, self.options.spliced and is_spliced,
-                       self.options.paired*read.tlen, r_length)
+                key = (read.is_reverse, self.options.spliced & is_spliced, r_length)
+
+                # In paired mode, we add the 2nd read's properties as well
+                if self.options.paired and (read2 is not None):
+                    start2, pos2, is_spliced2 = get_read_position(
+                        read, self.options.soft_clip_threshold)
+
+                    if self.options.read_length:
+                        r_length2 = read.query_length
+                    else:
+                        r_length2 = 0
+
+                    key = (key, read2.is_reverse, self.options.spliced & is_spliced, r_length2)
 
             # update dictionaries
             key = (key, cell)
-            self.update_dicts(read, pos, key, umi)
+            self.update_dicts(read, read2, pos, key, umi)
 
             if self.metacontig_contig:
                 # keep track of observed contigs for each gene

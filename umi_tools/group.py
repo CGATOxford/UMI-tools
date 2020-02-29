@@ -79,7 +79,7 @@ import collections
 import os
 
 # required to make iteritems python2 and python3 compatible
-from builtins import dict
+from builtins import dict, zip
 from future.utils import iteritems
 
 import pysam
@@ -187,8 +187,10 @@ def main(argv=None):
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
         mapping_outfile.write("%s\n" % "\t".join(
-            ["read_id", "contig", "position", "gene", "umi", "umi_count",
-             "final_umi", "final_umi_count", "unique_id"]))
+            ["read_id", "contig", "position"] +
+            (["position2"] if options.paired else []) +
+            ["gene", "umi", "umi_count", "final_umi", "final_umi_count",
+             "unique_id"]))
 
     nInput, nOutput, unique_id, input_reads, output_reads = 0, 0, 0, 0, 0
 
@@ -262,28 +264,38 @@ def main(argv=None):
 
             for umi in umi_group:
                 reads = bundle[umi]['read']
-                for read in reads:
+                reads2 = bundle[umi]['read2']
+                for read, read2 in zip(reads, reads2):
                     if outfile:
                         # Add the 'UG' tag to the read
                         read.set_tag('UG', unique_id)
                         read.set_tag(options.umi_group_tag, top_umi)
                         outfile.write(read)
+                        if read2 is not None:
+                            read2.tags += [('UG', unique_id)]
+                            read2.tags += [(options.umi_group_tag, top_umi)]
+                            outfile.write(read2)
 
                     if options.tsv:
                         if options.per_gene:
+                            # XXX: What if the two reads disagree?
                             gene = read.get_tag(gene_tag)
                         else:
                             gene = "NA"
-                        mapping_outfile.write("%s\n" % "\t".join(map(str, (
+                        pos = sam_methods.get_read_position(
+                            read, options.soft_clip_threshold)[1]
+                        pos2 = sam_methods.get_read_position(
+                            read2, options.soft_clip_threshold)[1] if read2 is not None else ""
+                        mapping_outfile.write("%s\n" % "\t".join(map(str, [
                             read.query_name, read.reference_name,
-                            sam_methods.get_read_position(
-                                read, options.soft_clip_threshold)[1],
+                            pos] +
+                            ([pos2] if options.paired else []) + [
                             gene,
                             umi.decode(),
                             counts[umi],
                             top_umi.decode(),
                             group_count,
-                            unique_id))))
+                            unique_id])))
 
                     nOutput += 1
 
