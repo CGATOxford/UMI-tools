@@ -470,7 +470,7 @@ class ExtractFilterAndUpdate:
                 self.cell_bases2 = [x for x in range(len(pattern2))
                                     if pattern2[x] is "C"]
 
-                self.getCellBarcode = self._getCellBarcodeString
+            self.getCellBarcode = self._getCellBarcodeString
             self.getBarcodes = self._getBarcodesString
 
         elif method == "regex":
