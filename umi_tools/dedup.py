@@ -89,9 +89,6 @@ the frequencies of each UMI.
   2      1             0
   3      1             2
   ====== ============= ==============
-  
-  Both instances_pre and instances_post <= targeted_positions.
-  Counts is only bounded by depth of sequencing.
 
 [PREFIX]_stats_per_umi_per.tsv
   The `_stats_per_umi_per.tsv` table provides UMI-level summary
