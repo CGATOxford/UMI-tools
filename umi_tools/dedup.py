@@ -63,15 +63,50 @@ Each unique UMI sequence may be observed [0-many] times at multiple
 positions in the BAM. The following files report the distribution for
 the frequencies of each UMI.
 
-[PREFIX_stats_per_umi_per.tsv
-  For each UMI, the positions was it observed at (times_observed), the
-  sum of freuqencies across all positions (total_counts) and the
-  median for the distibution of frequencies (median_counts). These are
-  all presented pre- and post-deduplication
-
 [PREFIX]_stats_per_umi_per_position.tsv
-  Frequency table for counts per unique combinations of position+UMI,
-  pre- and post-deduplication
+  The `_stats_per_umi_per_position.tsv` file simply tabulates the
+  counts for unique combinations of UMI and position. E.g if prior to
+  deduplication, we have two positions in the BAM (POSa, POSb), at
+  POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
+  then the stats file is populated thus
+
+  +------+-------------+
+  |counts|instances_pre|
+  +======+=============+
+  |1|2|
+  +-+-+
+  |2|1|
+  +-+-+
+  |3|1|
+  +-+-+
+
+  If post deduplication, UMIb is grouped with UMIa such that POSa:
+  3*UMIa, then the `instances_post` column is populated thus:
+
+  +------+-------------+--------------+
+  |counts|instances_pre|instances_post|
+  +======+=============+==============+
+  |1|2|1|
+  +-+-+-+
+  |2|1|0|
+  +-+-+-+
+  |3|1|2|
+  +-+-+-+
+  
+  Both instances_pre and instances_post <= targeted_positions.
+  Counts is only bounded by depth of sequencing.
+
+[PREFIX]_stats_per_umi_per.tsv
+  The `_stats_per_umi_per.tsv` table provides UMI-level summary
+  statistics. Keeping in mind that each unique UMI sequence can be
+  observed at [0-many] times across multiple positions in the BAM,
+
+  :times_observed: How many positions the UMI was observed at
+  :total_counts: The total number of times the UMI was observed across all positions
+  :median_counts: The median for the distribution of how often the UMI was observed at                  each position (excluding zeros)
+
+  Hence, whenever times_observed=1, total_counts==median_counts.
+ 
 '''
 
 import sys
