@@ -68,30 +68,27 @@ the frequencies of each UMI.
   counts for unique combinations of UMI and position. E.g if prior to
   deduplication, we have two positions in the BAM (POSa, POSb), at
   POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
-  then the stats file is populated thus
+  then the stats file is populated thus:
 
-  +------+-------------+
-  |counts|instances_pre|
-  +======+=============+
-  |1|2|
-  +-+-+
-  |2|1|
-  +-+-+
-  |3|1|
-  +-+-+
+  ====== =============
+  counts instances_pre
+  ------ -------------
+  1      2
+  2      1
+  3      1
+  ====== =============
+  
 
   If post deduplication, UMIb is grouped with UMIa such that POSa:
   3*UMIa, then the `instances_post` column is populated thus:
 
-  +------+-------------+--------------+
-  |counts|instances_pre|instances_post|
-  +======+=============+==============+
-  |1|2|1|
-  +-+-+-+
-  |2|1|0|
-  +-+-+-+
-  |3|1|2|
-  +-+-+-+
+  ====== ============= ==============
+  counts instances_pre instances_post
+  ------ ------------- --------------
+  1      2             1
+  2      1             0
+  3      1             2
+  ====== ============= ==============
   
   Both instances_pre and instances_post <= targeted_positions.
   Counts is only bounded by depth of sequencing.
