@@ -106,6 +106,18 @@ Barcode extraction
 ``--read2-in``
 """"""""""""""
         Filename for read pairs
+
+""""""""""""""""""
+``--filtered-out``
+""""""""""""""""""
+        Write out reads not matching regex pattern or cell barcode
+        whitelist to this file
+
+"""""""""""""""""""
+``--filtered-out2``
+"""""""""""""""""""
+        Write out read pairs not matching regex pattern or cell barcode
+        whitelist to this file
 '''
 
 
