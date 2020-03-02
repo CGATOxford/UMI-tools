@@ -314,7 +314,8 @@ def main(argv=None):
                         expect_cells=False,
                         allow_threshold_error=False,
                         cell_number=False,
-                        ed_above_threshold=None)
+                        ed_above_threshold=None,
+                        ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -355,7 +356,8 @@ def main(argv=None):
         pattern=options.pattern,
         pattern2=options.pattern2,
         prime3=options.prime3,
-        extract_cell=extract_cell)
+        extract_cell=extract_cell,
+        ignore_suffix=options.ignore_suffix)
 
     cell_barcode_counts = collections.Counter()
 

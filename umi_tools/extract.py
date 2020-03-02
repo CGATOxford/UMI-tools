@@ -274,7 +274,8 @@ def main(argv=None):
                         quality_encoding=None,
                         reconcile=False,
                         either_read=False,
-                        either_read_resolve="discard")
+                        either_read_resolve="discard",
+                        ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -339,7 +340,8 @@ def main(argv=None):
         options.filter_cell_barcode,
         options.retain_umi,
         options.either_read,
-        options.either_read_resolve)
+        options.either_read_resolve,
+        options.ignore_suffix)
 
     if options.filter_cell_barcode:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
