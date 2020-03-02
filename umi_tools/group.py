@@ -75,8 +75,7 @@ group-specific options
 """""""""
 --out-bam
 """""""""
-   Output a bam file with read groups (unique numerical identifier)
-   tagged using the UG tag
+   Output a bam file with read groups tagged using the UG tag
 
 """""""""""""""
 --umi-group-tag
