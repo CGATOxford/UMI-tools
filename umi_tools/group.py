@@ -72,6 +72,16 @@ group-specific options
 """""""""""
    Outfile name for file mapping read id to read group
 
+"""""""""
+--out-bam
+"""""""""
+   Output a bam file with read groups tagged using the UG tag
+
+"""""""""""""""
+--umi-group-tag
+"""""""""""""""
+   BAM tag for the error corrected UMI selected for the group. Default=BX
+
 
 '''
 import sys
