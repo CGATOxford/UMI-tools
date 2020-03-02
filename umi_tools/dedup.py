@@ -77,7 +77,7 @@ the frequencies of each UMI.
   2      1
   3      1
   ====== =============
-  
+
 
   If post deduplication, UMIb is grouped with UMIa such that POSa:
   3*UMIa, then the `instances_post` column is populated thus:
@@ -100,7 +100,7 @@ the frequencies of each UMI.
   :median_counts: The median for the distribution of how often the UMI was observed at                  each position (excluding zeros)
 
   Hence, whenever times_observed=1, total_counts==median_counts.
- 
+
 '''
 
 import sys
