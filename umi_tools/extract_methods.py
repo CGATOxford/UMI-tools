@@ -352,7 +352,7 @@ class ExtractFilterAndUpdate:
             else:
                 return None
 
-    def _addBarcodesToIdentifier(self, read, UMI, cell):
+    def addBarcodes(self, read, UMI, cell):
         '''extract the identifier from a read and append the UMI and
         cell barcode before the first space'''
 
@@ -365,29 +365,6 @@ class ExtractFilterAndUpdate:
 
         identifier = " ".join(read_id)
 
-        return identifier
-
-    def _addBarcodesToIdentifierIgnoreSuffix(self, read, UMI, cell):
-        '''extract the identifier from a read and append the UMI and
-        cell barcode before the first space, ignoring /1 or /2 suffixes'''
-
-        read_id = read.identifier.split(" ")
-
-        read_suffix = read_id[0][-2:]
-
-        if read_suffix not in ('/1', '/2'):
-            raise ValueError(
-                'Read ends in unexpected chxaracters. Expecting "/1" or "/2".'
-                'Observed: %s' % read_suffix)
-
-        read_id[0] = read_id[0][:-2]
-
-        if cell == "":
-            read_id[0] = read_id[0] + read_suffix + "_" + UMI
-        else:
-            read_id[0] = read_id[0] + read_suffix + "_" + cell + "_" + UMI
-
-        identifier = " ".join(read_id)
         return identifier
 
     def filterQuality(self, umi_quals):
@@ -504,11 +481,6 @@ class ExtractFilterAndUpdate:
         elif method == "regex":
             self.getCellBarcode = self._getCellBarcodeRegex
             self.getBarcodes = self._getBarcodesRegex
-
-        if ignore_suffix:
-            self.addBarcodes = self._addBarcodesToIdentifierIgnoreSuffix
-        else:
-            self.addBarcodes = self._addBarcodesToIdentifier
 
     def getReadCounts(self):
         return self.read_counts

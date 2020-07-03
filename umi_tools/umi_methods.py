@@ -122,7 +122,8 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
     def getReadIDSuffix(read):
         read_id = read.identifier.split(' ')[0]
         if not read_id[-2:] in ['/1', '/2']:
-            raise ValueError('read suffix must be /1 or /2. Observed: %s' % read_id[-2:])
+            raise ValueError(
+                'read suffix must be /1 or /2. Observed: %s' % read_id[-2:])
         return(read_id[:-2])
 
     if has_suffix:
@@ -144,6 +145,16 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
         if not read2_id == read1_id:
             raise ValueError("\nRead pairs do not match\n%s != %s" %
                              (read1_id, read2_id))
+
+        if has_suffix:
+            read1_id_components = read1.identifier.split(' ')
+            read1_id_components[0] = read1_id
+            read1.identifier = ' '.join(read1_id_components)
+
+            read2_id_components = read2.identifier.split(' ')
+            read2_id_components[0] = read2_id
+            read2.identifier = ' '.join(read2_id_components)
+
         yield (read1, read2)
 
 
