@@ -8,7 +8,7 @@ import umi_tools.Utilities as U
 from umi_tools.umi_methods import RANGES
 
 
-def addBarcodesToIdentifier(self, read, UMI, cell):
+def addBarcodesToIdentifier(read, UMI, cell):
     '''extract the identifier from a read and append the UMI and
     cell barcode before the first space'''
 
