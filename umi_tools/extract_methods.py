@@ -426,8 +426,7 @@ class ExtractFilterAndUpdate:
                  filter_cell_barcode=False,
                  retain_umi=False,
                  either_read=False,
-                 either_read_resolve="discard",
-                 ignore_suffix=False):
+                 either_read_resolve="discard"):
 
         self.read_counts = collections.Counter()
         self.pattern = pattern
