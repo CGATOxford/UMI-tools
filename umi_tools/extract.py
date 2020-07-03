@@ -396,7 +396,7 @@ def main(argv=None):
             strict = True
 
         for read1, read2 in umi_methods.joinedFastqIterate(
-                read1s, read2s, strict):
+                read1s, read2s, strict, options.ignore_suffix):
 
             # incrementing count for monitoring progress
             progCount += 1

@@ -369,26 +369,25 @@ class ExtractFilterAndUpdate:
 
     def _addBarcodesToIdentifierIgnoreSuffix(self, read, UMI, cell):
         '''extract the identifier from a read and append the UMI and
-        cell barcode before the first space, ignoring \1 or \2 suffixes'''
+        cell barcode before the first space, ignoring /1 or /2 suffixes'''
 
         read_id = read.identifier.split(" ")
 
-        read_suffix = read_id[0][-2:-1]
+        read_suffix = read_id[0][-2:]
 
-        if read_suffix not in ('\1', '\2'):
+        if read_suffix not in ('/1', '/2'):
             raise ValueError(
-                'Read ends in unexpected characters. Expecting "/1" or "/2".'
+                'Read ends in unexpected chxaracters. Expecting "/1" or "/2".'
                 'Observed: %s' % read_suffix)
 
         read_id[0] = read_id[0][:-2]
 
         if cell == "":
-            read_id[0] = read_id[0] + "_" + UMI
+            read_id[0] = read_id[0] + read_suffix + "_" + UMI
         else:
-            read_id[0] = read_id[0] + "_" + cell + "_" + UMI
+            read_id[0] = read_id[0] + read_suffix + "_" + cell + "_" + UMI
 
-        identifier = " ".join(read_id) + read_suffix
-
+        identifier = " ".join(read_id)
         return identifier
 
     def filterQuality(self, umi_quals):

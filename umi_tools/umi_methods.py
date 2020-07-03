@@ -97,7 +97,8 @@ def fastqIterate(infile):
 ###############################################################################
 
 
-def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
+def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
+                       strict=True, has_suffix=False):
     '''This will return an iterator that returns tuples of fastq records.
     At each step it will confirm that the first field of the read name
     (before the first whitespace character) is identical between the
@@ -110,17 +111,39 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
     reads have been filtered and corrected before processing without regard
     to read2
 
+    If has_suffix is True, /1 and /2 will be
+    removed from the end of read1 and read2, respectively before
+    checking their names are identical
     '''
+
+    def getReadIDNoSuffix(read):
+        return(read.identifier.split(' ')[0])
+
+    def getReadIDSuffix(read):
+        read_id = read.identifier.split(' ')[0]
+        if not read_id[-2:] in ['/1', '/2']:
+            raise ValueError('read suffix must be /1 or /2. Observed: %s' % read_id[-2:])
+        return(read_id[:-2])
+
+    if has_suffix:
+        getReadID = getReadIDSuffix
+    else:
+        getReadID = getReadIDNoSuffix
 
     for read1 in fastq_iterator1:
         read2 = next(fastq_iterator2)
-        pair_id = read1.identifier.split()[0]
+
+        read1_id = getReadID(read1)
+        read2_id = getReadID(read2)
+
         if not strict:
-            while read2.identifier.split()[0] != pair_id:
+            while read2_id != read1_id:
                 read2 = next(fastq_iterator2)
-        if not read2.identifier.split()[0] == pair_id:
+                read2_id = getReadID(read2)
+
+        if not read2_id == read1_id:
             raise ValueError("\nRead pairs do not match\n%s != %s" %
-                             (pair_id, read2.identifier.split()[0]))
+                             (read1_id, read2_id))
         yield (read1, read2)
 
 

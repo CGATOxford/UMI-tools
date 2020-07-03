@@ -698,8 +698,8 @@ def Start(parser=None,
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
         group.add_option("--ignore-read-pair-suffixes",
-                         dest="ignore_read_pair_suffixes", action="store_true",
-                         help="Ignore \1 and \2 read name suffixes")
+                         dest="ignore_suffix", action="store_true",
+                         help="Ignore '\\1' and '\\2' read name suffixes")
         parser.add_option_group(group)
 
     if add_sam_options:
