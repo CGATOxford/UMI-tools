@@ -245,6 +245,13 @@ dedup_single_gene_tag:
       references: [single_gene_tag_py3.sam]
       options: dedup -L test.log --out-sam --random-seed=123456789 --method=directional --per-gene --gene-tag=XF --skip-tags-regex="^[__|Unassigned]"
 
+dedup_paired_umi_whitelist:
+      sort: True
+      stdin: whitelist_umi_input.bam 
+      outputs: [stdout]
+      references: [whitelist_umi_output.sam]
+      options: dedup --paired --log=test.log --filter-umi --umi-whitelist=<DIR>/umi_whitelist.tsv --umi-whitelist-paired=<DIR>/umi_whitelist.tsv --out-sam --random-seed=123456789 
+
 dedup_paired_ignore_tlen_tag:
       stdin: paired.bam
       outputs: [stdout]

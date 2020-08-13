@@ -286,7 +286,7 @@ def main(argv=None):
 
     # set up ReadCluster functor with methods specific to
     # specified options.method
-    processor = network.ReadDeduplicator(options.method)
+    processor = network.ReadDeduplicator(options)
 
     bundle_iterator = sam_methods.get_bundles(
         options,
@@ -318,15 +318,6 @@ def main(argv=None):
             input_reads += 1000000
             U.info("Parsed %i input reads" % input_reads)
 
-        if options.stats:
-            # generate pre-dudep stats
-            average_distance = umi_methods.get_average_umi_distance(bundle.keys())
-            pre_cluster_stats.append(average_distance)
-            cluster_size = len(bundle)
-            random_umis = read_gn.getUmis(cluster_size)
-            average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-            pre_cluster_stats_null.append(average_distance_null)
-
         if options.ignore_umi:
             for umi in bundle:
                 nOutput += 1
@@ -339,13 +330,25 @@ def main(argv=None):
                 bundle=bundle,
                 threshold=options.threshold)
 
+            # with UMI filtering, it's possible reads
+            if len(reads) == 0:
+                continue
+
             for read in reads:
                 outfile.write(read)
                 nOutput += 1
 
             if options.stats:
 
-                # collect pre-dudupe stats
+                # generate pre-dudep stats
+                average_distance = umi_methods.get_average_umi_distance(bundle.keys())
+
+                pre_cluster_stats.append(average_distance)
+                cluster_size = len(bundle)
+                random_umis = read_gn.getUmis(cluster_size)
+                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
+                pre_cluster_stats_null.append(average_distance_null)
+
                 stats_pre_df_dict['UMI'].extend(bundle)
                 stats_pre_df_dict['counts'].extend(
                     [bundle[UMI]['count'] for UMI in bundle])
@@ -371,7 +374,6 @@ def main(argv=None):
         os.unlink(out_name)  # delete the tempfile
 
     if options.stats:
-
         # generate the stats dataframe
         stats_pre_df = pd.DataFrame(stats_pre_df_dict)
         stats_post_df = pd.DataFrame(stats_post_df_dict)
@@ -462,6 +464,11 @@ def main(argv=None):
         else:
             U.warn("The BAM did not contain any valid "
                    "reads/read pairs for deduplication")
+
+    if options.filter_umi:
+        U.info("%i UMIs were in a group where the top UMI was not a "
+               "whitelist UMI and were therefore discarded"
+               % processor.umi_whitelist_counts["Non-whitelist UMI"])
 
     U.Stop()
 
