@@ -429,7 +429,6 @@ class ExtractFilterAndUpdate:
                  either_read_resolve="discard"):
 
         self.read_counts = collections.Counter()
-        self.method = method
         self.pattern = pattern
         self.pattern2 = pattern2
         self.extract_cell = extract_cell

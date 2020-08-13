@@ -274,7 +274,8 @@ def main(argv=None):
                         quality_encoding=None,
                         reconcile=False,
                         either_read=False,
-                        either_read_resolve="discard")
+                        either_read_resolve="discard",
+                        ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -394,7 +395,7 @@ def main(argv=None):
             strict = True
 
         for read1, read2 in umi_methods.joinedFastqIterate(
-                read1s, read2s, strict):
+                read1s, read2s, strict, options.ignore_suffix):
 
             # incrementing count for monitoring progress
             progCount += 1

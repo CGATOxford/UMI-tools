@@ -314,7 +314,8 @@ def main(argv=None):
                         expect_cells=False,
                         allow_threshold_error=False,
                         cell_number=False,
-                        ed_above_threshold=None)
+                        ed_above_threshold=None,
+                        ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
 

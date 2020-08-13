@@ -105,7 +105,14 @@ Barcode extraction
 """"""""""""""
 ``--read2-in``
 """"""""""""""
-        Filename for read pairs
+       Filename for read pairs
+
+""""""""""""""
+``--ignore-read-pair-suffixes``
+""""""""""""""
+       Ignore \1 and \2 read name suffixes. Note that this options is
+       required if the suffixes are not whitespace separated from the
+       rest of the read name
 '''
 
 
