@@ -118,6 +118,13 @@ Barcode extraction
 """""""""""""""""""
         Write out read pairs not matching regex pattern or cell barcode
         whitelist to this file
+
+""""""""""""""
+``--ignore-read-pair-suffixes``
+""""""""""""""
+       Ignore \1 and \2 read name suffixes. Note that this options is
+       required if the suffixes are not whitespace separated from the
+       rest of the read name
 '''
 
 

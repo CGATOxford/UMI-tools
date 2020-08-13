@@ -500,8 +500,8 @@ class get_bundles:
                 else:
                     r_length = 0
 
-                key = (read.is_reverse, self.options.spliced & is_spliced,
-                       self.options.paired*read.tlen, r_length)
+                key = (read.is_reverse, self.options.spliced and is_spliced,
+                       (not self.options.ignore_tlen)*self.options.paired*read.tlen, r_length)
 
             # update dictionaries
             key = (key, cell)
@@ -623,7 +623,7 @@ class TwoPassPairWriter:
         found = 0
         for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
 
-            if read.is_unmapped:
+            if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
 
             key = read.query_name, read.reference_name, read.reference_start

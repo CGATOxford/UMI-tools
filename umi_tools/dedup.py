@@ -23,7 +23,10 @@ will be retained from a group of duplicated reads:
 1. The read with the lowest number of mapping coordinates (see
 ``--multimapping-detection-method`` option)
 
-2. The read with the highest mapping quality
+2. The read with the highest mapping quality. Note that this is not
+the read sequencing quality and that if two reads have the same
+mapping quality then one will be picked at random regardless of the
+read quality.
 
 Otherwise a read is chosen at random.
 
@@ -33,23 +36,70 @@ Dedup-specific options
 """""""""""""""""""""""""""
 ``--output-stats=[PREFIX]``
 """""""""""""""""""""""""""
-       Output edit distance statistics and UMI usage statistics
-       using this prefix.
+One can use the edit distance between UMIs at the same position as an
+quality control for the deduplication process by comparing with
+a null expectation of random sampling. For the random sampling, the
+observed frequency of UMIs is used to more reasonably model the null
+expectation.
 
-       Output files are:
+Use this option to generate a stats outfile called:
 
-       [PREFIX]_stats_per_umi_per_position.tsv
-           Histogram of counts per position per UMI pre- and post-deduplication
+[PREFIX]_stats_edit_distance.tsv
+  Reports the (binned) average edit distance between the UMIs at each
+  position. Positions with a single UMI are reported seperately.  The
+  edit distances are reported pre- and post-deduplication alongside
+  the null expectation from random sampling of UMIs from the UMIs
+  observed across all positions. Note that separate null
+  distributions are reported since the null depends on the observed
+  frequency of each UMI which is different pre- and
+  post-deduplication. The post-duplication values should be closer to
+  their respective null than the pre-deduplication vs null comparison
 
-       [PREFIX_stats_per_umi_per.tsv
-           Table of stats per umi. Number of times UMI was observed,
-           total counts and median counts, pre- and post-deduplication
+In addition, this option will trigger reporting of further summary
+statistics for the UMIs which may be informative for selecting the
+optimal deduplication method or debugging.
 
-       [PREFIX]_stats_edit_distance.tsv
-           Edit distance between UMIs at each position. Positions with a
-           single UMI are reported seperately. Pre- and post-deduplication and
-           inluding null expectations from random sampling of UMIs from the
-           UMIs observed across all positions.
+Each unique UMI sequence may be observed [0-many] times at multiple
+positions in the BAM. The following files report the distribution for
+the frequencies of each UMI.
+
+[PREFIX]_stats_per_umi_per_position.tsv
+  The `_stats_per_umi_per_position.tsv` file simply tabulates the
+  counts for unique combinations of UMI and position. E.g if prior to
+  deduplication, we have two positions in the BAM (POSa, POSb), at
+  POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
+  then the stats file is populated thus:
+
+  ====== =============
+  counts instances_pre
+  ------ -------------
+  1      2
+  2      1
+  3      1
+  ====== =============
+
+
+  If post deduplication, UMIb is grouped with UMIa such that POSa:
+  3*UMIa, then the `instances_post` column is populated thus:
+
+  ====== ============= ==============
+  counts instances_pre instances_post
+  ------ ------------- --------------
+  1      2             1
+  2      1             0
+  3      1             2
+  ====== ============= ==============
+
+[PREFIX]_stats_per_umi_per.tsv
+  The `_stats_per_umi_per.tsv` table provides UMI-level summary
+  statistics. Keeping in mind that each unique UMI sequence can be
+  observed at [0-many] times across multiple positions in the BAM,
+
+  :times_observed: How many positions the UMI was observed at
+  :total_counts: The total number of times the UMI was observed across all positions
+  :median_counts: The median for the distribution of how often the UMI was observed at                  each position (excluding zeros)
+
+  Hence, whenever times_observed=1, total_counts==median_counts.
 
 '''
 
@@ -317,7 +367,7 @@ def main(argv=None):
 
     if not options.no_sort_output:
         # sort the output
-        pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
+        pysam.sort("-o", sorted_out_name, "-O", sort_format, "--no-PG", out_name)
         os.unlink(out_name)  # delete the tempfile
 
     if options.stats:

@@ -705,7 +705,9 @@ def Start(parser=None,
                          dest="filtered_out2", type="string", default=None,
                          help=("Write out paired reads not matching regex"
                                " pattern to this file"))
-
+        group.add_option("--ignore-read-pair-suffixes",
+                         dest="ignore_suffix", action="store_true",
+                         help="Ignore '\\1' and '\\2' read name suffixes")
         parser.add_option_group(group)
 
     if add_sam_options:
@@ -889,6 +891,11 @@ def Start(parser=None,
         group.add_option("--ignore-umi", dest="ignore_umi",
                          action="store_true", help="Ignore UMI and dedup"
                          " only on position", default=False)
+
+        group.add_option("--ignore-tlen", dest="ignore_tlen", action="store_true",
+                         default=False,
+                         help="Option to dedup paired end reads based solely on read1, "
+                         "whether or not the template length is the same")
 
         group.add_option("--chrom", dest="chrom", type="string",
                          help="Restrict to one chromosome",
@@ -1255,6 +1262,11 @@ def validateSamOptions(options, group=False):
     if "--unpaired-reads" in command:
         if not options.paired:
             raise ValueError("--unpaired-reads is only compatible "
+                             "with paired end reads (--paired)")
+
+    if "--ignore-tlen" in command:
+        if not options.paired:
+            raise ValueError("--ignore-tlen is only compatible "
                              "with paired end reads (--paired)")
 
     # legacy support for --output-unmapped behaviour
