@@ -248,21 +248,21 @@ The groups flatfile contains the following columns:
 
 #### Example UMI extraction: ####
 
-The case below could be handled by umi_tools dedup by specifiying --bc-pattern=NNXXXXNN but we include it here as an example of how the fastq should be formatted following extraction:
+In the case above the UMIs are extracted with the pattern --bc-pattern=NNXXXXNN. Below is an example of how the fastq should be formatted following extraction:
 
 UMI is bases 3-7, bases 1-2 and 7-8 are the sample barcode and need to be removed
 
     @HISEQ:87:00000000 read1
     AAGGTTGCTGATTGGATGGGCTAG
-    DA1AEBFGGCG01DFH00B1FF0B
     +
+    DA1AEBFGGCG01DFH00B1FF0B
  
  will become:
  
      @HISEQ:87:00000000_GGTT read1
      TGATTGGATGGGCTAG
-     1AFGGCG01DFH00B1FF0B
-     +
+     + 
+     1AFGGCG01DFH00B1
 
 ### Other options ###
 

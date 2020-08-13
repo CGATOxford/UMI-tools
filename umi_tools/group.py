@@ -72,6 +72,16 @@ group-specific options
 """""""""""
    Outfile name for file mapping read id to read group
 
+"""""""""
+--out-bam
+"""""""""
+   Output a bam file with read groups tagged using the UG tag
+
+"""""""""""""""
+--umi-group-tag
+"""""""""""""""
+   BAM tag for the error corrected UMI selected for the group. Default=BX
+
 
 '''
 import sys
@@ -293,7 +303,7 @@ def main(argv=None):
         outfile.close()
         if not options.no_sort_output:
             # sort the output
-            pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
+            pysam.sort("-o", sorted_out_name, "-O", sort_format, "--no-PG", out_name)
             os.unlink(out_name)  # delete the tempfile
 
     if options.tsv:

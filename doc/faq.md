@@ -22,8 +22,9 @@ Here is a table of the techniques we have come across that are not easily proces
    | Technique | regex |
    | --------- | ------ |
    | inDrop    | `(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT)(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*` |
-   | ddSeq/Sureccell | `(?P<cell_1>.{6})(?P<discard_1>TAGCCATCGCATTGC)(?P<cell_2>.{6})(?P<discard_2>TACCTCTGAGCTGAA)(?P<cell_3>.{6})(?P<discard_3>ACG)(?P<umi_1>.{8}).*` |
+   | ddSeq/Sureccell | `(?P<discard_1>.{0,5})(?P<cell_1>.{6})(?P<discard_2>TAGCCATCGCATTGC){e<=1}(?P<cell_2>.{6})(?P<discard_3>TACCTCTGAGCTGAA){e<=1}(?P<cell_3>.{6})(?P<discard_4>ACG)(?P<umi_1>.{8})(?P<discard_5>GAC).*` |
    | SPLiT-seq | `(?P<umi_1>.{10})(?<cell_1>.{8})(?P<discard_1>GTGGCCGATGTTTCGCATCGGCGTACGACT)(?P<cell_2>.{8})(?<discard_2>ATCCACGTGCTTGAGAGGCCAGAGCATTCG)(?P<cell_3>.{8})` |
+   | BD-Rhapsody | `(?<cell_1>.{9})(?<discard_1>.{12})(?<cell_2>.{9})(?<discard_2>.{13})(?<cell_3>.{9})(?<umi_1>.{8})T+` |
 
    If you know of other, please drop us a PR with them!
 

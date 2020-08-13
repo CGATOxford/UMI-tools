@@ -302,7 +302,6 @@ def main(argv=None):
     parser.set_defaults(method="reads",
                         knee_method="distance",
                         extract_method="string",
-                        filter_cell_barcodes=False,
                         whitelist_tsv=None,
                         blacklist_tsv=None,
                         error_correct_threshold=1,
@@ -314,7 +313,8 @@ def main(argv=None):
                         expect_cells=False,
                         allow_threshold_error=False,
                         cell_number=False,
-                        ed_above_threshold=None)
+                        ed_above_threshold=None,
+                        ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
 
@@ -323,6 +323,10 @@ def main(argv=None):
                               add_group_dedup_options=False,
                               add_umi_grouping_options=False,
                               add_sam_options=False)
+
+    if options.filtered_out and not options.extract_method == "regex":
+        U.error("Reads will not be filtered unless extract method is"
+                "set to regex (--extract-method=regex)")
 
     if options.expect_cells:
         if options.knee_method == "distance":
@@ -370,6 +374,9 @@ def main(argv=None):
     displayMax = 100000
     U.info("Starting barcode extraction")
 
+    if options.filtered_out:
+        filtered_out = U.openFile(options.filtered_out, "w")
+
     if not options.read2_in:
         for read1 in read1s:
 
@@ -380,6 +387,8 @@ def main(argv=None):
             n_reads += 1
             barcode_values = ReadExtractor.getBarcodes(read1)
             if barcode_values is None:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
                 continue
             else:
                 cell, umi, _, _, _, _, _ = barcode_values
@@ -393,6 +402,10 @@ def main(argv=None):
                 if n_cell_barcodes > options.subset_reads:
                     break
     else:
+
+        if options.filtered_out2:
+            filtered_out2 = U.openFile(options.filtered_out2, "w")
+
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
         for read1, read2 in izip(read1s, read2s):
 
@@ -404,6 +417,10 @@ def main(argv=None):
 
             barcode_values = ReadExtractor.getBarcodes(read1, read2)
             if barcode_values is None:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
+                if options.filtered_out2:
+                    filtered_out2.write(str(read2) + "\n")
                 continue
             else:
                 cell, umi, _, _, _, _, _ = barcode_values
@@ -498,6 +515,11 @@ def main(argv=None):
                total_correct_barcodes)
         U.info("Found %i total reads which can be error corrected to the "
                "selected cell barcodes" % total_corrected_barcodes)
+
+    if options.filtered_out:
+        filtered_out.close()
+    if options.filtered_out2:
+        filtered_out2.close()
 
     U.Stop()
 

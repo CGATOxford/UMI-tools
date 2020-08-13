@@ -9,7 +9,14 @@ CentOS) and Mac OSX. We do not currently support Windows.
 There are three possible ways to install UMI-tools: conda, pip or from
 source, in decending order of ease.
 
-
+.. note::
+   As of version 1.0.0 UMI-tools requires python 3.5 or better. If you are
+   still using python 2.7, we recommend you switch to python 3. If you
+   use `conda` it is possible to have both python 2 and python 3 environments.
+   If you can't do this and really need 2.7, we recommend you use UMI-tools
+   0.5.5, but note that this will not be updated. 
+   
+   
 Quick Start
 -------------
 
@@ -62,7 +69,7 @@ system, will use your existing python environments, and plays nicely
 with the virtualenv system. On the downside, the installation of
 dependencies is not handled as cleanly as in conda. You will need
 
-* python version greater than 2.7
+* python version greater than 3.5
 * gcc or compatible c compiler 
 * zlib with development headers
 * the pip python package manager version at least 1.4
@@ -75,9 +82,10 @@ worth just trying::
 
     $ pip install umi_tools
 
-If you get a permissions error try adding ``--user`` to the ``pip``
-command. Note that ``umi_tools`` will now only be installed for the
-current user.
+If you also have python 2 on your system, you may need to use ``pip3``
+rather than ``pip``. If you get a permissions error try adding ``--user``
+to the ``pip`` command. Note that ``umi_tools`` will now only be 
+installed for the current user.
 
 If that doesn't work, then you need to find what is missing. You can
 check for gcc and pip by typing gcc or pip at a terminal
