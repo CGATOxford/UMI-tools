@@ -697,6 +697,14 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        group.add_option("--filtered-out",
+                         dest="filtered_out", type="string", default=None,
+                         help=("Write out reads not matching regex pattern"
+                               " to this file"))
+        group.add_option("--filtered-out2",
+                         dest="filtered_out2", type="string", default=None,
+                         help=("Write out paired reads not matching regex"
+                               " pattern to this file"))
         group.add_option("--ignore-read-pair-suffixes",
                          dest="ignore_suffix", action="store_true",
                          help="Ignore '\\1' and '\\2' read name suffixes")
@@ -1074,17 +1082,25 @@ def validateExtractOptions(options):
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
-            U.error("Must supply --bc-pattern for single-end")
+            raise ValueError("Must supply --bc-pattern for single-end")
         else:
-            U.error("Must supply --bc-pattern and/or --bc-pattern2 "
-                    "if paired-end ")
+            raise ValueError("Must supply --bc-pattern and/or --bc-pattern2 "
+                             "if paired-end ")
 
     if options.pattern2:
         if not options.read2_in:
-            U.error("must specify a paired fastq ``--read2-in``")
+            raise ValueError("must specify a paired fastq ``--read2-in``")
 
         if not options.pattern2:
             options.pattern2 = options.pattern
+
+    if options.filtered_out2 and not options.read2_in:
+        raise ValueError("Cannot use --filtered-out2 without read2 input (--read2-in)")
+
+    if ((options.read2_in and options.filtered_out) and not options.filtered_out2) or (
+            options.filtered_out2 and not options.filtered_out):
+        raise ValueError("Must supply both --filtered-out and --filtered-out2"
+                         "to write out filtered reads for paired end")
 
     extract_cell = False
     extract_umi = False
@@ -1096,15 +1112,15 @@ def validateExtractOptions(options):
             try:
                 options.pattern = regex.compile(options.pattern)
             except regex.error:
-                U.error("--bc-pattern '%s' is not a "
-                        "valid regex" % options.pattern)
+                raise ValueError("--bc-pattern '%s' is not a "
+                                 "valid regex" % options.pattern)
 
         if options.pattern2:
             try:
                 options.pattern2 = regex.compile(options.pattern2)
             except regex.Error:
-                U.error("--bc-pattern2 '%s' is not a "
-                        "valid regex" % options.pattern2)
+                raise ValueError("--bc-pattern2 '%s' is not a "
+                                 "valid regex" % options.pattern2)
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
@@ -1136,13 +1152,13 @@ def validateExtractOptions(options):
 
     if not extract_umi:
         if options.extract_method == "string":
-            U.error("barcode pattern(s) do not include any umi bases "
-                    "(marked with 'Ns') %s, %s" % (
-                        options.pattern, options.pattern2))
+            raise ValueError("barcode pattern(s) do not include any umi bases "
+                             "(marked with 'Ns') %s, %s" % (
+                                 options.pattern, options.pattern2))
         elif options.extract_method == "regex":
-            U.error("barcode regex(es) do not include any umi groups "
-                    "(starting with 'umi_') %s, %s" (
-                        options.pattern, options.pattern2))
+            raise ValueError("barcode regex(es) do not include any umi groups "
+                             "(starting with 'umi_') %s, %s" (
+                                 options.pattern, options.pattern2))
 
     return(extract_cell, extract_umi)
 

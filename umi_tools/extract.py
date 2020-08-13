@@ -286,7 +286,13 @@ def main(argv=None):
                               add_sam_options=False)
 
     if options.retain_umi and not options.extract_method == "regex":
-        raise ValueError("option --retain-umi only works with --extract-method=regex")
+        U.error("option --retain-umi only works with --extract-method=regex")
+
+    if (options.filtered_out and not options.extract_method == "regex" and
+        not filter_cell_barcodes):
+        U.error("Reads will not be filtered unless extract method is"
+                "set to regex (--extract-method=regex) or cell"
+                "barcodes are filtered (--filter-cell-barcode)")
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
@@ -361,6 +367,9 @@ def main(argv=None):
     displayMax = 100000
     U.info("Starting barcode extraction")
 
+    if options.filtered_out:
+        filtered_out = U.openFile(options.filtered_out, "w")
+
     if options.read2_in is None:
         for read in read1s:
 
@@ -379,11 +388,17 @@ def main(argv=None):
                     break
 
             if not new_read:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
                 continue
 
             options.stdout.write(str(new_read) + "\n")
 
     else:
+
+        if options.filtered_out2:
+            filtered_out2 = U.openFile(options.filtered_out2, "w")
+
         read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
 
         if options.read2_out:
@@ -413,6 +428,10 @@ def main(argv=None):
                     break
 
             if not reads:
+                if options.filtered_out:
+                    filtered_out.write(str(read1) + "\n")
+                if options.filtered_out2:
+                    filtered_out2.write(str(read2) + "\n")
                 continue
             else:
                 new_read1, new_read2 = reads
@@ -427,6 +446,10 @@ def main(argv=None):
 
     if options.read2_out:
         read2_out.close()
+    if options.filtered_out:
+        filtered_out.close()
+    if options.filtered_out2:
+        filtered_out2.close()
 
     for k, v in ReadExtractor.getReadCounts().most_common():
         U.info("%s: %s" % (k, v))
