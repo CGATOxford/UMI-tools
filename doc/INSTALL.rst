@@ -9,23 +9,30 @@ CentOS) and Mac OSX. We do not currently support Windows.
 There are three possible ways to install UMI-tools: conda, pip or from
 source, in decending order of ease.
 
-
+.. note::
+   As of version 1.0.0 UMI-tools requires python 3.5 or better. If you are
+   still using python 2.7, we recommend you switch to python 3. If you
+   use `conda` it is possible to have both python 2 and python 3 environments.
+   If you can't do this and really need 2.7, we recommend you use UMI-tools
+   0.5.5, but note that this will not be updated. 
+   
+   
 Quick Start
 -------------
 
 Try one of the following::
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda -c conda-forge umi_tools
 
 or::
 
     $ pip install umi_tools
 
 or grab a zip of the `latest release`_ from github and unpack
-(replace ``wget`` with ``curl -O``) for OS X::
+(replace `0.5.5` with version number; replace ``wget`` with ``curl -O`` for OS X)::
 
-    $ unzip v0.2.4.zip
-    $ cd UMI-tools-0.2.4
+    $ unzip 1.0.0.zip
+    $ cd UMI-tools-1.0.0
     $ python setup.py install --user
 
 If these options don't work, see below.
@@ -48,7 +55,7 @@ etc. You can read more `about conda here`_.
 
 2. Type::
 
-    $ conda install -c https://conda.anaconda.org/toms umi_tools
+    $ conda install -c bioconda -c conda-forge umi_tools
 
 That's it, simple as that.
 
@@ -62,7 +69,7 @@ system, will use your existing python environments, and plays nicely
 with the virtualenv system. On the downside, the installation of
 dependencies is not handled as cleanly as in conda. You will need
 
-* python version greater than 2.7
+* python version greater than 3.5
 * gcc or compatible c compiler 
 * zlib with development headers
 * the pip python package manager version at least 1.4
@@ -75,9 +82,10 @@ worth just trying::
 
     $ pip install umi_tools
 
-If you get a permissions error try adding ``--user`` to the ``pip``
-command. Note that ``umi_tools`` will now only be installed for the
-current user.
+If you also have python 2 on your system, you may need to use ``pip3``
+rather than ``pip``. If you get a permissions error try adding ``--user``
+to the ``pip`` command. Note that ``umi_tools`` will now only be 
+installed for the current user.
 
 If that doesn't work, then you need to find what is missing. You can
 check for gcc and pip by typing gcc or pip at a terminal
@@ -195,8 +203,8 @@ Depedencies from conda/PyPI manager
     `master branch`_ (which should contain the lastest development
     version) and unpack the zip or tar and enter the directory::
 
-        $ unzip v0.2.4.zip
-        $ cd UMI-tools-0.2.4
+        $ unzip 1.0.0.zip
+        $ cd UMI-tools-1.0.0
 
     or clone the repository::
 

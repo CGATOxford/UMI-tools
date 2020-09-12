@@ -1,52 +1,105 @@
 '''
-dedup.py - Deduplicate reads that are coded with a UMI
-=========================================================
+===========================================================
+dedup - Deduplicate reads using UMI and mapping coordinates
+===========================================================
 
-:Author: Ian Sudbery, Tom Smith
-:Release: $Id$
-:Date: |today|
-:Tags: Python UMI
+*Deduplicate reads based on the mapping co-ordinate and the UMI attached to the read*
 
-Purpose
--------
+The identification of duplicate reads is performed in an error-aware
+manner by building networks of related UMIs (see
+``--method``). ``dedup`` can also handle cell barcoded input (see
+``--per-cell``).
 
-The purpose of this command is to deduplicate BAM files based
-on the first mapping co-ordinate and the UMI attached to the read.
+Usage::
+
+    umi_tools dedup --stdin=INFILE --log=LOGFILE [OPTIONS] > OUTFILE
 
 Selecting the representative read
 ---------------------------------
-
-The following criteria are applied to select the read that will be retained
-from a group of duplicated reads:
+For every group of duplicate reads, a single representative read is
+retained.The following criteria are applied to select the read that
+will be retained from a group of duplicated reads:
 
 1. The read with the lowest number of mapping coordinates (see
---multimapping-detection-method option)
-2. The read with the highest mapping quality
+``--multimapping-detection-method`` option)
+
+2. The read with the highest mapping quality. Note that this is not
+the read sequencing quality and that if two reads have the same
+mapping quality then one will be picked at random regardless of the
+read quality.
 
 Otherwise a read is chosen at random.
 
 
-dedup-specific options
+Dedup-specific options
 ----------------------
+"""""""""""""""""""""""""""
+``--output-stats=[PREFIX]``
+"""""""""""""""""""""""""""
+One can use the edit distance between UMIs at the same position as an
+quality control for the deduplication process by comparing with
+a null expectation of random sampling. For the random sampling, the
+observed frequency of UMIs is used to more reasonably model the null
+expectation.
 
---output-stats (string, filename_prefix)
-       Output edit distance statistics and UMI usage statistics
-       using this prefix.
+Use this option to generate a stats outfile called:
 
-       Output files are:
+[PREFIX]_stats_edit_distance.tsv
+  Reports the (binned) average edit distance between the UMIs at each
+  position. Positions with a single UMI are reported seperately.  The
+  edit distances are reported pre- and post-deduplication alongside
+  the null expectation from random sampling of UMIs from the UMIs
+  observed across all positions. Note that separate null
+  distributions are reported since the null depends on the observed
+  frequency of each UMI which is different pre- and
+  post-deduplication. The post-duplication values should be closer to
+  their respective null than the pre-deduplication vs null comparison
 
-       "[prefix]_stats_per_umi_per_position.tsv"
-           Histogram of counts per position per UMI pre- and post-deduplication
+In addition, this option will trigger reporting of further summary
+statistics for the UMIs which may be informative for selecting the
+optimal deduplication method or debugging.
 
-       "[prefix]_stats_per_umi_per.tsv"
-           Table of stats per umi. Number of times UMI was observed,
-           total counts and median counts, pre- and post-deduplication
+Each unique UMI sequence may be observed [0-many] times at multiple
+positions in the BAM. The following files report the distribution for
+the frequencies of each UMI.
 
-       "[prefix]_stats_edit_distance.tsv"
-           Edit distance between UMIs at each position. Positions with a
-           single UMI are reported seperately. Pre- and post-deduplication and
-           inluding null expectations from random sampling of UMIs from the
-           UMIs observed across all positions.
+[PREFIX]_stats_per_umi_per_position.tsv
+  The `_stats_per_umi_per_position.tsv` file simply tabulates the
+  counts for unique combinations of UMI and position. E.g if prior to
+  deduplication, we have two positions in the BAM (POSa, POSb), at
+  POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
+  then the stats file is populated thus:
+
+  ====== =============
+  counts instances_pre
+  ------ -------------
+  1      2
+  2      1
+  3      1
+  ====== =============
+
+
+  If post deduplication, UMIb is grouped with UMIa such that POSa:
+  3*UMIa, then the `instances_post` column is populated thus:
+
+  ====== ============= ==============
+  counts instances_pre instances_post
+  ------ ------------- --------------
+  1      2             1
+  2      1             0
+  3      1             2
+  ====== ============= ==============
+
+[PREFIX]_stats_per_umi_per.tsv
+  The `_stats_per_umi_per.tsv` table provides UMI-level summary
+  statistics. Keeping in mind that each unique UMI sequence can be
+  observed at [0-many] times across multiple positions in the BAM,
+
+  :times_observed: How many positions the UMI was observed at
+  :total_counts: The total number of times the UMI was observed across all positions
+  :median_counts: The median for the distribution of how often the UMI was observed at                  each position (excluding zeros)
+
+  Hence, whenever times_observed=1, total_counts==median_counts.
 
 '''
 
@@ -65,13 +118,23 @@ import numpy as np
 
 import umi_tools
 import umi_tools.Utilities as U
+import umi_tools.Documentation as Documentation
 import umi_tools.network as network
 import umi_tools.umi_methods as umi_methods
-
+import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
-__doc__ = __doc__ + U.GENERIC_DOCSTRING_GDC
-__doc__ = __doc__ + U.GROUP_DEDUP_GENERIC_OPTIONS
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
+
+usage = '''
+dedup - Deduplicate reads using UMI and mapping coordinates
+
+Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 
 def detect_bam_features(bamfile, n_entries=1000):
@@ -122,7 +185,8 @@ def main(argv=None):
 
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=globals()["__doc__"])
+                            usage=usage,
+                            description=globals()["__doc__"])
     group = U.OptionGroup(parser, "dedup-specific options")
 
     group.add_option("--output-stats", dest="stats", type="string",
@@ -134,7 +198,7 @@ def main(argv=None):
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv)
 
-    U.validateSamOptions(options)
+    U.validateSamOptions(options, group=False)
 
     if options.random_seed:
         np.random.seed(options.random_seed)
@@ -149,14 +213,14 @@ def main(argv=None):
         if options.no_sort_output:
             out_name = options.stdout.name
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = options.stdout.name
         options.stdout.close()
     else:
         if options.no_sort_output:
             out_name = "-"
         else:
-            out_name = U.getTempFilename()
+            out_name = U.getTempFilename(dir=options.tmpdir)
             sorted_out_name = "-"
 
     if not options.no_sort_output:  # need to determine the output format for sort
@@ -183,7 +247,7 @@ def main(argv=None):
     outfile = pysam.Samfile(out_name, out_mode, template=infile)
 
     if options.paired:
-        outfile = umi_methods.TwoPassPairWriter(infile, outfile)
+        outfile = sam_methods.TwoPassPairWriter(infile, outfile)
 
     nInput, nOutput, input_reads, output_reads = 0, 0, 0, 0
 
@@ -211,10 +275,10 @@ def main(argv=None):
 
     else:
         if options.per_contig and options.gene_transcript_map:
-            metacontig2contig = umi_methods.getMetaContig2contig(
+            metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
-            inreads = umi_methods.metafetcher(infile, metacontig2contig, metatag)
+            inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
         else:
@@ -224,7 +288,7 @@ def main(argv=None):
     # specified options.method
     processor = network.ReadDeduplicator(options.method)
 
-    bundle_iterator = umi_methods.get_bundles(
+    bundle_iterator = sam_methods.get_bundles(
         options,
         metacontig_contig=metacontig2contig)
 
@@ -303,7 +367,7 @@ def main(argv=None):
 
     if not options.no_sort_output:
         # sort the output
-        pysam.sort("-o", sorted_out_name, "-O", sort_format, out_name)
+        pysam.sort("-o", sorted_out_name, "-O", sort_format, "--no-PG", out_name)
         os.unlink(out_name)  # delete the tempfile
 
     if options.stats:
@@ -364,12 +428,14 @@ def main(argv=None):
         pre_cluster_null_binned = bin_clusters(pre_cluster_stats_null)
         post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
 
-        edit_distance_df = pd.DataFrame({
-            "unique": tallyCounts(pre_cluster_binned, max_ed),
-            "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
-            options.method: tallyCounts(post_cluster_binned, max_ed),
-            "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
-            "edit_distance": cluster_bins})
+        edit_distance_df = pd.DataFrame(
+            {"unique": tallyCounts(pre_cluster_binned, max_ed),
+             "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
+             options.method: tallyCounts(post_cluster_binned, max_ed),
+             "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
+             "edit_distance": cluster_bins},
+            columns=["unique", "unique_null", options.method,
+                     "%s_null" % options.method, "edit_distance"])
 
         # TS - set lowest bin (-1) to "Single_UMI"
         edit_distance_df['edit_distance'][0] = "Single_UMI"

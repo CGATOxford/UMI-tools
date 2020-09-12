@@ -5,15 +5,11 @@ matrix:
     include:
         - os: linux
           sudo: required
-          python: 2.7
+          python: 3.7.3
           env: TEST_FUNCTIONALITY=1
         - os: linux
           sudo: required
-          python: 3.5
-          env: TEST_FUNCTIONALITY=1
-        - os: linux
-          sudo: required
-          python: 3.5
+          python: 3.7.3
           env: TEST_STYLE=1
 
 before_install:
@@ -21,9 +17,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype; fi
   - pip install cython
-  - pip install pandas==0.19
+  - pip install pandas
   - pip install scipy
-  - pip install matplotlib==2.2.3  # can remove once py2 support dropped
 install:
   - python setup.py install
 

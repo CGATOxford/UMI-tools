@@ -1,6 +1,15 @@
 Single cell tutorial
 ====================
-  
+
+**Important update**: We now recommend the use of `alevin` for droplet-based
+scRNA-Seq (e.g 10X, inDrop etc). `alevin` extends the directional
+method used in `UMI-tools` to correct UMI errors with droplet
+scRNA-Seq within a framework that also enables quantification using
+multi-mapped reads. `alevin` is an accurate, fast and convenient
+end-to-end tool to go from fastq -> count matrix. See
+[alevin documentation](https://salmon.readthedocs.io/en/latest/alevin.html)
+and [alevin pre-print](https://www.biorxiv.org/content/10.1101/335000v2) for more information
+
 This tutorial will go through an end to end analysis for single cell analysis using UMI-tools. Before you start, you will need:
 *  An installed copy of UMI-tools (see the installation guide)
 *  [The STAR aligner](https://github.com/alexdobin/STAR)
@@ -119,7 +128,7 @@ Firstly, note that FASTQ file that contains the barcodes is passed to  `--stdin`
 The `--plot-prefix` option tells `whitelist` to output summary plots for the frequency of each CB. We always recommend running with this option in order to visualise whether the number of cells accepted seems reasonable. See [Variations](Automatic estimation of cell number) for a more complete explanation of what these plots show.
 
 ### Specifying barcode locations
-Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI in the read sequence. By default we assume the barcodes are at the 5' end of the read (this can be changed with `--3prime`). We then use `C` characters to show where CB bases are and `N` characters to show were UMI bases are. Thus we have 16 `C`s followed by 10 `N`s to denote that the first 16 bases of the read are CB bases and the second 16 are UMI bases. If this is a bit cumbersome you can also enter the pattern as a regular expression, using named groups. For example we could change the above command to:
+Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI in the read sequence. By default we assume the barcodes are at the 5' end of the read (this can be changed with `--3prime`). We then use `C` characters to show where CB bases are and `N` characters to show were UMI bases are. Thus, in the above we have 16 `C`s followed by 10 `N`s to denote that the first 16 bases of the read are CB bases and the second 16 are UMI bases. Alternatively, you can also define the barcode pattern using a regex instead (--extract-method=regex) in which there are named groups to define the positions for the cell barcode and UMI. For example we would change the above command to:
     
     umi_tools whitelist --stdin hgmm_100_R1.fastq.gz \
                         --bc-pattern='(?P<cell_1>.{16})(?P<umi_1>.{10})' \
@@ -129,7 +138,7 @@ Second, the `--bc-pattern`. This tells `whitelist` where to find the CB and UMI 
                         
 
          
-This interface is very powerful and flexible and allows for the specification of all sorts of interesting things, like variable length CBs (UMIs do have to be a fixed length) and tolerant linker sequences (see the inDrop example in [Variations](#Barcode-extraction-for-inDrop)).
+This interface is very powerful and flexible and allows for the specification of all sorts of interesting things, like variable length CBs (UMIs do have to be a fixed length) and tolerant linker sequences (see the inDrop example in [Variations](#Barcode-extraction-for-inDrop) and `umi_tools whitelist --help`).
 
 ### Specifying outputs
 
@@ -142,8 +151,8 @@ By default UMI-tools outputs everything, final output, logging info and progress
 
 This applies to all the UMI-Tools commands. 
 
-### Using UMI counts rather than read counts
-Many published protocols rank CBs by the number of reads the CBs appear in. However you could also use the number of unique UMIs a CB is associated with. Note that this is still and approximation to the number of transcripts captured because the same UMI could be associated with two different transcripts and be counted as independent. Activate this with `--method=umis`.
+### Using UMI counts rather than read counts in umi_tools whitelist
+Many published protocols rank CBs by the number of reads the CBs appear in. However you could also use the number of unique UMIs a CB is associated with. Note that this is still an approximation to the number of transcripts captured because the same UMI could be associated with two different transcripts and be counted as independent. Activate this with `--method=umis`.
 
 ### Contents of `whitelist.txt`
 
@@ -356,7 +365,7 @@ To encode this in the barcode pattern, we must provide the option `--extract-met
 
 This translates to: 8-12 characters (group="cell_1"), followed by "GAGTGATTGCTTGTGACGCCTT" (group="discard_1"), followed by 8 characters (group="cell_2"), followed by 6 characters (group="umi_1"), followed by 3 or more "T"s.
 
-The other benefit of using a regex is that we can perform ['fuzzy'](https://pypi.python.org/pypi/regex/) matching. For example, the inDrop adapter sequence is 22bp long so it may sometimes contain base calling errors. We can allow usp to two substituions like so:
+The other benefit of using a regex is that we can perform ['fuzzy'](https://pypi.python.org/pypi/regex/). For example, the inDrop adapter sequence is 22bp long so it may sometimes contain base calling errors. We can allow usp to two substituions like so:
 
 `--bc-pattern="(?P<cell_1>.{8,12})(?P<discard_1>GAGTGATTGCTTGTGACGCCTT){s<=2}(?P<cell_2>.{8})(?P<umi_1>.{6})T{3}.*"`
 

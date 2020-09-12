@@ -28,7 +28,7 @@ To use a specific tool, type::
 from __future__ import absolute_import
 import os
 import sys
-import imp
+import importlib
 from umi_tools import __version__
 
 
@@ -39,6 +39,8 @@ def main(argv=None):
     path = os.path.abspath(os.path.dirname(__file__))
 
     if len(argv) == 1 or argv[1] == "--help" or argv[1] == "-h":
+        print("For full UMI-tools documentation, see: "
+              "https://umi-tools.readthedocs.io/en/latest/\n")
         print(globals()["__doc__"])
 
         return
@@ -48,14 +50,15 @@ def main(argv=None):
 
         return
 
+    elif argv[2] in ["--help", "-h", "--help-extended"]:
+        print("UMI-Tools: Version %s" % __version__)
+
     command = argv[1]
 
-    (file, pathname, description) = imp.find_module(command, [path, ])
-    module = imp.load_module(command, file, pathname, description)
+    module = importlib.import_module("umi_tools." + command, "umi_tools")
     # remove 'umi-tools' from sys.argv
     del sys.argv[0]
     module.main(sys.argv)
-
 
 if __name__ == "__main__":
     sys.exit(main())
