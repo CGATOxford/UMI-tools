@@ -404,6 +404,7 @@ def getKneeEstimateDistance(cell_barcode_counts,
     return(final_barcodes)
 
 
+# Function contributed by https://github.com/redst4r
 def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
@@ -412,11 +413,14 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
 
     true_to_false = collections.defaultdict(set)
 
-    # the cython distance function has some weird bugs, lets use a native python
-    # distance function, no bytes etc
+    # Unexpected results with cythonise hamming distance so redefine in python here
     def hamming_distance(first, second):
         ''' returns the edit distance/hamming distances between
         its two arguements '''
+
+        # We only want to define hamming distance for barcodes with the same length
+        if len(first) != len(second):
+            return np.inf
 
         dist = sum([not a == b for a, b in zip(first, second)])
         return dist
@@ -427,22 +431,28 @@ def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     tree2 = pybktree.BKTree(hamming_distance, whitelist)
     U.info('done building bktree')
 
-    for i, cell_barcode in enumerate(cell_barcodes):
+    for cell_barcode in cell_barcodes:
 
         if cell_barcode in whitelist:
             # if the barcode is already whitelisted, no need to add
             continue
+
         # get all members of whitelist that are at distance 1
-        candidates = [white_cell for d, white_cell in tree2.find(cell_barcode, threshold) if d > 0]
+        candidates = [white_cell for
+                      d, white_cell in
+                      tree2.find(cell_barcode, threshold) if
+                      d > 0]
 
         if len(candidates) == 0:
             # the cell doesnt match to any whitelisted barcode,
             # hence we have to drop it
             # (as it cannot be asscociated with any frequent barcde)
             continue
+
         elif len(candidates) == 1:
             white_cell_str = candidates[0]
             true_to_false[white_cell_str].add(cell_barcode)
+
         else:
             # more than on whitelisted candidate:
             # we drop it as its not uniquely assignable
