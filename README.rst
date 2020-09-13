@@ -1,4 +1,4 @@
-![logo](https://user-images.githubusercontent.com/6096414/93030687-c7cf7300-f61c-11ea-92b8-102ec17ef6aa.png)
+.. image:: https://user-images.githubusercontent.com/6096414/93030687-c7cf7300-f61c-11ea-92b8-102ec17ef6aa.png
 
 UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
 
