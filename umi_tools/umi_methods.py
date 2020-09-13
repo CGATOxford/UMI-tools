@@ -16,7 +16,6 @@ from builtins import dict
 
 import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
-import pybktree
 
 RANGES = {
     'phred33': (33, 77),
@@ -123,9 +122,6 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
             raise ValueError("\nRead pairs do not match\n%s != %s" %
                              (pair_id, read2.identifier.split()[0]))
         yield (read1, read2)
-# End of FastqIterate()
-###############################################################################
-###############################################################################
 
 
 def get_average_umi_distance(umis):

@@ -23,6 +23,7 @@ from scipy.signal import argrelextrema
 
 import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
+import pybktree
 
 
 def getKneeEstimateDensity(cell_barcode_counts,
@@ -406,32 +407,46 @@ def getKneeEstimateDistance(cell_barcode_counts,
 def getErrorCorrectMapping(cell_barcodes, whitelist, threshold=1):
     ''' Find the mappings between true and false cell barcodes based
     on an edit distance threshold.
-
     Any cell barcode within the threshold to more than one whitelist
     barcode will be excluded'''
 
     true_to_false = collections.defaultdict(set)
 
-    whitelist = set([str(x).encode("utf-8") for x in whitelist])
+    # the cython distance function has some weird bugs, lets use a native python
+    # distance function, no bytes etc
+    def hamming_distance(first, second):
+        ''' returns the edit distance/hamming distances between
+        its two arguements '''
 
-    for cell_barcode in cell_barcodes:
-        match = None
-        barcode_in_bytes = str(cell_barcode).encode("utf-8")
-        for white_cell in whitelist:
+        dist = sum([not a == b for a, b in zip(first, second)])
+        return dist
 
-            if barcode_in_bytes in whitelist:  # don't check if whitelisted
-                continue
+    whitelist = set([str(x) for x in whitelist])
 
-            if edit_distance(barcode_in_bytes, white_cell) <= threshold:
-                if match is not None:  # already matched one barcode
-                    match = None  # set match back to None
-                    break  # break and don't add to maps
-                else:
-                    match = white_cell.decode("utf-8")
+    U.info('building bktree')
+    tree2 = pybktree.BKTree(hamming_distance, whitelist)
+    U.info('done building bktree')
 
-        if match is not None:
-            true_to_false[match].add(cell_barcode)
+    for i, cell_barcode in enumerate(cell_barcodes):
 
+        if cell_barcode in whitelist:
+            # if the barcode is already whitelisted, no need to add
+            continue
+        # get all members of whitelist that are at distance 1
+        candidates = [white_cell for d, white_cell in tree2.find(cell_barcode, threshold) if d > 0]
+
+        if len(candidates) == 0:
+            # the cell doesnt match to any whitelisted barcode,
+            # hence we have to drop it
+            # (as it cannot be asscociated with any frequent barcde)
+            continue
+        elif len(candidates) == 1:
+            white_cell_str = candidates[0]
+            true_to_false[white_cell_str].add(cell_barcode)
+        else:
+            # more than on whitelisted candidate:
+            # we drop it as its not uniquely assignable
+            continue
     return true_to_false
 
 
