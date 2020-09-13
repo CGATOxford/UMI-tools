@@ -1,4 +1,4 @@
-.. image:: https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?url=https://cloud.githubusercontent.com/assets/6096414/19521726/a4dea98e-960c-11e6-806a-a18ff04a391e.png&container=focus&resize_w=550
+![logo](https://user-images.githubusercontent.com/6096414/93030687-c7cf7300-f61c-11ea-92b8-102ec17ef6aa.png)
 
 UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract>`_ on 18 Jan '17 (open access)
 
