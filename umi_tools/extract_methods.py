@@ -470,6 +470,7 @@ class ExtractFilterAndUpdate:
                  either_read=False,
                  either_read_resolve="discard"):
 
+        self.method = method
         self.read_counts = collections.Counter()
         self.pattern = pattern
         self.pattern2 = pattern2
@@ -493,7 +494,7 @@ class ExtractFilterAndUpdate:
 
         # If the pattern is a string we can identify the position of
         # the cell and umi bases at instantiation
-        if method == "string":
+        if self.method == "string":
             if prime3:
                 self.extract = self._extract_3prime
                 self.joiner = self._joiner_3prime
@@ -525,7 +526,7 @@ class ExtractFilterAndUpdate:
             self.getCellBarcode = self._getCellBarcodeString
             self.getBarcodes = self._getBarcodesString
 
-        elif method == "regex":
+        elif self.method == "regex":
             self.getCellBarcode = self._getCellBarcodeRegex
             self.getBarcodes = self._getBarcodesRegex
 
@@ -533,6 +534,20 @@ class ExtractFilterAndUpdate:
         return self.read_counts
 
     def __call__(self, read1, read2=None):
+
+        # Check for string ensures sensible error message rather
+        # than out of bounds exception (#424)
+        # Check for regex is more complex.
+        # Reads too short with regex pattern will silently fail to match
+        if self.method == "string":
+            if(len(read1.seq) < len(self.pattern)):
+                raise ValueError('Read sequence: %s is shorter than pattern: %s' % (
+                    read1.seq, self.pattern))
+
+            if(read2 is not None and self.pattern2 is not None and
+               len(read2.seq) < len(self.pattern2)):
+                raise ValueError('Read2 sequence: %s is shorter than pattern2: %s' % (
+                    read2.seq, self.pattern2))
 
         self.read_counts['Input Reads'] += 1
 
