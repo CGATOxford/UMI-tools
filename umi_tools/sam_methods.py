@@ -478,7 +478,7 @@ class get_bundles:
 
             else:
 
-                start, pos, is_spliced = get_read_position(
+                self.start, pos, is_spliced = get_read_position(
                     read, self.options.soft_clip_threshold)
 
                 do_output, out_keys = self.check_output()
