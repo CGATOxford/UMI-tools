@@ -15,6 +15,6 @@ The network-based methods, *cluster*, *adjacency* and *directional*, build netwo
 
 **cluster**: Form networks of connected UMIs (based on hamming distance threshold). Each connected component is a read group
 
-**adjacency**: Form networks as above. For each connected component, select the node (UMI) with the highest counts. Visit all nodes one edge away. If all nodes have been visited, stop. Otherwise, select the top 2 nodes with highest counts and visit all nodes one edge. Repeat process until all nodes have been visited. Nodes which are not one of the n selected nodes are placed in a read group with the selected node with the highest counts for which there is an edge. 
+**adjacency**: Form networks as above. For each connected component, select the node (UMI) with the highest counts. Visit all nodes one edge away. If all nodes have been visited, stop. Otherwise, select the top 2 nodes with highest counts and visit all nodes one edge away. Repeat process until all nodes have been visited. Nodes which are not one of the n selected nodes are placed in a read group with the selected node with the highest counts for which there is an edge. 
 
 **directional** (default): Form networks with edges defined based on hamming distance threshold and umi A counts >= (2 * umi B counts) - 1. Each connected component is a read group.
