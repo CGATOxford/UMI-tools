@@ -7,4 +7,5 @@ six
 regex
 scipy
 matplotlib
+pybktree
 python>=3.5
