@@ -56,7 +56,6 @@ umi_tools extract --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
                   --stdout hgmm_100_R1_extracted.fastq.gz \
                   --read2-in hgmm_100_R2.fastq.gz \
                   --read2-out=hgmm_100_R2_extracted.fastq.gz \
-                  --filter-cell-barcode \
                   --whitelist=whitelist.txt; 
 # Step 4: Map reads
 STAR --runThreadN 4 \
@@ -192,11 +191,10 @@ umi_tools extract --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
                   --stdout hgmm_100_R1_extracted.fastq.gz \
                   --read2-in hgmm_100_R2.fastq.gz \
                   --read2-out=hgmm_100_R2_extracted.fastq.gz \
-                  --filter-cell-barcode \
                   --whitelist=whitelist.txt 
 ```
 
-The `--bc-pattern` and `--stdin` options are as before. Note that we send the standard out (which contains the extract Read 1s) to the a file (add `.gz` to the end of the name will trigger automatic compression). `--read2-in` and `--read2-out` specify the output files for read 2. Finally `--filter-cell-barcode` tells `extract` to only output those reads that contain accepted CBs and `--whitelist` passes the list of these sequences generated in the previous step. 
+The `--bc-pattern` and `--stdin` options are as before. Note that we send the standard out (which contains the extract Read 1s) to the a file (add `.gz` to the end of the name will trigger automatic compression). `--read2-in` and `--read2-out` specify the output files for read 2. Finally `--whitelist` passes the list of accepted CBs generated in the previous step and tells `extract` to only output those reads that contain accepted CBs. 
 
 As the end of the log makes clear, the command above took about 20 minutes
 

@@ -34,6 +34,7 @@ UMI-tools was published in `Genome Research <http://genome.cshlp.org/content/ear
 
    INSTALL
    QUICK_START
+   the_methods
    Single_cell_tutorial
    regex
    faq
@@ -64,7 +65,8 @@ The remaining commands, ``group``, ``dedup`` and
 ``count``/``count_tab``, are used to identify PCR duplicates using the
 UMIs and perform different levels of analysis depending on the needs
 of the user. A number of different UMI deduplication schemes are
-enabled - The recommended method is *directional*.
+enabled - The recommended method is *directional*. For more deails about the
+deduplication schemes see :doc:`the_methods`
 
 * dedup:
    **Groups PCR duplicates and deduplicates reads to yield one read per group**

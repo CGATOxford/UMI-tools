@@ -369,7 +369,7 @@ class get_bundles:
                 if self.options.unmapped_reads != "use":
                     if self.return_unmapped:
                         yield read, None, "single_read"
-                        continue
+                    continue
 
             if read.is_paired and (
                     read.reference_name != read.next_reference_name):

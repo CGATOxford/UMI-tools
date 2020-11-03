@@ -31,7 +31,7 @@ FASTQOUT::
 
 Using regex and filtering against a whitelist of cell barcodes::
 
-        umi_tools extract --extract-method=regex --filter-cell-barcode
+        umi_tools extract --extract-method=regex
         --bc-pattern=[REGEX] --whitlist=[WHITELIST_TSV]
         -L extract.log [OPTIONS]
 
@@ -39,21 +39,14 @@ Using regex and filtering against a whitelist of cell barcodes::
 Filtering and correcting cell barcodes
 --------------------------------------
 
-umi_tools extract can optionally filter cell barcodes
-(``--filter-cell-barcode``) against a user-supplied whitelist
-(``--whitelist``). If a whitelist is not available for your data, e.g
+umi_tools extract can optionally filter cell barcodes against a user-supplied
+whitelist (``--whitelist``). If a whitelist is not available for your data, e.g
 if you have performed droplet-based scRNA-Seq, you can use the
 whitelist tool.
 
 Cell barcodes which do not match the whitelist (user-generated or
 automatically generated) can also be optionally corrected using the
 ``--error-correct-cell`` option.
-
-"""""""""""""""""""""""""
-``--filter-cell-barcode``
-"""""""""""""""""""""""""
-     Filter cell barcodes against a user-supplied whitelist (see
-     ``--whitelist``)
 
 """"""""""""""""""""""""
 ``--error-correct-cell``
@@ -219,7 +212,7 @@ def main(argv=None):
     group.add_option("--filter-cell-barcode",
                      dest="filter_cell_barcode",
                      action="store_true",
-                     help="Filter the cell barcodes")
+                     help=optparse.SUPPRESS_HELP)
     group.add_option("--error-correct-cell",
                      dest="error_correct_cell",
                      action="store_true",
@@ -306,14 +299,22 @@ def main(argv=None):
                               add_umi_grouping_options=False,
                               add_sam_options=False)
 
+    if options.filter_cell_barcode:
+        U.info('Use of --whitelist ensures cell barcodes are filtered. '
+               '--filter-cell-barcode is no longer required and may be '
+               'removed in future versions.')
+
+    if options.whitelist is not None:
+        options.filter_cell_barcode = True
+
     if options.retain_umi and not options.extract_method == "regex":
         U.error("option --retain-umi only works with --extract-method=regex")
 
     if (options.filtered_out and not options.extract_method == "regex" and
-        not filter_cell_barcodes):
+        whitelist is None):
         U.error("Reads will not be filtered unless extract method is"
                 "set to regex (--extract-method=regex) or cell"
-                "barcodes are filtered (--filter-cell-barcode)")
+                "barcodes are filtered (--whitelist)")
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
@@ -355,11 +356,7 @@ def main(argv=None):
                         "(starting with 'umi_') %s, %s" (
                             options.pattern, options.pattern2))
 
-    if options.filter_cell_barcodes:
-
-        if not options.whitelist:
-                U.error("must provide a whitelist (--whitelist) if using "
-                        "--filter-cell-barcode option")
+    if options.whitelist:
 
         if not extract_cell:
             if options.extract_method == "string":
@@ -404,7 +401,7 @@ def main(argv=None):
         ReadExtractor.umi_whitelist_counts = collections.defaultdict(
             lambda: collections.Counter())
 
-    if options.filter_cell_barcode:
+    if options.whitelist:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
             options.whitelist,
             getErrorCorrection=options.error_correct_cell)
