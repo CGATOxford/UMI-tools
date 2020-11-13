@@ -25,7 +25,7 @@ def addBarcodesToIdentifier(read, UMI, cell):
 
 
 def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases,
-                       retain_umi=False):
+                       retain_umi=False, retain_cb=False):
     '''Remove selected bases from seq and quals
     '''
 
@@ -36,24 +36,30 @@ def extractSeqAndQuals(seq, quals, umi_bases, cell_bases, discard_bases,
 
     ix = 0
     for base, qual in zip(seq, quals):
-        if ((ix not in discard_bases) and
-            (ix not in cell_bases)):
 
+        if(ix in discard_bases):
+            pass
+
+        elif ix in cell_bases:
+            # if we are retaining the cell barcode, this base is both seq and cb
+            if retain_cb:
+                new_quals += qual
+                new_seq += base
+
+            cell_quals += qual
+
+        elif ix in umi_bases:
             # if we are retaining the umi, this base is both seq and umi
             if retain_umi:
                 new_quals += qual
                 new_seq += base
-                umi_quals += qual
 
-            else:  # base is either seq or umi
-                if ix not in umi_bases:
-                    new_quals += qual
-                    new_seq += base
-                else:
-                    umi_quals += qual
+            umi_quals += qual
 
-        elif ix in cell_bases:
-            cell_quals += qual
+        # if none of the above, just template sequence
+        else:
+            new_quals += qual
+            new_seq += base
 
         ix += 1
 
@@ -93,7 +99,8 @@ def ExtractBarcodes(read, match,
                     extract_umi=False,
                     extract_cell=False,
                     discard=False,
-                    retain_umi=False):
+                    retain_umi=False,
+                    retain_cb=False):
     '''Extract the cell and umi barcodes using a regex.match object
 
     inputs:
@@ -105,6 +112,7 @@ def ExtractBarcodes(read, match,
     - discard = is there a region(s) of the sequence which should be
       discarded entirely?
     - retain_umi = Should UMI sequence be retained on the read sequence
+    - retain_cb = Should cell barcode sequence be retained on the read sequence
 
     returns:
 
@@ -140,7 +148,8 @@ def ExtractBarcodes(read, match,
             discard_bases.update(range(span[0], span[1]))
 
     new_seq, new_quals, umi_quals, cell_quals = extractSeqAndQuals(
-        read.seq, read.quals, umi_bases, cell_bases, discard_bases, retain_umi)
+        read.seq, read.quals, umi_bases, cell_bases, discard_bases,
+        retain_umi, retain_cb)
 
     return (cell_barcode, cell_barcode_quals,
             umi, umi_quals,
@@ -250,12 +259,16 @@ class ExtractFilterAndUpdate:
                 (cell, cell_quals, umi, umi_quals,
                  new_seq, new_quals) = ExtractBarcodes(
                      read1, match, extract_cell=self.extract_cell,
-                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+                     extract_umi=True, discard=True,
+                     retain_umi=self.retain_umi,
+                     retain_cb=self.retain_cb)
             if match2:
                 (cell2, cell_quals2, umi2, umi_quals2,
                  new_seq2, new_quals2) = ExtractBarcodes(
                      read2, match2, extract_cell=self.extract_cell,
-                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+                     extract_umi=True, discard=True,
+                     retain_umi=self.retain_umi,
+                     retain_cb=self.retain_cb)
 
             if match and match2:
                 if self.either_read_resolve == "quality":
@@ -293,7 +306,9 @@ class ExtractFilterAndUpdate:
                  umi, umi_quals,
                  new_seq, new_quals) = ExtractBarcodes(
                      read1, match, extract_cell=self.extract_cell,
-                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+                     extract_umi=True, discard=True,
+                     retain_umi=self.retain_umi,
+                     retain_cb=self.retain_cb)
             else:
                 cell, cell_quals, umi, umi_quals, new_seq, new_quals = ("",)*6
 
@@ -302,7 +317,9 @@ class ExtractFilterAndUpdate:
                  umi2, umi_quals2,
                  new_seq2, new_quals2) = ExtractBarcodes(
                      read2, match2, extract_cell=self.extract_cell,
-                     extract_umi=True, discard=True, retain_umi=self.retain_umi)
+                     extract_umi=True, discard=True,
+                     retain_umi=self.retain_umi,
+                     retain_cb=self.retain_cb)
 
                 cell += cell2
                 cell_quals += cell_quals2
@@ -467,6 +484,7 @@ class ExtractFilterAndUpdate:
                  filter_umi_barcode=False,
                  filter_cell_barcode=False,
                  retain_umi=False,
+                 retain_cb=False,
                  either_read=False,
                  either_read_resolve="discard"):
 
@@ -481,6 +499,7 @@ class ExtractFilterAndUpdate:
         self.filter_umi_barcodes = filter_umi_barcode
         self.filter_cell_barcodes = filter_cell_barcode
         self.retain_umi = retain_umi
+        self.retain_cb = retain_cb
         self.either_read = either_read
         self.either_read_resolve = either_read_resolve
 

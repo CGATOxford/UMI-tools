@@ -188,9 +188,6 @@ def main(argv=None):
 
     group = U.OptionGroup(parser, "extract-specific options")
 
-    # (Experimental option) Retain the UMI in the sequence read"
-    group.add_option("--retain-umi", dest="retain_umi", action="store_true",
-                     help=optparse.SUPPRESS_HELP)
     group.add_option("--read2-out", dest="read2_out", type="string",
                      help="file to output processed paired read to")
     group.add_option("--read2-stdout", dest="read2_stdout",
@@ -271,6 +268,12 @@ def main(argv=None):
                            "contain a UMI but using --either-read."
                            "Choose from 'discard' or 'quality'"
                            "(use highest quality). default=dicard"))
+    group.add_option("--retain-umi", dest="retain_umi", action="store_true",
+                     help=('Copy the UMI to the read header but retain it'
+                           'in the sequence also'))
+    group.add_option("--retain-cell-barcode", dest="retain_cb", action="store_true",
+                     help=('Copy the cell barcode to the read header but retain it'
+                           'in the sequence also'))
 
     parser.add_option_group(group)
 
@@ -309,6 +312,9 @@ def main(argv=None):
 
     if options.retain_umi and not options.extract_method == "regex":
         U.error("option --retain-umi only works with --extract-method=regex")
+
+    if options.retain_cb and not options.extract_method == "regex":
+        U.error("option --retain-cell-barcode only works with --extract-method=regex")
 
     if (options.filtered_out and not options.extract_method == "regex" and
         whitelist is None):
@@ -383,6 +389,7 @@ def main(argv=None):
         options.filter_umi,
         options.filter_cell_barcode,
         options.retain_umi,
+        options.retain_cb,
         options.either_read,
         options.either_read_resolve)
 
