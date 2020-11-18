@@ -14,18 +14,52 @@ import random
 from functools import partial
 import umi_tools.Utilities as U
 
+def repeater(string):
 
-def get_barcode_read_id(read, cell_barcode=False, sep="_"):
+    i = 0
+    n = 0
+    umis = []
+    for x in range(0, len(string)):
+
+        substr = string[x:x+2]
+        if i % 2:
+            pass
+        else:
+            if ("CC" in substr or "GG" in substr or "AA" in substr or "TT" in substr):
+#                print("Perfect umi so return single sequence not double")
+                n += 1
+                if n == len(string)/2:
+                    umi = string[::2]
+                    umis.append(umi)
+
+            else:
+                umi1 = string[::2]
+                umi2 = string[1::2]
+                umis.append(umi1)
+                umis.append(umi2)
+                break
+
+
+
+        i+=1
+    return(umis)
+
+
+def get_barcode_read_id(read, cell_barcode=False, dual_nucleotide=False, sep="_"):
     ''' extract the umi +/- cell barcode from the read id using the
     specified separator '''
 
     try:
         if cell_barcode:
-            umi = read.qname.split(sep)[-1].encode('utf-8')
+
+            umi = read.qname.split(sep)[-1]
             cell = read.qname.split(sep)[-2].encode('utf-8')
         else:
-            umi = read.qname.split(sep)[-1].encode('utf-8')
+            umi = read.qname.split(sep)[-1]
             cell = None
+        if dual_nucleotide:
+
+            umi = repeater(umi)
 
         return umi, cell
 
@@ -173,6 +207,7 @@ class get_bundles:
             self.barcode_getter = partial(
                 get_barcode_read_id,
                 cell_barcode=self.options.per_cell,
+                dual_nucleotide=self.options.dual_nucleotide,
                 sep=self.options.umi_sep)
 
         elif self.options.get_umi_method == "tag":
@@ -369,7 +404,7 @@ class get_bundles:
                 if self.options.unmapped_reads != "use":
                     if self.return_unmapped:
                         yield read, None, "single_read"
-                    continue
+                        continue
 
             if read.is_paired and (
                     read.reference_name != read.next_reference_name):
@@ -478,7 +513,7 @@ class get_bundles:
 
             else:
 
-                self.start, pos, is_spliced = get_read_position(
+                start, pos, is_spliced = get_read_position(
                     read, self.options.soft_clip_threshold)
 
                 do_output, out_keys = self.check_output()
@@ -505,7 +540,9 @@ class get_bundles:
 
             # update dictionaries
             key = (key, cell)
-            self.update_dicts(read, pos, key, umi)
+            for individual_umi in umi:
+                individual_umi = individual_umi.encode('utf-8')
+                self.update_dicts(read, pos, key, individual_umi)
 
             if self.metacontig_contig:
                 # keep track of observed contigs for each gene
