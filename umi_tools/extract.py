@@ -424,7 +424,7 @@ def main(argv=None):
     if options.filtered_out:
         filtered_out = U.openFile(options.filtered_out, "w")
 
-    if options.read2_in is None:
+    if options.filtered_out and options.read2_in is None:
         for read in read1s:
 
             # incrementing count for monitoring progress
@@ -443,7 +443,7 @@ def main(argv=None):
 
             if not new_read:
                 if options.filtered_out:
-                    filtered_out.write(str(read1) + "\n")
+                    filtered_out.write(str(read) + "\n")
                 continue
 
             options.stdout.write(str(new_read) + "\n")
