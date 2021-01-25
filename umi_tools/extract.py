@@ -424,7 +424,7 @@ def main(argv=None):
     if options.filtered_out:
         filtered_out = U.openFile(options.filtered_out, "w")
 
-    if options.filtered_out and options.read2_in is None:
+    if options.read2_in is None:
         for read in read1s:
 
             # incrementing count for monitoring progress
