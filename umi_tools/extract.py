@@ -443,7 +443,7 @@ def main(argv=None):
 
             if not new_read:
                 if options.filtered_out:
-                    filtered_out.write(str(read1) + "\n")
+                    filtered_out.write(str(read) + "\n")
                 continue
 
             options.stdout.write(str(new_read) + "\n")
