@@ -1175,7 +1175,7 @@ def validateExtractOptions(options):
                                  options.pattern, options.pattern2))
         elif options.extract_method == "regex":
             raise ValueError("barcode regex(es) do not include any umi groups "
-                             "(starting with 'umi_') %s, %s" (
+                             "(starting with 'umi_') %s, %s" % (
                                  options.pattern, options.pattern2))
 
     return(extract_cell, extract_umi)
