@@ -348,7 +348,7 @@ def main(argv=None):
                         options.pattern, options.pattern2))
         elif options.extract_method == "regex":
             U.error("barcode regex(es) do not include any cell groups "
-                    "(starting with 'cell_') %s, %s" (
+                    "(starting with 'cell_') %s, %s" % (
                         options.pattern, options.pattern2))
 
     read1s = umi_methods.fastqIterate(options.stdin)
