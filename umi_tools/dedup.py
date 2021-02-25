@@ -273,16 +273,27 @@ def main(argv=None):
     if options.chrom:
         inreads = infile.fetch(reference=options.chrom)
 
-    else:
-        if options.per_contig and options.gene_transcript_map:
+    elif options.per_contig and options.gene_transcript_map:
             metacontig2contig = sam_methods.getMetaContig2contig(
                 infile, options.gene_transcript_map)
             metatag = "MC"
             inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
 
-        else:
-            inreads = infile.fetch()
+    # the standard bai index can only deal with positions upto 2**29 -1. CSI
+    # indexs can deal with longer. pysam automatically opens CSI indexes, and
+    # will allow calls to fetch for longer positions. Howevere, the straight
+    # call to fetch() doesn't work. Issue raised on pysam (#996). In the 
+    # meantime, maybe this patch will do the trick?
+    elif any(l > 2**29 - 1 for l in infile.lengths):
+        def _chrom_itr(sf):
+            for contig in sf.references:
+                for read in sf.fetch(contig):
+                    yield read
+        inreads = _chrom_itr(infile)
+    
+    else:
+        inreads = infile.fetch()
 
     # set up ReadCluster functor with methods specific to
     # specified options.method
