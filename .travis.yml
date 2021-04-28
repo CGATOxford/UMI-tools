@@ -19,6 +19,7 @@ before_install:
   - pip install cython
   - pip install pandas
   - pip install scipy
+  - pip install siphashc>=2.1
 install:
   - python setup.py install
 

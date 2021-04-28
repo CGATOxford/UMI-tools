@@ -9,3 +9,4 @@ scipy
 matplotlib
 pybktree
 python>=3.5
+siphashc>=2.1

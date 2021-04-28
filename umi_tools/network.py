@@ -14,24 +14,52 @@ import numpy as np
 from umi_tools._dedup_umi import edit_distance
 import umi_tools.Utilities as U
 import umi_tools.whitelist_methods as whitelist_methods
+import siphashc
 
 sys.setrecursionlimit(10000)
+
+# the umi-tools algorithm is sensitive to the actual order
+# returned by breadth_first_search.
+# That order in turn depends on python's hash() output,
+# and that's randomized per python instance to avoid DOS attacks.
+# The tests assumed it was fixed via PYTHON_HASHSEED = 0
+
+# This fixes the hash values to be independent of python's hash()
+# function.
+hash_key = "\0" * 16  # equivalent to PYTHON_HASHSEED = 0
+
+
+class HashWrappedNode:
+    def __init__(self, val):
+        self.val = val
+
+    def __hash__(self):
+        res = siphashc.siphash(hash_key, self.val)
+        # convert unsigned to signed as python does
+        res = (res & ((1 << 63) - 1)) - (res & (1 << 63))
+        return res
+
+    def __eq__(self, other):
+        return self.val == other.val
 
 
 def breadth_first_search(node, adj_list):
     searched = set()
     queue = set()
+    node = HashWrappedNode(node)
     queue.update((node,))
     searched.update((node,))
 
     while len(queue) > 0:
         node = queue.pop()
-        for next_node in adj_list[node]:
+        for next_node in adj_list[node.val]:
+            next_node = HashWrappedNode(next_node)
             if next_node not in searched:
                 queue.update((next_node,))
                 searched.update((next_node,))
 
-    return searched
+    # must return something keeping the iteration order.
+    return [x.val for x in searched]
 
 
 def recursive_search(node, adj_list):
@@ -63,7 +91,7 @@ def remove_umis(adj_list, cluster, nodes):
                            for x in nodes
                            for node in adj_list[x]] + nodes)
 
-    return cluster - nodes_to_remove
+    return [x for x in cluster if x not in nodes_to_remove]
 
 
 def get_substr_slices(umi_length, idx_size):
