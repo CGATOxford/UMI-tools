@@ -1,6 +1,17 @@
 Release notes
 =============
 
+1.1.2
+-----
+07 May 2021
+
+**Bugfix**
+
+ - ``whitelist --filtered-out`` with SE reads threw an unassigned error. Thanks @yech1990 for rectifying this (`#453 <https://github.com/CGATOxford/UMI-tools/issues/453>`_)
+
+Also includes a very minor update of syntax (`#455 <https://github.com/CGATOxford/UMI-tools/issues/455>`_)
+
+
 1.1.1
 -----
 18 Nov 2020
