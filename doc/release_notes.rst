@@ -13,16 +13,19 @@ Updates requirements for pysam version to >0.16.0.1. Thanks @sunnymouse25 (`#444
 4 Nov 2020
 
 **Additional functionality**
-- Write out reads failing regex matching with extract/whitelist (see options --filtered-out, --filtered-out2). See `#328 <https://github.com/CGATOxford/UMI-tools/issues/328>`_ for motivation
-- Ignore template length with paired-end dedup/group (see option --ignore-tlen). See `#357 <https://github.com/CGATOxford/UMI-tools/issues/357>`_ for motivation. Thanks @skitcattCRUKMI
-- Ignore read pair suffixes with extract/whitelist e.g /1 or /2. (see option --ignore-read-pair-suffixes). See (`#325 <https://github.com/CGATOxford/UMI-tools/issues/325>`_, `#391 <https://github.com/CGATOxford/UMI-tools/issues/391>`_, `#418 <https://github.com/CGATOxford/UMI-tools/issues/418>`_, `PierreBSC/Viral-Track issue 9 <https://github.com/PierreBSC/Viral-Track/issues/9>`_) for motivation
+
+ - Write out reads failing regex matching with extract/whitelist (see options --filtered-out, --filtered-out2). See `#328 <https://github.com/CGATOxford/UMI-tools/issues/328>`_ for motivation
+ - Ignore template length with paired-end dedup/group (see option --ignore-tlen). See `#357 <https://github.com/CGATOxford/UMI-tools/issues/357>`_ for motivation. Thanks @skitcattCRUKMI
+ - Ignore read pair suffixes with extract/whitelist e.g /1 or /2. (see option --ignore-read-pair-suffixes). See (`#325 <https://github.com/CGATOxford/UMI-tools/issues/325>`_, `#391 <https://github.com/CGATOxford/UMI-tools/issues/391>`_, `#418 <https://github.com/CGATOxford/UMI-tools/issues/418>`_, `PierreBSC/Viral-Track issue 9 <https://github.com/PierreBSC/Viral-Track/issues/9>`_) for motivation
 
 **Performance**
-- Sped up error correction mapping for cell barcodes in whitelist by using BKTree. Thanks @redst4r. Note that this adds a new python dependency (pybktree) which is available via pip and conda-forge.
-- Very slight reduction in memory usage for dedup/group via bugfix to reduce the amount of reads being retained in the buffer. Thanks to @mitrinh1 for spotting this (`#428 <https://github.com/CGATOxford/UMI-tools/issues/428>`_). The bug was equivalent to hardcoding the option -buffer-whole-contig on, which ensures all reads with the same start position are grouped together for deduplication, but at the cost of not yielding reads until the end of each contig, thus increasing memory usage. As such, the bug was not detrimental to results output.
+
+ - Sped up error correction mapping for cell barcodes in whitelist by using BKTree. Thanks @redst4r. Note that this adds a new python dependency (pybktree) which is available via pip and conda-forge.
+ - Very slight reduction in memory usage for dedup/group via bugfix to reduce the amount of reads being retained in the buffer. Thanks to @mitrinh1 for spotting this (`#428 <https://github.com/CGATOxford/UMI-tools/issues/428>`_). The bug was equivalent to hardcoding the option -buffer-whole-contig on, which ensures all reads with the same start position are grouped together for deduplication, but at the cost of not yielding reads until the end of each contig, thus increasing memory usage. As such, the bug was not detrimental to results output.
 
 **Bugfixes**
-- Unmapped mates were not properly discarded with dedup and group. Thanks @Daniel-Liu-c0deb0t for rectifying this.
+
+ - Unmapped mates were not properly discarded with dedup and group. Thanks @Daniel-Liu-c0deb0t for rectifying this.
 
 1.0.1
 -----
