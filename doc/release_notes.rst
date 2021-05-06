@@ -1,9 +1,39 @@
 Release notes
 =============
 
+1.1.1
+-----
+18 Nov 2020
+
+Updates requirements for pysam version to >0.16.0.1. Thanks @sunnymouse25 (`#444 <https://github.com/CGATOxford/UMI-tools/issues/444>`_)
+
+
+1.1.0
+-----
+4 Nov 2020
+
+**Additional functionality**
+- Write out reads failing regex matching with extract/whitelist (see options --filtered-out, --filtered-out2). See `#328 <https://github.com/CGATOxford/UMI-tools/issues/328>`_ for motivation
+- Ignore template length with paired-end dedup/group (see option --ignore-tlen). See `#357 <https://github.com/CGATOxford/UMI-tools/issues/357>`_ for motivation. Thanks @skitcattCRUKMI
+- Ignore read pair suffixes with extract/whitelist e.g /1 or /2. (see option --ignore-read-pair-suffixes). See (`#325 <https://github.com/CGATOxford/UMI-tools/issues/325>`_, `#391 <https://github.com/CGATOxford/UMI-tools/issues/391>`_, `#418 <https://github.com/CGATOxford/UMI-tools/issues/418>`_, `PierreBSC/Viral-Track issue 9 <https://github.com/PierreBSC/Viral-Track/issues/9>`_) for motivation
+
+**Performance**
+- Sped up error correction mapping for cell barcodes in whitelist by using BKTree. Thanks @redst4r. Note that this adds a new python dependency (pybktree) which is available via pip and conda-forge.
+- Very slight reduction in memory usage for dedup/group via bugfix to reduce the amount of reads being retained in the buffer. Thanks to @mitrinh1 for spotting this (`#428 <https://github.com/CGATOxford/UMI-tools/issues/428>`_). The bug was equivalent to hardcoding the option -buffer-whole-contig on, which ensures all reads with the same start position are grouped together for deduplication, but at the cost of not yielding reads until the end of each contig, thus increasing memory usage. As such, the bug was not detrimental to results output.
+
+**Bugfixes**
+- Unmapped mates were not properly discarded with dedup and group. Thanks @Daniel-Liu-c0deb0t for rectifying this.
+
+1.0.1
+-----
+6 Dec 2019
+
+Debug for KeyError when some reads are missing a cell barode tag and stats output required from umi_tools dedup. See comments from @ZHUwj0 in `#281 <https://github.com/CGATOxford/UMI-tools/issues/281>`_
+
 
 1.0.0
 -----
+14 Feb 2019
 
 This release is intended to be a stable release with no plans for significant updates to UMI-tools functionality in the near future. As part of this release, much of the code base has been refactored. It is possible this may have introduced bugs which have not been picked up by the regression testing. If so, please raise an issue and we'll try and rectify with a minor release update ASAP.
 
@@ -25,7 +55,7 @@ Along with the previous documentation, the readthedocs pages also include new pa
 
 **Explicit options for handling chimeric & inproper read pairs** (`#312 <https://github.com/CGATOxford/UMI-tools/issues/312>`_)
 
-The behaviour for chimeric read pairs, inproper read pairs and unmapped reads can now be explictly set with the ``--chimeric-pairs, --unpaired-reads and --unmapped-reads.
+The behaviour for chimeric read pairs, inproper read pairs and unmapped reads can now be explictly set with the ``--chimeric-pairs``, ``--unpaired-reads`` and ``--unmapped-reads`` options.
 
 **New options**
 
