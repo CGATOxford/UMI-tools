@@ -176,7 +176,7 @@ whitelist-specific options
         Detect CBs above the threshold which may be sequence
         errors:
             - "discard"
-                  Discard all putative error CBs
+                  Discard all putative error CBs.
             - "correct"
                   Correct putative substituion errors in CBs above the
                   threshold. Discard putative insertions/deletions. Note that
@@ -296,7 +296,7 @@ def main(argv=None):
                       choices=["discard", "correct"],
                       help=("Detect CBs above the threshold which may be "
                             "sequence errors from another CB and either "
-                            "'discard' or 'correct'. Default=discard"))
+                            "'discard' or 'correct'. Default=None (No correction)"))
     parser.add_option_group(group)
 
     parser.set_defaults(method="reads",
