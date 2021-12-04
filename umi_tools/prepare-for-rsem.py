@@ -200,7 +200,7 @@ def main(argv=None):
                 if output_key not in output:
                     output.add(output_key)
                     outbam.write(mate)
-                    outbam.write(key)
+                    outbam.write(read)
 
             else:
                 U.warn("Alignment {} is neither read1 nor read2 -- skipped".format(
