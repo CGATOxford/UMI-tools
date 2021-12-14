@@ -24,7 +24,7 @@ Input must to name sorted.
 
 
 from umi_tools import Utilities as U
-from collections import defaultdict
+from collections import defaultdict, Counter
 import pysam
 import sys
 
@@ -95,6 +95,8 @@ def main(argv=None):
                               add_umi_grouping_options=False,
                               add_sam_options=False)
 
+    skipped_stats = Counter()
+
     if options.stdin != sys.stdin:
         in_name = options.stdin.name
         options.stdin.close()
@@ -163,8 +165,9 @@ def main(argv=None):
                     # there should be exactly one primary alignment at this location
                     mate = current_template[not read.is_read1][mate_key_primary][0]
                 except (KeyError, IndexError):
+                    skipped_stats["no_mate"] += 1
                     U.warn("Alignment {} has no mate -- skipped".format(
-                        "\t".join([read.query_name, read.flag, read.reference_name, read.pos])
+                        "\t".join(map(str, [read.query_name, read.flag, read.reference_name, int(read.pos)]))
                     ))
                     continue
             
@@ -191,6 +194,7 @@ def main(argv=None):
                     output.add(output_key)
                     outbam.write(read)
                     outbam.write(mate)
+                    skipped_stats["pairs_output"] += 1
 
             elif read.is_read2:
 
@@ -201,15 +205,23 @@ def main(argv=None):
                     output.add(output_key)
                     outbam.write(mate)
                     outbam.write(read)
+                    skipped_stats["pairs_output"] += 1
 
             else:
+                skipped_stats["skipped_not_read12"] += 1
                 U.warn("Alignment {} is neither read1 nor read2 -- skipped".format(
-                    "\t".join([read.query_name, read.flag, read.reference_name, read.pos])
+                    "\t".join(map(str, [read.query_name, read.flag, read.reference_name, int(read.pos)]))
                 ))
                 continue
 
     if not out_name == "-":
         outbam.close()
+    
+    U.info("Total pairs output: {}, Pairs skipped - no mates: {},"
+           " Pairs skipped - not read1 or 2: {}".format(
+               skipped_stats["pairs_output"],
+               skipped_stats["no_mate"],
+               skipped_stats["skipped_not_read12"]))
     U.Stop()
 
 if __name__ == "__main__":
