@@ -162,7 +162,7 @@ def main(argv=None):
                 try:
                     # there should be exactly one primary alignment at this location
                     mate = current_template[not read.is_read1][mate_key_primary][0]
-                except KeyError:
+                except (KeyError, IndexError):
                     U.warn("Alignment {} has no mate -- skipped".format(
                         "\t".join([read.query_name, read.flag, read.reference_name, read.pos])
                     ))
