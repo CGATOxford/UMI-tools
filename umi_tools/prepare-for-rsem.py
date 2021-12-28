@@ -50,6 +50,7 @@ def chunk_bam(bamfile):
             yield(output_buffer)
             output_buffer = list()
         
+        last_query_name = read.query_name
         output_buffer.append(read)
 
     yield (output_buffer)
@@ -68,6 +69,29 @@ def copy_tags(tags, read1, read2):
         
     return(read2)
 
+def pick_mate(read, template_dict, mate_key):
+    '''Find the mate of read in the template dict using key. It will retreieve
+    all reads at that key, and then scan to pick the one that refers to _read_
+    as it's mate. If there is no such read, it picks a first one it comes to'''
+
+    mate = None
+
+    # get a list of secondary reads at the correct alignment position
+    potential_mates = template_dict[not read.is_read1][mate_key]
+
+    # search through one at a time to find a read that points to the current read
+    # as its mate.
+    for candidate_mate in potential_mates:
+        if candidate_mate.next_reference_name == read.reference_name and \
+            candidate_mate.next_reference_start == read.pos:
+            mate = candidate_mate
+               
+    # if no such read is found, then pick any old secondary alignment at that position
+    # note: this happens when UMI-tools outputs the wrong read as something's pair.
+    if mate is None and len(potential_mates) >0:
+        mate = potential_mates[0]
+
+    return mate
 
 def main(argv=None):
 
@@ -122,6 +146,7 @@ def main(argv=None):
 
     for template in chunk_bam(inbam):
         
+        assert len(set(r.query_name for r in template)) == 1
         current_template = {True: defaultdict(list),
                             False: defaultdict(list)}
 
@@ -137,39 +162,31 @@ def main(argv=None):
            
             # if this read is a non_primary alignment, we first want to check if it has a mate
             # with the non-primary alignment flag set. 
+
+            mate_key_primary = ( True)
             mate_key_secondary = (read.next_reference_name, read.next_reference_start, False)
-            if read.is_secondary:
+            
+            # First look for a read that has the same primary/secondary status
+            # as read (i.e. secondary mate for secondary read, and primary mate
+            # for primary read)
+            mate_key = (read.next_reference_name, read.next_reference_start,
+                        read.is_secondary)
+            mate = pick_mate(read, current_template, mate_key)
 
-                # get a list of secondary reads at the correct alignment position
-                potential_secondary_mates = current_template[not read.is_read1][mate_key_secondary]
-
-                # search through one at a time to find a read that points to the current read
-                # as its mate.
-                for candidate_mate in potential_secondary_mates:
-                    if candidate_mate.next_reference_name == read.reference_name and \
-                       candidate_mate.next_reference_start == read.pos:
-                        mate = candidate_mate
-                
-                # if no such read is found, then pick any old secondary alignment at that position
-                # note: this happens when UMI-tools outputs the wrong read as somethings pair.
-                if mate is None and len(potential_secondary_mates) >0:
-                    mate = potential_secondary_mates[0]
-
-            # The following happens if read is primary, or is secondary, but doesn't point to a secondary
-            # alignment as its mate (or at least we didn't find one). If which case find the primary 
-            # alignment at that location.
+            # If none was found then look for the opposite (primary mate of secondary
+            # read or seconadary mate of primary read)
             if mate is None:
-                mate_key_primary = (read.next_reference_name, read.next_reference_start, True)
+                mate_key = (read.next_reference_name, read.next_reference_start,
+                            not read.is_secondary)
+                mate = pick_mate(read, current_template, mate_key)
 
-                try:
-                    # there should be exactly one primary alignment at this location
-                    mate = current_template[not read.is_read1][mate_key_primary][0]
-                except (KeyError, IndexError):
-                    skipped_stats["no_mate"] += 1
-                    U.warn("Alignment {} has no mate -- skipped".format(
-                        "\t".join(map(str, [read.query_name, read.flag, read.reference_name, int(read.pos)]))
-                    ))
-                    continue
+            # If we still don't have a mate, then their can't be one?
+            if mate is None:
+                skipped_stats["no_mate"] += 1
+                U.warn("Alignment {} has no mate -- skipped".format(
+                    "\t".join(map(str, [read.query_name, read.flag, read.reference_name, int(read.pos)]))
+                ))
+                continue
             
             # because we might want to make changes to the read, but not have those changes reflected
             # if we need the read again,we copy the read. This is only way I can find to do this.
