@@ -22,7 +22,7 @@ stdout::
         --bc-pattern=[PATTERN] -L extract.log [OPTIONS]
 
 For paired end reads, the following reads end one from stdin and end
-two from FASTQIN and outputs end one to stdin and end two to
+two from FASTQIN and outputs end one to stdout and end two to
 FASTQOUT::
 
         umi_tools extract --extract-method=string
