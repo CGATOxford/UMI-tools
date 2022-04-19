@@ -311,7 +311,7 @@ def main(argv=None):
         U.error("option --retain-umi only works with --extract-method=regex")
 
     if (options.filtered_out and not options.extract_method == "regex" and
-        whitelist is None):
+        options.whitelist is None):
         U.error("Reads will not be filtered unless extract method is"
                 "set to regex (--extract-method=regex) or cell"
                 "barcodes are filtered (--whitelist)")
