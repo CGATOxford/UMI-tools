@@ -1,10 +1,8 @@
 '''
 umi_tools.py - Tools for UMI analyses
-===============================================
+=====================================
 
 :Author: Tom Smith & Ian Sudbury, CGAT
-:Release: $Id$
-:Date: |today|
 :Tags: Genomics UMI
 
 There are 6 tools:
@@ -50,12 +48,22 @@ def main(argv=None):
 
         return
 
-    elif argv[2] in ["--help", "-h", "--help-extended"]:
+    elif len(argv) > 2 and  argv[2] in ["--help", "-h", "--help-extended"]:
         print("UMI-Tools: Version %s" % __version__)
 
     command = argv[1]
 
-    module = importlib.import_module("umi_tools." + command, "umi_tools")
+    try:
+        module = importlib.import_module("umi_tools." + command, "umi_tools")
+    except ImportError:
+        print("Command %s not recognosied" % command)
+        print()
+        print("For full UMI-tools documentation, see: "
+              "https://umi-tools.readthedocs.io/en/latest/\n")
+        print(globals()["__doc__"])
+
+        return (1)
+    
     # remove 'umi-tools' from sys.argv
     del sys.argv[0]
     module.main(sys.argv)
