@@ -63,7 +63,7 @@ def main(argv=None):
         print(globals()["__doc__"])
 
         return (1)
-    
+
     # remove 'umi-tools' from sys.argv
     del sys.argv[0]
     module.main(sys.argv)
