@@ -131,7 +131,7 @@ def main(argv=None):
         parser.print_usage()
         print ("Required options missing, see --help for more details")
         return 1
-    
+
     group = U.OptionGroup(parser, "group-specific options")
 
     group.add_option("--group-out", dest="tsv", type="string",

@@ -190,7 +190,7 @@ def main(argv=None):
         parser.print_usage()
         print ("Required options missing, see --help for more details")
         return 1
-    
+
     group = U.OptionGroup(parser, "extract-specific options")
 
     # (Experimental option) Retain the UMI in the sequence read"
