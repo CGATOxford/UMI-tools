@@ -121,7 +121,7 @@ def main(argv=None):
 
     if argv is None:
         argv = sys.argv
-        
+
     # setup command line parser
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=usage,
