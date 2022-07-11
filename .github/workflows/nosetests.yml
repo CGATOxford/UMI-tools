@@ -32,4 +32,5 @@ jobs:
           python setup.py install
       - name: Test with nosetests
         run: |
+          export PYTHONHASHSEED=0
           nosetests -v tests/test_umi_tools.py
