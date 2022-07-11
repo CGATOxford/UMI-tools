@@ -12,6 +12,9 @@ import collections
 import re
 import random
 from functools import partial
+
+import pysam
+
 import umi_tools.Utilities as U
 
 
@@ -572,6 +575,7 @@ class TwoPassPairWriter:
 
     def __init__(self, infile, outfile, tags=False):
         self.infile = infile
+        self.mate_file = pysam.AlignmentFile(infile.filename)
         self.outfile = outfile
         self.read1s = set()
         self.chrom = None
@@ -601,7 +605,7 @@ class TwoPassPairWriter:
             U.debug("Dumping %i mates for contig %s" % (
                 len(self.read1s), self.chrom))
 
-        for read in self.infile.fetch(reference=self.chrom, multiple_iterators=True):
+        for read in self.mate_file.fetch(reference=self.chrom, multiple_iterators=False):
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
 
@@ -621,7 +625,7 @@ class TwoPassPairWriter:
                len(self.read1s))
 
         found = 0
-        for read in self.infile.fetch(until_eof=True, multiple_iterators=True):
+        for read in self.mate_file.fetch(until_eof=True, multiple_iterators=False):
 
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
