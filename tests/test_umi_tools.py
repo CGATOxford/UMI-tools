@@ -237,7 +237,7 @@ def test_tool():
     fn = 'tests/tests.yaml'
     assert os.path.exists(fn), "tests.yaml does not exist!"
 
-    tool_tests = yaml.load(open(fn))
+    tool_tests = yaml.safe_load(open(fn))
 
     for test, values in sorted(list(tool_tests.items())):
         check_script.description = os.path.join(tool_name, test)
