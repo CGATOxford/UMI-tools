@@ -58,7 +58,7 @@ extract_indrop_output_filtered:
       stdin: indrop.fastq.1.gz
       outputs: [stdout, indrop_fuzzy_filtered.1.fastq.gz, indrop_fuzzy_filtered.2.fastq.gz]
       references: [indrop_extract_fuzzy_filtered_out.fastq, indrop_fuzzy_filtered.1.fastq.gz, indrop_fuzzy_filtered.2.fastq.gz]
-      options: umi_tools extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --read2-stdout --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv  --filtered-out=indrop_fuzzy_filtered.1.fastq.gz --filtered-out2=indrop_fuzzy_filtered.2.fastq.gz
+      options: extract --extract-method=regex --read2-in=<DIR>/indrop.fastq.2.gz --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" --read2-stdout --error-correct-cell --whitelist=<DIR>/indrop_fuzzy_whitelist.tsv  --filtered-out=indrop_fuzzy_filtered.1.fastq.gz --filtered-out2=indrop_fuzzy_filtered.2.fastq.gz
 
 extract_scrb_seq_prefiltered:
       stdin: scrb_filtered_fastq.1.gz
@@ -85,7 +85,7 @@ whitelist_indrop:
       stdin: indrop.fastq.1.gz
       outputs: [stdout]
       references: [indrop_whitelist.tsv]
-      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log 
+      options: whitelist --extract-method=regex --bc-pattern="(?P<cell_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT)(?P<cell_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log
 
 whitelist_indrop_filtered_out:
       stdin: indrop.fastq.1.gz
@@ -225,7 +225,7 @@ dedup_single_sep:
       stdin: chr19_sep.bam
       outputs: [stdout]
       references: [single_sep_py3.sam]
-      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:" 
+      options: "dedup -L test.log --out-sam --random-seed=123456789 --method=directional --umi-separator=:"
 
 dedup_single_tag:
       stdin: chr19_tag.bam
@@ -247,10 +247,10 @@ dedup_single_gene_tag:
 
 dedup_paired_umi_whitelist:
       sort: True
-      stdin: whitelist_umi_input.bam 
+      stdin: whitelist_umi_input.bam
       outputs: [stdout]
       references: [whitelist_umi_output.sam]
-      options: dedup --paired --log=test.log --filter-umi --umi-whitelist=<DIR>/umi_whitelist.tsv --umi-whitelist-paired=<DIR>/umi_whitelist.tsv --out-sam --random-seed=123456789 
+      options: dedup --paired --log=test.log --filter-umi --umi-whitelist=<DIR>/umi_whitelist.tsv --umi-whitelist-paired=<DIR>/umi_whitelist.tsv --out-sam --random-seed=123456789
 
 dedup_paired_ignore_tlen_tag:
       stdin: paired.bam
@@ -280,7 +280,7 @@ group_adjacency:
       stdin: chr19.bam
       outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]
-      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv 
+      options: group -L test.log --out-sam --random-seed=123456789 --method=adjacency --output-bam --out-sam --group-out=group_adj_py3.tsv
 
 group_directional:
       stdin: chr19.bam

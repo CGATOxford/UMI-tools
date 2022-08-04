@@ -28,8 +28,6 @@ from nose.tools import ok_
 PYTHON_VERSION = platform.python_version()
 IS_PY3 = sys.version_info.major >= 3
 
-TRAVIS = os.environ.get("TRAVIS", False) == "true"
-JENKINS = os.environ.get("USER", "") == "jenkins"
 
 SUBDIRS = ("gpipe", "optic")
 
@@ -248,10 +246,6 @@ def test_tool():
                         if PYTHON_VERSION.startswith(x)]
             if len(versions) > 0:
                 continue
-        if "skip_travis" in values and TRAVIS:
-            continue
-        if "skip_jenkins" in values and JENKINS:
-            continue
 
         yield(check_script,
               test,
