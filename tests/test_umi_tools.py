@@ -28,8 +28,6 @@ from nose.tools import ok_
 PYTHON_VERSION = platform.python_version()
 IS_PY3 = sys.version_info.major >= 3
 
-TRAVIS = os.environ.get("TRAVIS", False) == "true"
-JENKINS = os.environ.get("USER", "") == "jenkins"
 
 SUBDIRS = ("gpipe", "optic")
 
@@ -237,7 +235,7 @@ def test_tool():
     fn = 'tests/tests.yaml'
     assert os.path.exists(fn), "tests.yaml does not exist!"
 
-    tool_tests = yaml.load(open(fn))
+    tool_tests = yaml.safe_load(open(fn))
 
     for test, values in sorted(list(tool_tests.items())):
         check_script.description = os.path.join(tool_name, test)
@@ -248,10 +246,6 @@ def test_tool():
                         if PYTHON_VERSION.startswith(x)]
             if len(versions) > 0:
                 continue
-        if "skip_travis" in values and TRAVIS:
-            continue
-        if "skip_jenkins" in values and JENKINS:
-            continue
 
         yield(check_script,
               test,
