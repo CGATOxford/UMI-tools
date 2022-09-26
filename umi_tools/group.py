@@ -127,6 +127,11 @@ def main(argv=None):
                             usage=usage,
                             description=globals()["__doc__"])
 
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
+
     group = U.OptionGroup(parser, "group-specific options")
 
     group.add_option("--group-out", dest="tsv", type="string",

@@ -186,6 +186,11 @@ def main(argv=None):
                             usage=usage,
                             description=globals()["__doc__"])
 
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
+
     group = U.OptionGroup(parser, "extract-specific options")
 
     # (Experimental option) Retain the UMI in the sequence read"
