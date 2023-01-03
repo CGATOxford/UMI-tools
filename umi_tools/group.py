@@ -286,7 +286,10 @@ def main(argv=None):
 
                     if options.tsv:
                         if options.per_gene:
-                            gene = read.get_tag(gene_tag)
+                            if options.per_contig:
+                                gene = read.reference_name
+                            else:
+                                gene = read.get_tag(gene_tag)
                         else:
                             gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (
