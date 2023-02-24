@@ -344,6 +344,12 @@ group_paired_use_unmapped:
       references: [paired_group_use_unmapped.sam]
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --unmapped=use --paired
 
+group_contig_no_gene_tag:
+      stdin: chr19.bam
+      outputs: [stdout]
+      references: [group_unsorted_py3.sam]
+      options: group -L test.log --out-sam --per-contig --per-gene --random-seed=123456789 --method=directional --no-sort-output --output-bam --group-out=group_contig_no_gene_tag.tsv
+
 # ### Tests to implement ####
 
 # ## dedup ##
