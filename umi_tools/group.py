@@ -285,7 +285,7 @@ def main(argv=None):
                         outfile.write(read)
 
                     if options.tsv:
-                        if options.per_gene:
+                        if options.per_gene and gene_tag is not None:
                             gene = read.get_tag(gene_tag)
                         else:
                             gene = "NA"
