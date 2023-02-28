@@ -345,6 +345,7 @@ group_paired_use_unmapped:
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --unmapped=use --paired
 
 group_contig_no_gene_tag:
+      sort: True
       stdin: chr19.bam
       outputs: [group_contig_no_gene_tag.tsv]
       references: [group_contig_no_gene_tag.tsv]

@@ -110,12 +110,8 @@ def check_script(test_name,
     options = re.sub("\n", "", options)
 
     # use /bin/bash in order to enable "<( )" syntax in shells
-    if sort:
-        statement = ("/bin/bash -c "
-                     "'umi_tools %(options)s %(stdin)s |sort > %(stdout)s'") % locals()
-    else:
-        statement = ("/bin/bash -c "
-                     "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
+    statement = ("/bin/bash -c "
+                 "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
 
     process = subprocess.Popen(statement,
                                shell=True,
@@ -159,8 +155,14 @@ def check_script(test_name,
                       (reference, tmpdir, statement)
 
             if not fail:
+
                 a = _read(output)
                 b = _read(reference)
+
+                if sort:
+                    a = sorted(a)
+                    b = sorted(b)
+
                 if a != b:
                     fail = True
                     msg = ("files %s and %s are not the same\n"
@@ -177,6 +179,11 @@ def check_script(test_name,
                             diffs.append((aa, bb))
                             if len(diffs) > 10:
                                 break
+
+                    if sort:
+                        msg += ('\n\nNote that files were sorted prior to diff so line numbers '
+                                'in diff are with respect to sorted reference '
+                                'and output files\n\n')
 
                     msg += "first 10 differences: {}".format(
                         "\n--\n".join(
