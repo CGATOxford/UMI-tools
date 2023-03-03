@@ -351,6 +351,11 @@ group_contig_no_gene_tag:
       references: [group_contig_no_gene_tag.tsv]
       options: group -L test.log --out-sam --per-contig --per-gene --random-seed=123456789 --method=directional --no-sort-output --output-bam --group-out=group_contig_no_gene_tag.tsv
 
+dedup_help:
+      outputs: [stdout]
+      references: [dedup_help.txt]
+      options: dedup --help
+
 # ### Tests to implement ####
 
 # ## dedup ##

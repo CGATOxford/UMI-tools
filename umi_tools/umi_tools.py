@@ -47,8 +47,6 @@ def main():
     elif len(argv) > 2 and  argv[2] in ["--help", "-h", "--help-extended"]:
         print("UMI-Tools: Version %s" % __version__)
 
-        return 0
-
     command = argv[1]
 
     try:
