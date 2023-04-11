@@ -377,7 +377,8 @@ def main(argv=None):
                         "(starting with 'cell_') %s, %s" % (
                             options.pattern, options.pattern2))
 
-    read1s = umi_methods.fastqIterate(options.stdin)
+    read1s = umi_methods.fastqIterate(options.stdin,
+                                      remove_suffix=options.ignore_suffix)
 
     # set up read extractor
     ReadExtractor = extract_methods.ExtractFilterAndUpdate(
@@ -463,7 +464,8 @@ def main(argv=None):
         if options.filtered_out2:
             filtered_out2 = U.openFile(options.filtered_out2, "w")
 
-        read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
+        read2s = umi_methods.fastqIterate(U.openFile(options.read2_in),
+                                          remove_suffix=options.ignore_suffix)
 
         if options.read2_out:
             read2_out = U.openFile(options.read2_out, "w")
@@ -474,7 +476,7 @@ def main(argv=None):
             strict = True
 
         for read1, read2 in umi_methods.joinedFastqIterate(
-                read1s, read2s, strict, options.ignore_suffix):
+                read1s, read2s, strict):
 
             # incrementing count for monitoring progress
             progCount += 1
