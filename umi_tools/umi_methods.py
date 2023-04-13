@@ -84,7 +84,7 @@ def fastqIterate(infile, remove_suffix=False):
         the field seperator) and sepreated with a '/'. Raises ValueError if this
         is not the case'''
         
-        components = line.split(' ')
+        components = line.strip().split(' ')
         read_id = components[0]
         
         if not read_id[-2:] in ['/1', '/2']:
