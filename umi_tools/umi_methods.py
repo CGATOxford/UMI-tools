@@ -84,7 +84,7 @@ def fastqIterate(infile, remove_suffix=False):
         the field seperator) and sepreated with a '/'. Raises ValueError if this
         is not the case'''
         
-        components = line.strip().split(' ')
+        components = line.split(' ')
         read_id = components[0]
         
         if not read_id[-2:] in ['/1', '/2']:
@@ -98,7 +98,7 @@ def fastqIterate(infile, remove_suffix=False):
         return(line)
      
     while 1:
-        line1 = convert2string(infile.readline())
+        line1 = convert2string(infile.readline()).strip()
         if not line1:
             break
         if not line1.startswith('@'):
@@ -115,7 +115,7 @@ def fastqIterate(infile, remove_suffix=False):
         if remove_suffix:
             line1 = removeReadIDSuffix(line1)
             
-        yield Record(line1[1:-1], line2[:-1], line4[:-1])
+        yield Record(line1[1:], line2[:-1], line4[:-1])
 
 # End of FastqIterate()
 ###############################################################################
