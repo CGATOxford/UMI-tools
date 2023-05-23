@@ -351,11 +351,57 @@ group_contig_no_gene_tag:
       references: [group_contig_no_gene_tag.tsv]
       options: group -L test.log --out-sam --per-contig --per-gene --random-seed=123456789 --method=directional --no-sort-output --output-bam --group-out=group_contig_no_gene_tag.tsv
 
+<<<<<<< Updated upstream
 dedup_help:
       outputs: [stdout]
       references: [dedup_help.txt]
       options: dedup --help
 
+=======
+umi_tools_help:
+      sort: False
+      outputs: [stdout]
+      references: [umi_tools_help]
+      options: --help
+
+whitelist_help:
+      sort: False
+      outputs: [stdout]
+      references: [whitelist_help]
+      options: whitelist --help
+
+extract_help:
+      sort: False
+      outputs: [stdout]
+      references: [extract_help]
+      options: extract --help
+
+dedup_help:
+      sort: False
+      outputs: [stdout]
+      references: [dedup_help]
+      options: dedup --help
+
+group_help:
+      sort: False
+      outputs: [stdout]
+      references: [group_help]
+      options: group --help
+
+count_help:
+      sort: False
+      outputs: [stdout]
+      references: [count_help]
+      options: count --help
+
+count_tab_help:
+      sort: False
+      outputs: [stdout]
+      references: [count_tab_help]
+      options: count_tab --help
+
+      
+>>>>>>> Stashed changes
 # ### Tests to implement ####
 
 # ## dedup ##
