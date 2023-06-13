@@ -121,4 +121,3 @@ Dependencies
 ------------
 umi_tools is dependent on `python>=3.5`, `numpy`, `pandas`, `scipy`, `cython`, `pysam`,
 `future`, `regex` and `matplotlib`
-
