@@ -1,0 +1,68 @@
+
+count_tab - Count reads per gene from flatfile using UMIs
+
+Usage: umi_tools count_tab [OPTIONS] [--stdin=IN_TSV[.gz]] [--stdout=OUT_TSV[.gz]]
+
+       note: If --stdin/--stdout are ommited standard in and standard
+             out are used for input and output. Input/Output will be
+             (de)compressed if a filename provided to --stdin/--stdout
+             ends in .gz 
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/
+
+Options:
+  --version             show program's version number and exit
+
+  count_tab-specific options:
+    --barcode-separator=BC_SEP
+                        separator between read id and UMI  and (optionally)
+                        the cell barcode
+    --per-cell          Readname includes cell barcode as well as UMI in
+                        format: read[sep]UMI[sep]CB
+
+  UMI grouping options:
+    --method=METHOD     method to use for umi grouping [default=directional]
+    --edit-distance-threshold=THRESHOLD
+                        Edit distance theshold at which to join two UMIs when
+                        grouping UMIs. [default=1]
+    --spliced-is-unique
+                        Treat a spliced read as different to an unspliced one
+                        [default=False]
+    --soft-clip-threshold=SOFT_CLIP_THRESHOLD
+                        number of bases clipped from 5' end before read is
+                        counted as spliced [default=4]
+    --read-length       use read length in addition to position and UMI to
+                        identify possible duplicates [default=False]
+
+  input/output options:
+    -I FILE, --stdin=FILE
+                        file to read stdin from [default = stdin].
+    -L FILE, --log=FILE
+                        file with logging information [default = stdout].
+    -E FILE, --error=FILE
+                        file with error information [default = stderr].
+    -S FILE, --stdout=FILE
+                        file where output is to go [default = stdout].
+    --temp-dir=FILE     Directory for temporary files. If not set, the bash
+                        environmental variable TMPDIR is used[default = None].
+    --log2stderr        send logging information to stderr [default = False].
+    --compresslevel=COMPRESSLEVEL
+                        Level of Gzip compression to use. Default (6)
+                        matchesGNU gzip rather than python gzip default (which
+                        is 9)
+
+  profiling options:
+    --timeit=TIMEIT_FILE
+                        store timeing information in file [none].
+    --timeit-name=TIMEIT_NAME
+                        name in timing file for this class of jobs [all].
+    --timeit-header     add header for timing information [none].
+
+  common options:
+    -v LOGLEVEL, --verbose=LOGLEVEL
+                        loglevel [1]. The higher, the more output.
+    -h, --help          output short help (command line options only).
+    --help-extended     Output full documentation
+    --random-seed=RANDOM_SEED
+                        random seed to initialize number generator with
+                        [none].
