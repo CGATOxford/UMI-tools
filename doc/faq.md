@@ -7,16 +7,19 @@
    3. Sequencing depth (higher = greater proportion of possible UMIs observed => larger network => longer run time)
    4. Running `umi_tools dedup --output-stats` requires a considerable amount of time and memory to generate the null distributions. If you want these stats, consider obtaining stats for just a single contig, eg. `--chrom=chr22`.
    5. If you are doing single-cell RNA-seq and you have reads from more than one cell in your BAM file, make sure you are running with the `--per-cell` swtich.
+&nbsp;
 
 - **Why is my `umi_tool group`/`dedup` command taking so much memory?**
 
 	There are a few reasons why your command could require an excessive amount of memory:
    1. Most of the above factors increasing run time can also increase memory
    2. Running `umi_tools dedup` with `chimeric-reads=use` (default) can take a large amount of memory. This is because `dedup` will wait until a whole contig has been deduplicated before re-parsing the reads from the contig and writing out the read2s which match the retained read1s. For chimeric read pairs, the read2s will not be found on the same contig and will be kept in a buffer of "orphan" read2s which may take up a lot of memory. Consider using `chimeric-reads=discard` instead to discard chimeric read pairs. Similarly, use of `--unmapped-reads=use` with `--paired` can also increase memory requirements.
+&nbsp;
 
  - **Can I run `umi_tools` with parallel threads?**
 
 	Not yet! This is something we have been discussing for a while (see [#203](https://github.com/CGATOxford/UMI-tools/issues/203) & [#257](https://github.com/CGATOxford/UMI-tools/issues/257)) but haven't found the time to actually implement. If you'd like to help us out, get in touch!
+&nbsp;
 
 - **What's the correct regex to use for technique X?**
 
@@ -30,25 +33,28 @@
    | BD-Rhapsody | `(?<cell_1>.{9})(?<discard_1>.{12})(?<cell_2>.{9})(?<discard_2>.{13})(?<cell_3>.{9})(?<umi_1>.{8})T+` |
 
    If you know of other, please drop us a PR with them!
+&nbsp;
 
 - **Can I use `umi_tools` to determine consensus sequences?**
 
 	Right now, you can use `umi_tools group` to identify the duplicated read groups. From this, you can then derive consensus sequences as you wish. We have discussed adding consense sequence calling as a separate `umi_tools` command (see [#203](https://github.com/CGATOxford/UMI-tools/issues/181)). If you'd like to help us out, get in touch!
+&nbsp;
 
 - **What do the `--per-gene`, `--gene-tag` and `--per-contig` options do in `umi_tools group`/`dedup`/`count`?**
 
 	These options are designed to handle samples from sequence library protocols where fragmentation occurs post amplification, e.g CEL-Seq for single cell RNA-Seq. For such sample, mapping coordinates of duplicate reads will no longer be identical and `umi_tools` can instead use the gene to which the read is mapped. This behaviour is switched on with `--per-gene`. `umi_tools` then needs to be told if the reads are directly mapped to a transcriptome (`--per-contig`), or mapped to a genome and the transcript/gene assignment is contained in a read tag (`--gene-tag=[TAG]`). If you have assigned reads to transcripts but want to use the gene IDs to determine UMI groups, there is a further option to provide a file mapping transcript IDs to gene IDs (`--gene-transcript-map`). Finally, for single cell RNA-Seq, you must specify `--per-cell`. See `umi_tools dedup`/`group`/`count --help` for details of further related options and the [UMI-tools single cell RNA-Seq guide](https://github.com/CGATOxford/UMI-tools/blob/%7BTS%7D-AddFAQ/doc/Single_cell_tutorial.md).
+&nbsp;
 
 - **Should I use `--per-gene` with my sequencing from method X?**
 
 	It can be difficult to work this out sometimes! So far we have come across the following technqies that require the use of `--per-gene`: CEL-seq2, SCRB-seq, 10x Chromium, inDrop, Drop-seq and SPLiT-seq. Let us know if you know of more
+&nbsp;
 
 - **Has the whitelist command been peer-reviewed and compared to alternatives?**
 
 	No. At the time of the [UMI-tools publication](http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract`) on 18 Jan '17, the only tools available were `extract`, `dedup` and `group`. The `count` and `whitelist` commands were added later. With `count`, the deduplication part is identical to `dedup`, so it's reasonable to say the underlying agorithm has been peer-reviewed. However, `whitelist` is using an entirely different approach (see [here](https://github.com/CGATOxford/UMI-tools/pull/317) which has not been rigourously tested, compared to alternative algorithms or peer-reviewed. We recommend users to explore other options for whitelisting also.
-        
+&nbsp;
+      
 - **Can I use whitelist without UMIs?**
 
 	Strickly speaking, yes, but only with `--extract-method string`. If you use `--extract-method regex` and don't provide both a UMI and Cell barcode position in the regex, you'll get an error.
-
-
