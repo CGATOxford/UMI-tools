@@ -44,7 +44,7 @@ expectation.
 
 Use this option to generate a stats outfile called:
 
-[PREFIX]_stats_edit_distance.tsv
+[PREFIX]_edit_distance.tsv
   Reports the (binned) average edit distance between the UMIs at each
   position. Positions with a single UMI are reported seperately.  The
   edit distances are reported pre- and post-deduplication alongside
@@ -63,8 +63,8 @@ Each unique UMI sequence may be observed [0-many] times at multiple
 positions in the BAM. The following files report the distribution for
 the frequencies of each UMI.
 
-[PREFIX]_stats_per_umi_per_position.tsv
-  The `_stats_per_umi_per_position.tsv` file simply tabulates the
+[PREFIX]_per_umi_per_position.tsv
+  The `_per_umi_per_position.tsv` file simply tabulates the
   counts for unique combinations of UMI and position. E.g if prior to
   deduplication, we have two positions in the BAM (POSa, POSb), at
   POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
@@ -90,8 +90,8 @@ the frequencies of each UMI.
   3      1             2
   ====== ============= ==============
 
-[PREFIX]_stats_per_umi_per.tsv
-  The `_stats_per_umi_per.tsv` table provides UMI-level summary
+[PREFIX]_per_umi.tsv
+  The `_per_umi.tsv` table provides UMI-level summary
   statistics. Keeping in mind that each unique UMI sequence can be
   observed at [0-many] times across multiple positions in the BAM,
 
