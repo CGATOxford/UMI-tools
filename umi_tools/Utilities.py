@@ -599,6 +599,8 @@ def Start(parser=None,
           add_extract_options=False,
           add_group_dedup_options=True,
           add_sam_options=True,
+          add_dedup_count_sam_options=False,
+          add_group_sam_options=False,
           add_umi_grouping_options=True,
           return_parser=False):
     """set up an experiment.
@@ -885,27 +887,6 @@ def Start(parser=None,
         group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
                          default=False, help=optparse.SUPPRESS_HELP)
 
-        group.add_option("--unmapped-reads", dest="unmapped_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="discard",
-                         help=("How to handle unmapped reads. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
-        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle chimeric read pairs. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
-        group.add_option("--unpaired-reads", dest="unpaired_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle unpaired reads. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
         group.add_option("--ignore-umi", dest="ignore_umi",
                          action="store_true", help="Ignore UMI and dedup"
                          " only on position", default=False)
@@ -939,6 +920,56 @@ def Start(parser=None,
                          action="store_true", default=False,
                          help="Don't Sort the output")
 
+        parser.add_option_group(group)
+
+  if add_dedup_count_sam_options:
+        group = OptionGroup(parser, "Dedup and Count SAM/BAM options")
+
+        group.add_option("--unmapped-reads", dest="unmapped_reads",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="discard",
+                         help=("How to handle unmapped reads. Options are "
+                               "'discard' or 'use'' [default=%default]"))
+
+        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="use",
+                         help=("How to handle chimeric read pairs. Options are "
+                               "'discard' or 'use'  [default=%default]"))
+
+        group.add_option("--unpaired-reads", dest="unpaired_reads",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="use",
+                         help=("How to handle unpaired reads. Options are "
+                               "'discard'or 'use' [default=%default]"))
+        parser.add_option_group(group)
+
+  if add_group_sam_options:
+      group = OptionGroup(parser, "Group SAM/BAM options")
+
+        group.add_option("--unmapped-reads", dest="unmapped_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="discard",
+                         help=("How to handle unmapped reads. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
+
+        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle chimeric read pairs. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
+
+        group.add_option("--unpaired-reads", dest="unpaired_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle unpaired reads. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
         parser.add_option_group(group)
 
     if add_pipe_options:
