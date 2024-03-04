@@ -167,7 +167,7 @@ def aggregateStatsDF(stats_df):
 
     grouped = stats_df.groupby("UMI")
 
-    agg_dict = {'counts': [np.median, len, np.sum]}
+    agg_dict = {'counts': ['median', len, 'sum']}
     agg_df = grouped.agg(agg_dict)
 
     agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
@@ -444,8 +444,10 @@ def main(argv=None):
             columns=["unique", "unique_null", options.method,
                      "%s_null" % options.method, "edit_distance"])
 
+        edit_distance_df['edit_distance'] = edit_distance_df['edit_distance'].astype(str)
+
         # TS - set lowest bin (-1) to "Single_UMI"
-        edit_distance_df['edit_distance'][0] = "Single_UMI"
+        edit_distance_df.loc[0, 'edit_distance'] = "Single_UMI"
 
         edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
                                 index=False, sep="\t")
