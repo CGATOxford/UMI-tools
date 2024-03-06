@@ -922,7 +922,7 @@ def Start(parser=None,
 
         parser.add_option_group(group)
 
-  if add_dedup_count_sam_options:
+    if add_dedup_count_sam_options:
         group = OptionGroup(parser, "Dedup and Count SAM/BAM options")
 
         group.add_option("--unmapped-reads", dest="unmapped_reads",
@@ -947,7 +947,7 @@ def Start(parser=None,
                                "'discard'or 'use' [default=%default]"))
         parser.add_option_group(group)
 
-  if add_group_sam_options:
+    if add_group_sam_options:
       group = OptionGroup(parser, "Group SAM/BAM options")
 
         group.add_option("--unmapped-reads", dest="unmapped_reads",
