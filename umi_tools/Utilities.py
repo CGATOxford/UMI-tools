@@ -928,7 +928,7 @@ def Start(parser=None,
                          choices=("discard", "use"),
                          default="discard",
                          help=("How to handle unmapped reads. Options are "
-                               "'discard' or 'use'' [default=%default]"))
+                               "'discard' or 'use' [default=%default]"))
 
         group.add_option("--chimeric-pairs", dest="chimeric_pairs",
                          type="choice",
