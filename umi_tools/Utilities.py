@@ -258,8 +258,6 @@ import tempfile
 import regex
 from umi_tools import __version__
 
-from builtins import bytes, chr
-
 
 class DefaultOptions:
     stdlog = sys.stdout
@@ -948,7 +946,7 @@ def Start(parser=None,
         parser.add_option_group(group)
 
     if add_group_sam_options:
-      group = OptionGroup(parser, "Group SAM/BAM options")
+        group = OptionGroup(parser, "Group SAM/BAM options")
 
         group.add_option("--unmapped-reads", dest="unmapped_reads",
                          type="choice",
@@ -1209,7 +1207,7 @@ def validateExtractOptions(options):
                              "(starting with 'umi_') %s, %s" % (
                                  options.pattern, options.pattern2))
 
-    return(extract_cell, extract_umi)
+    return (extract_cell, extract_umi)
 
 
 def validateSamOptions(options, group=False):
