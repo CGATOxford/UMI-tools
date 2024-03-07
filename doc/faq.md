@@ -50,6 +50,17 @@
 	It can be difficult to work this out sometimes! So far we have come across the following technqies that require the use of `--per-gene`: CEL-seq2, SCRB-seq, 10x Chromium, inDrop, Drop-seq and SPLiT-seq. Let us know if you know of more
 &nbsp;
 
+
+- **How are reads/read pairs defined as having the same alignment coordinates?**
+    Defining which reads have the same alignment coordinates is more difficult that one might intuitively expect. For single-end reads, `umi_tools` uses the position of the start of the alignment and the strand. For paired-end read, `umi_tools` additionally uses the template length (this can be turned off with `--ignore-tlen`.
+
+    When defining the start of the read, `umi_tools` takes into account the soft-clipping. This is to avoid base miss-calling errors at the start of a read that could make two reads appear to have unique alignment coordinates.
+
+    `umi_tools` can additionally use the 'spliced' status of a read to define possible duplicates. This behaviour is turned on with the `--spliced-is-unique` option. This is obtained by inspecting the cigar string to identify `N` anywhere within the cigar (skipped regions within the reference) or, alternatively, `S` at the 5' end of the cigar (soft-clipped at the end of the read). By default, 4 bases of `S` at the 5' end is the threshold for a read to be considered spliced. This can be controlled with the `--soft-clip-threshold` option.
+
+- **Why do I have reads with the same alignment coordinates and UMIs post deduplication?**
+    It's possible for reads/read pairs with the same or very similar UMIs and seemingly the same alignment coordinates when inspecting the BAM to be put into separate UMI groups. For `umi_tools dedup`, this would mean multiple output reads which look like duplicates. Refering to the question above about how alignment coordinates are defined, an inspection of the alignment start, 3' softclipping and template length (if paired end) +/- the splicing status (if `--spliced-is-unique`  has been used), will likely clarify why these reads/read pairs were not considered duplicates.
+
 - **Has the whitelist command been peer-reviewed and compared to alternatives?**
 
 	No. At the time of the [UMI-tools publication](http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract`) on 18 Jan '17, the only tools available were `extract`, `dedup` and `group`. The `count` and `whitelist` commands were added later. With `count`, the deduplication part is identical to `dedup`, so it's reasonable to say the underlying agorithm has been peer-reviewed. However, `whitelist` is using an entirely different approach (see [here](https://github.com/CGATOxford/UMI-tools/pull/317) which has not been rigourously tested, compared to alternative algorithms or peer-reviewed. We recommend users to explore other options for whitelisting also.
