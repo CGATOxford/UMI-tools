@@ -56,11 +56,10 @@
 
     When calculating the start of the read, `umi_tools` takes into account the soft-clipping and the strand of the read. Softclipped bases are part of the read, and on the forward strand UMI-tools calculates the read start position as the alignment start position minus the number of clipped bases. This is to avoid base miss-calling errors at the start of a read that could make two reads appear to have unique alignment coordinates. If the read is on the reverse strand, then the read start position is actually the alignment end position (adjust for soft-clipping). The following reads all have the same alignment start position, as defined by the "pos" column in the BAM/SAM.
 
+   ![Calculating the read start](./read_start_calculation.png)
 
     The black read has the same read start and alignment start. The red read has 6 bases soft-clipped at the start. While these bases don't align to the genome, and the part of the read that aligns to the genome starts at the same sequence as the black read, we take these six additional nucleotides at the start to make it unlikely that the red read is a PCR duplicate of the black read.  The blue read is on the reverse strand - while according to the SAM format specification its start position is the same as the black read, it's sequences is actually completely different, and again is unlikely to be a PCR duplicate. The orange read is also on the reverse strand. It has a different alignment start position to the blue read (perhaps due to quality trimming). It also has a different alignment end. But the last two bases are soft-clipped. If you add back on these two bases (perhaps they are sequencing errors) you find that the organe and blue reads have the same outer fragment coordinates. 
 
-   ![Calculating the read start](./read_start_calculation.png)
-   
     The optimality of these choices was confirmed by looking at how well they accounted for identical UMIs of reads near each other. 
 
     `umi_tools` can additionally use the 'spliced' status of a read to define possible duplicates. This behaviour is turned on with the `--spliced-is-unique` option. This is obtained by inspecting the cigar string to identify `N` anywhere within the cigar (skipped regions within the reference) or, alternatively, `S` at the 3' end of the cigar (soft-clipped at the end of the read). By default, 4 bases of `S` at the 3' end is the threshold for a read to be considered spliced. This can be controlled with the `--soft-clip-threshold` option.
