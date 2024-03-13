@@ -59,6 +59,7 @@ Options:
     --3prime            barcode is on 3' end of read.
     --read2-in=READ2_IN
                         file name for read pairs
+    --read2-only        Only extract from read2
     --filtered-out=FILTERED_OUT
                         Write out reads not matching regex pattern to this
                         file

@@ -291,6 +291,7 @@ def main(argv=None):
                         pattern2=None,
                         read2_in=None,
                         read2_out=False,
+                        read2_only=False,
                         read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,

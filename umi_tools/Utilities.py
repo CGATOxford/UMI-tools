@@ -697,6 +697,8 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        group.add_option("--read2-only", dest="read2_only", action='store_true',
+                         help="Only extract from read2")
         group.add_option("--filtered-out",
                          dest="filtered_out", type="string", default=None,
                          help=("Write out reads not matching regex pattern"
@@ -1097,6 +1099,14 @@ def Start(parser=None,
 
 def validateExtractOptions(options):
     ''' Check the validity of the option combinations for barcode extraction'''
+
+    if options.read2_only:
+
+        if not options.pattern2:
+            raise ValueError("Must supply --bc-pattern2 if extracting from just read2")
+
+        if options.pattern:
+            raise ValueError("Don't supply --bc-pattern if extracting from just read2")
 
     if not options.pattern and not options.pattern2:
         if not options.read2_in:

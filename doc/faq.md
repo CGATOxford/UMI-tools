@@ -58,3 +58,8 @@
 - **Can I use whitelist without UMIs?**
 
 	Strickly speaking, yes, but only with `--extract-method string`. If you use `--extract-method regex` and don't provide both a UMI and Cell barcode position in the regex, you'll get an error.
+
+&nbsp;
+- **Can I extract barcodes from just read2?**
+
+    Yes, you can use --read2-only with `umi_tools extract` & `whitelist`. Previously, we had been recommending users achieve this by simply swapping the read1 and read2 input files around. That's still a viable approach. 
