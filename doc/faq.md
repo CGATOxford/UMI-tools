@@ -50,6 +50,23 @@
 	It can be difficult to work this out sometimes! So far we have come across the following technqies that require the use of `--per-gene`: CEL-seq2, SCRB-seq, 10x Chromium, inDrop, Drop-seq and SPLiT-seq. Let us know if you know of more
 &nbsp;
 
+
+- **How are reads/read pairs defined as having the same alignment coordinates?**
+    Defining which reads have the same alignment coordinates is more difficult that one might intuitively expect. For single-end reads, `umi_tools` uses the position of the start of the read (_not the alignment start position_ - see below) and the strand. For paired-end read, `umi_tools` additionally uses the template length (this can be turned off with `--ignore-tlen`.
+
+    When calculating the start of the read, `umi_tools` takes into account the soft-clipping and the strand of the read. Softclipped bases are part of the read, and on the forward strand UMI-tools calculates the read start position as the alignment start position minus the number of clipped bases. This is to avoid base miss-calling errors at the start of a read that could make two reads appear to have unique alignment coordinates. If the read is on the reverse strand, then the read start position is actually the alignment end position (adjust for soft-clipping). The following reads all have the same alignment start position, as defined by the "pos" column in the BAM/SAM.
+
+   ![Calculating the read start](./read_start_calculation.png)
+
+    The black read has the same read start and alignment start. The red read has 6 bases soft-clipped at the start. While these bases don't align to the genome, and the part of the read that aligns to the genome starts at the same sequence as the black read, we take these six additional nucleotides at the start to make it unlikely that the red read is a PCR duplicate of the black read.  The blue read is on the reverse strand - while according to the SAM format specification its start position is the same as the black read, it's sequences is actually completely different, and again is unlikely to be a PCR duplicate. The orange read is also on the reverse strand. It has a different alignment start position to the blue read (perhaps due to quality trimming). It also has a different alignment end. But the last two bases are soft-clipped. If you add back on these two bases (perhaps they are sequencing errors) you find that the organe and blue reads have the same outer fragment coordinates. 
+
+    The optimality of these choices was confirmed by looking at how well they accounted for identical UMIs of reads near each other. 
+
+    `umi_tools` can additionally use the 'spliced' status of a read to define possible duplicates. This behaviour is turned on with the `--spliced-is-unique` option. This is obtained by inspecting the cigar string to identify `N` anywhere within the cigar (skipped regions within the reference) or, alternatively, `S` at the 3' end of the cigar (soft-clipped at the end of the read). By default, 4 bases of `S` at the 3' end is the threshold for a read to be considered spliced. This can be controlled with the `--soft-clip-threshold` option.
+
+- **Why do I have reads with the same alignment coordinates and UMIs post deduplication?**
+    It's possible for reads/read pairs with the same or very similar UMIs and seemingly the same alignment coordinates when inspecting the BAM to be put into separate UMI groups. For `umi_tools dedup`, this would mean multiple output reads which look like duplicates. Refering to the question above about how alignment coordinates are defined, an inspection of the strand, alignment start, 5' softclipping and template length (if paired end) +/- the splicing status (if `--spliced-is-unique`  has been used), will likely clarify why these reads/read pairs were not considered duplicates.
+
 - **Has the whitelist command been peer-reviewed and compared to alternatives?**
 
 	No. At the time of the [UMI-tools publication](http://genome.cshlp.org/content/early/2017/01/18/gr.209601.116.abstract`) on 18 Jan '17, the only tools available were `extract`, `dedup` and `group`. The `count` and `whitelist` commands were added later. With `count`, the deduplication part is identical to `dedup`, so it's reasonable to say the underlying agorithm has been peer-reviewed. However, `whitelist` is using an entirely different approach (see [here](https://github.com/CGATOxford/UMI-tools/pull/317) which has not been rigourously tested, compared to alternative algorithms or peer-reviewed. We recommend users to explore other options for whitelisting also.
