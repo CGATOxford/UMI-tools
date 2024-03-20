@@ -81,15 +81,6 @@ Options:
     --mapping-quality=MAPPING_QUALITY
                         Minimum mapping quality for a read to be retained
                         [default=0]
-    --unmapped-reads=UNMAPPED_READS
-                        How to handle unmapped reads. Options are 'discard',
-                        'use' or 'correct' [default=discard]
-    --chimeric-pairs=CHIMERIC_PAIRS
-                        How to handle chimeric read pairs. Options are
-                        'discard', 'use' or 'correct' [default=use]
-    --unpaired-reads=UNPAIRED_READS
-                        How to handle unpaired reads. Options are 'discard',
-                        'use' or 'correct' [default=use]
     --ignore-umi        Ignore UMI and dedup only on position
     --ignore-tlen       Option to dedup paired end reads based solely on
                         read1, whether or not the template length is the same
@@ -99,6 +90,17 @@ Options:
     --paired            paired input BAM. [default=False]
     -o, --out-sam       Output alignments in sam format [default=False]
     --no-sort-output    Don't Sort the output
+
+  Dedup and Count SAM/BAM options:
+    --unmapped-reads=UNMAPPED_READS
+                        How to handle unmapped reads. Options are 'discard' or
+                        'use' [default=discard]
+    --chimeric-pairs=CHIMERIC_PAIRS
+                        How to handle chimeric read pairs. Options are
+                        'discard' or 'use'  [default=use]
+    --unpaired-reads=UNPAIRED_READS
+                        How to handle unpaired reads. Options are 'discard'or
+                        'use' [default=use]
 
   input/output options:
     -I FILE, --stdin=FILE

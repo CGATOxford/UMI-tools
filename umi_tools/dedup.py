@@ -201,7 +201,7 @@ def main(argv=None):
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv, add_dedup_count_sam_options=True)
 
     U.validateSamOptions(options, group=False)
 
