@@ -8,8 +8,6 @@ whitelist_methods.py - Methods for whitelisting cell barcodes
 import itertools
 import collections
 import matplotlib
-# change back to original user params after plotting
-_rcParams_orig = matplotlib.rcParams.copy()
 import copy
 import regex
 
@@ -100,6 +98,8 @@ def getKneeEstimateDensity(cell_barcode_counts,
 
     if plotfile_prefix:
 
+        # change back to original user params after plotting
+        _rcParams_orig = matplotlib.rcParams.copy()
         # require to run on systems with no X11
         matplotlib.use('Agg')
 
