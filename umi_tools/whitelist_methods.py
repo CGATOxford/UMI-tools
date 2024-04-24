@@ -11,8 +11,6 @@ import matplotlib
 import copy
 import regex
 
-# require to run on systems with no X11
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
@@ -99,6 +97,11 @@ def getKneeEstimateDensity(cell_barcode_counts,
         final_barcodes = None
 
     if plotfile_prefix:
+
+        # change back to original user params after plotting
+        _rcParams_orig = matplotlib.rcParams.copy()
+        # require to run on systems with no X11
+        matplotlib.use('Agg')
 
         # colour-blind friendly colours - https://gist.github.com/thriveth/8560036
         CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
@@ -243,6 +246,8 @@ def getKneeEstimateDensity(cell_barcode_counts,
                         threshold_type = "Rejected"
 
                     outf.write("%s\t%s\n" % (local_mins_count, threshold_type))
+
+        matplotlib.rcParams.update(_rcParams_orig)
 
     return final_barcodes
 
