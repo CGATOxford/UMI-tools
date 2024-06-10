@@ -24,8 +24,8 @@ if LooseVersion(setuptools.__version__) < LooseVersion('1.1'):
 
 major, minor1, minor2, s, tmp = sys.version_info
 
-if (major == 2 and minor1 < 7) or major < 2:
-    raise SystemExit("""umi_tools requires Python 2.7 or later.""")
+if major < 3:
+    raise SystemExit("""umi_tools requires Python 3 or later.""")
 
 umi_tools_packages = ["umi_tools"]
 umi_tools_package_dirs = {'umi_tools': 'umi_tools'}
@@ -56,7 +56,7 @@ install_requires = [
 
 try:
     import pysam
-    if LooseVersion(pysam.__version__) < LooseVersion('0.8.4'):
+    if LooseVersion(pysam.__version__) < LooseVersion('0.16.0.1'):
         print("""
         
     ######################################################################
@@ -70,7 +70,7 @@ try:
 
         """)
 
-        install_requires.append("pysam>=0.8.4")
+        install_requires.append("pysam>=0.16.0.1")
 
 except ImportError:
     install_requires.append("pysam")
