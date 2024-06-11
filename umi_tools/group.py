@@ -287,7 +287,7 @@ def main(argv=None):
                     if options.tsv:
                         if options.per_gene:
                             if options.per_contig:
-                                if options.options.gene_transcript_map:
+                                if options.gene_transcript_map:
                                     gene = read.get_tag(gene_tag)
                                 else:
                                     gene = read.reference_name
