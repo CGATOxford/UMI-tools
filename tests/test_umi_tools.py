@@ -23,8 +23,6 @@ import hashlib
 import sys
 import platform
 
-from nose.tools import ok_
-
 PYTHON_VERSION = platform.python_version()
 IS_PY3 = sys.version_info.major >= 3
 
@@ -58,7 +56,7 @@ def check_main(script):
         script = re.sub("%s_" % s, "%s/" % s, script)
 
     # check for text match
-    ok_([x for x in open(script) if x.startswith("def main(")],
+    assert([x for x in open(script) if x.startswith("def main(")],
         "no main function")
 
 
@@ -204,7 +202,7 @@ def check_script(test_name,
 
     if not DEBUG:
         shutil.rmtree(tmpdir)
-    ok_(not fail, msg)
+    assert(not fail, msg)
 
 
 def get_tests_directory():
