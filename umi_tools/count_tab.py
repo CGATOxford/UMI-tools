@@ -148,7 +148,15 @@ def main(argv=None):
                 threshold=options.threshold)
 
             gene_count = len(groups)
+            try:
+                gene = gene.decode()
+            except AttributeError:
+                pass
             if options.per_cell:
+                try:
+                    cell = cell.decode()
+                except AttributeError:
+                    pass
                 options.stdout.write("%s\t%s\t%i\n" % (cell, gene, gene_count))
             else:
                 options.stdout.write("%s\t%i\n" % (gene, gene_count))
