@@ -16,7 +16,6 @@ This code is borrowed with permission from https://github.com/CGATOxford/cgat
 import pep8
 import glob
 import os
-from nose.tools import ok_
 
 # DIRECTORIES to examine for python modules/scripts
 EXPRESSIONS = (
@@ -57,8 +56,7 @@ def check_style(filename):
     found = ['%s:%i' % (x, y) for x, y
              in report.counters.items() if x not in IGNORE]
     total = sum(take)
-    ok_(total == 0,
-        'pep8 style violations in %s: %s' % (filename, ','.join(found)))
+    assert total == 0, 'pep8 style violations in %s: %s' % (filename, ','.join(found))
 
 
 def test_style():
