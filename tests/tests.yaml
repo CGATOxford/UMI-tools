@@ -289,6 +289,7 @@ group_cluster:
       options: group -L test.log --out-sam --random-seed=123456789 --method=cluster --output-bam --out-sam --group-out=group_cluster_py3.tsv
 
 group_adjacency:
+      sort: True
       stdin: chr19.bam
       outputs: [stdout, group_adj_py3.tsv]
       references: [group_adj_py3.sam, group_adj_py3.tsv]

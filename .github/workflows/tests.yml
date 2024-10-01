@@ -33,5 +33,4 @@ jobs:
           python setup.py install
       - name: Test with PyTest
         run: |
-          export PYTHONHASHSEED=0
           pytest -v tests/test_umi_tools.py

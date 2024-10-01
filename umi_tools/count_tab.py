@@ -42,12 +42,12 @@ sorted by the gene identifier:
 
 Input template::
 
-    read_id[SEP]_UMI_CB    gene
+    read_id[SEP]_CB_UMI    gene
 
 Example::
 
-    NS500668:144:H5FCJBGXY:2:22309:18356:15843_TCTAA_AGTCGA     ENSG00000279457.3
-    NS500668:144:H5FCJBGXY:3:23405:39715:19716_CGATG_GGAGAA     ENSG00000225972.1
+    NS500668:144:H5FCJBGXY:2:22309:18356:15843_AGTCGA_TCTAA     ENSG00000279457.3
+    NS500668:144:H5FCJBGXY:3:23405:39715:19716_GGAGAA_CGATG     ENSG00000225972.1
 
 '''
 
@@ -148,7 +148,15 @@ def main(argv=None):
                 threshold=options.threshold)
 
             gene_count = len(groups)
+            try:
+                gene = gene.decode()
+            except AttributeError:
+                pass
             if options.per_cell:
+                try:
+                    cell = cell.decode()
+                except AttributeError:
+                    pass
                 options.stdout.write("%s\t%s\t%i\n" % (cell, gene, gene_count))
             else:
                 options.stdout.write("%s\t%i\n" % (gene, gene_count))
