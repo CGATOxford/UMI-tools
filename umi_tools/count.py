@@ -75,6 +75,10 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=usage,
                             description=globals()["__doc__"])
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
 
     group = U.OptionGroup(parser, "count-specific options")
 
@@ -87,7 +91,7 @@ def main(argv=None):
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False)
+    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False, add_dedup_count_sam_options=True)
 
     options.per_gene = True  # hardcodes counting to per-gene only
 

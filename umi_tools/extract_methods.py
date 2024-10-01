@@ -8,16 +8,16 @@ import umi_tools.Utilities as U
 from umi_tools.umi_methods import RANGES
 
 
-def addBarcodesToIdentifier(read, UMI, cell):
+def addBarcodesToIdentifier(read, UMI, cell, umi_separator):
     '''extract the identifier from a read and append the UMI and
     cell barcode before the first space'''
 
     read_id = read.identifier.split(" ")
 
     if cell == "":
-        read_id[0] = read_id[0] + "_" + UMI
+        read_id[0] = read_id[0] + umi_separator + UMI
     else:
-        read_id[0] = read_id[0] + "_" + cell + "_" + UMI
+        read_id[0] = read_id[0] + umi_separator + cell + umi_separator + UMI
 
     identifier = " ".join(read_id)
 
@@ -190,7 +190,8 @@ class ExtractFilterAndUpdate:
             new_quals = self.joiner(seq_qual1, sample_qual1)
 
         else:
-            cell, umi, umi_quals, new_seq, new_quals = ("",)*5
+            cell, umi, new_seq, new_quals = ("",)*4
+            umi_quals = [ ]
 
         if self.pattern2:
             bc2, sequence2 = self.extract(read2.seq, read=2)
@@ -331,42 +332,31 @@ class ExtractFilterAndUpdate:
 
     def _getCellBarcodeRegex(self, read1, read2=None):
 
-        if read2 is None:
-            match = self.pattern.match(read1.seq)
-            if match:
-                cell_barcode = ExtractBarcodes(
-                    read1, match, extract_cell=True, extract_umi=False)[0]
-                return cell_barcode
-            else:
-                return None
+        match1, match2 = None, None
 
-        else:
+        if self.pattern:
+            match1 = self.pattern.match(read1.seq)
 
-            match1, match2 = None, None
+        if self.pattern2:
+            match2 = self.pattern2.match(read2.seq)
+
+        # check matches have been made
+        if not ((self.pattern and not match1) or
+                (self.pattern2 and not match2)):
+            cell_barcode1, cell_barcode2 = "", ""
 
             if self.pattern:
-                match1 = self.pattern.match(read1.seq)
-
+                cell_barcode1 = ExtractBarcodes(
+                    read1, match1, extract_cell=True, extract_umi=False)[0]
             if self.pattern2:
-                match2 = self.pattern2.match(read2.seq)
+                cell_barcode2 = ExtractBarcodes(
+                    read2, match2, extract_cell=True, extract_umi=False)[0]
 
-            # check matches have been made
-            if not ((self.pattern and not match1) or
-                    (self.pattern2 and not match2)):
-                cell_barcode1, cell_barcode2 = "", ""
+            cell_barcode = cell_barcode1 + cell_barcode2
 
-                if self.pattern:
-                    cell_barcode1 = ExtractBarcodes(
-                        read1, match1, extract_cell=True, extract_umi=False)[0]
-                if self.pattern2:
-                    cell_barcode2 = ExtractBarcodes(
-                        read2, match2, extract_cell=True, extract_umi=False)[0]
-
-                cell_barcode = cell_barcode1 + cell_barcode2
-
-                return cell_barcode
-            else:
-                return None
+            return cell_barcode
+        else:
+            return None
 
     def filterQuality(self, umi_quals):
         if umi_below_threshold(
@@ -468,7 +458,8 @@ class ExtractFilterAndUpdate:
                  filter_cell_barcode=False,
                  retain_umi=False,
                  either_read=False,
-                 either_read_resolve="discard"):
+                 either_read_resolve="discard",
+                 umi_separator="_"):
 
         self.method = method
         self.read_counts = collections.Counter()
@@ -487,6 +478,7 @@ class ExtractFilterAndUpdate:
         self.umi_whitelist = None  # These will be updated if required
         self.umi_false_to_true_map = None  # These will be updated if required
         self.umi_whitelist_counts = None  # These will be updated if required
+        self.umi_separator = umi_separator
 
         self.cell_whitelist = None  # These will be updated if required
         self.false_to_true_map = None  # These will be updated if required
@@ -540,7 +532,7 @@ class ExtractFilterAndUpdate:
         # Check for regex is more complex.
         # Reads too short with regex pattern will silently fail to match
         if self.method == "string":
-            if(len(read1.seq) < len(self.pattern)):
+            if(self.pattern and (len(read1.seq) < len(self.pattern))):
                 raise ValueError('Read sequence: %s is shorter than pattern: %s' % (
                     read1.seq, self.pattern))
 
@@ -574,17 +566,20 @@ class ExtractFilterAndUpdate:
             if cell is None:
                 return None
 
+        if self.umi_separator:
+            umi_separator = self.umi_separator
+
         self.read_counts['Reads output'] += 1
 
         # if UMI could be on either read, use umi_values to identify
         # which read(s) it was on
         if self.either_read:
             new_identifier = addBarcodesToIdentifier(
-                read1, umi, cell)
+                read1, umi, cell, umi_separator)
             read1.identifier = new_identifier
 
             new_identifier2 = addBarcodesToIdentifier(
-                read2, umi, cell)
+                read2, umi, cell, umi_separator)
             read2.identifier = new_identifier
 
             # UMI was on read 1
@@ -600,7 +595,7 @@ class ExtractFilterAndUpdate:
         # Otherwise, use input from user to identiy which reads need updating
         else:
             new_identifier = addBarcodesToIdentifier(
-                read1, umi, cell)
+                read1, umi, cell, umi_separator)
             read1.identifier = new_identifier
             if self.pattern:  # seq and quals need to be updated
                 read1.seq = new_seq
@@ -608,7 +603,7 @@ class ExtractFilterAndUpdate:
 
             if read2:
                 new_identifier2 = addBarcodesToIdentifier(
-                    read2, umi, cell)
+                    read2, umi, cell, umi_separator)
                 read2.identifier = new_identifier2
                 if self.pattern2:   # seq and quals need to be updated
                     read2.seq = new_seq2

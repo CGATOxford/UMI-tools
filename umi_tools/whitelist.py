@@ -249,6 +249,10 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=usage,
                             description=globals()["__doc__"])
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
 
     group = U.OptionGroup(parser, "whitelist-specific options")
 

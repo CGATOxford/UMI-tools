@@ -1,0 +1,26 @@
+For full UMI-tools documentation, see: https://umi-tools.readthedocs.io/en/latest/
+
+
+umi_tools.py - Tools for UMI analyses
+=====================================
+
+:Author: Tom Smith & Ian Sudbury, CGAT
+:Tags: Genomics UMI
+
+There are 6 tools:
+
+  - whitelist
+  - extract
+  - group
+  - dedup
+  - count
+  - count_tab
+
+To get help on a specific tool, type:
+
+    umi_tools <tool> --help
+
+To use a specific tool, type::
+
+    umi_tools <tool> [tool options] [tool arguments]
+

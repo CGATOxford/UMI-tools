@@ -258,8 +258,6 @@ import tempfile
 import regex
 from umi_tools import __version__
 
-from builtins import bytes, chr
-
 
 class DefaultOptions:
     stdlog = sys.stdout
@@ -599,6 +597,8 @@ def Start(parser=None,
           add_extract_options=False,
           add_group_dedup_options=True,
           add_sam_options=True,
+          add_dedup_count_sam_options=False,
+          add_group_sam_options=False,
           add_umi_grouping_options=True,
           return_parser=False):
     """set up an experiment.
@@ -697,6 +697,8 @@ def Start(parser=None,
                          help="barcode is on 3' end of read.")
         group.add_option("--read2-in", dest="read2_in", type="string",
                          help="file name for read pairs")
+        group.add_option("--read2-only", dest="read2_only", action='store_true',
+                         help="Only extract from read2")
         group.add_option("--filtered-out",
                          dest="filtered_out", type="string", default=None,
                          help=("Write out reads not matching regex pattern"
@@ -885,27 +887,6 @@ def Start(parser=None,
         group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
                          default=False, help=optparse.SUPPRESS_HELP)
 
-        group.add_option("--unmapped-reads", dest="unmapped_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="discard",
-                         help=("How to handle unmapped reads. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
-        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle chimeric read pairs. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
-        group.add_option("--unpaired-reads", dest="unpaired_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle unpaired reads. Options are "
-                               "'discard', 'use' or 'correct' [default=%default]"))
-
         group.add_option("--ignore-umi", dest="ignore_umi",
                          action="store_true", help="Ignore UMI and dedup"
                          " only on position", default=False)
@@ -939,6 +920,56 @@ def Start(parser=None,
                          action="store_true", default=False,
                          help="Don't Sort the output")
 
+        parser.add_option_group(group)
+
+    if add_dedup_count_sam_options:
+        group = OptionGroup(parser, "Dedup and Count SAM/BAM options")
+
+        group.add_option("--unmapped-reads", dest="unmapped_reads",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="discard",
+                         help=("How to handle unmapped reads. Options are "
+                               "'discard' or 'use' [default=%default]"))
+
+        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="use",
+                         help=("How to handle chimeric read pairs. Options are "
+                               "'discard' or 'use'  [default=%default]"))
+
+        group.add_option("--unpaired-reads", dest="unpaired_reads",
+                         type="choice",
+                         choices=("discard", "use"),
+                         default="use",
+                         help=("How to handle unpaired reads. Options are "
+                               "'discard'or 'use' [default=%default]"))
+        parser.add_option_group(group)
+
+    if add_group_sam_options:
+        group = OptionGroup(parser, "Group SAM/BAM options")
+
+        group.add_option("--unmapped-reads", dest="unmapped_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="discard",
+                         help=("How to handle unmapped reads. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
+
+        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle chimeric read pairs. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
+
+        group.add_option("--unpaired-reads", dest="unpaired_reads",
+                         type="choice",
+                         choices=("discard", "use", "output"),
+                         default="use",
+                         help=("How to handle unpaired reads. Options are "
+                               "'discard', 'use' or 'output' [default=%default]"))
         parser.add_option_group(group)
 
     if add_pipe_options:
@@ -1098,6 +1129,14 @@ def Start(parser=None,
 def validateExtractOptions(options):
     ''' Check the validity of the option combinations for barcode extraction'''
 
+    if options.read2_only:
+
+        if not options.pattern2:
+            raise ValueError("Must supply --bc-pattern2 if extracting from just read2")
+
+        if options.pattern:
+            raise ValueError("Don't supply --bc-pattern if extracting from just read2")
+
     if not options.pattern and not options.pattern2:
         if not options.read2_in:
             raise ValueError("Must supply --bc-pattern for single-end")
@@ -1178,7 +1217,7 @@ def validateExtractOptions(options):
                              "(starting with 'umi_') %s, %s" % (
                                  options.pattern, options.pattern2))
 
-    return(extract_cell, extract_umi)
+    return (extract_cell, extract_umi)
 
 
 def validateSamOptions(options, group=False):

@@ -1,0 +1,103 @@
+
+whitelist - Generates a whitelist of accepted cell barcodes
+
+Usage:
+
+   Single-end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]]
+
+   Paired end:
+      umi_tools whitelist [OPTIONS] [-I IN_FASTQ[.gz]] [-S OUT_TSV[.gz]] --read2-in=IN2_FASTQ[.gz]
+
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in ends in .gz
+
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/
+
+Options:
+  --version             show program's version number and exit
+  --ed-above-threshold=ED_ABOVE_THRESHOLD
+                        Detect CBs above the threshold which may be sequence
+                        errors from another CB and either 'discard' or
+                        'correct'. Default=None (No correction)
+
+  whitelist-specific options:
+    --plot-prefix=PLOT_PREFIX
+                        Prefix for plots to visualise the automated detection
+                        of the number of 'true' cell barcodes
+    --subset-reads=SUBSET_READS
+                        Use the first N reads to automatically identify the
+                        true cell barcodes. If N is greater than the number of
+                        reads, all reads will be used. Default is 100,000,000
+    --error-correct-threshold=ERROR_CORRECT_THRESHOLD
+                        Hamming distance for correction of barcodes to
+                        whitelist barcodes. This value will also be used for
+                        error detection above the knee if required (--ed-
+                        above-threshold)
+    --method=METHOD     Use reads or unique umi counts per cell
+    --knee-method=KNEE_METHOD
+                        Use distance or density methods for detection of knee
+    --expect-cells=EXPECT_CELLS
+                        Prior expectation on the upper limit on the number of
+                        cells sequenced
+    --allow-threshold-error
+                        Don't select a threshold. Will still output the plots
+                        if requested (--plot-prefix)
+    --set-cell-number=CELL_NUMBER
+                        Specify the number of cell barcodes to accept
+
+  fastq barcode extraction options:
+    --extract-method=EXTRACT_METHOD
+                        How to extract the umi +/- cell barcodes, Choose from
+                        'string' or 'regex'
+    -p PATTERN, --bc-pattern=PATTERN
+                        Barcode pattern
+    --bc-pattern2=PATTERN2
+                        Barcode pattern for paired reads
+    --3prime            barcode is on 3' end of read.
+    --read2-in=READ2_IN
+                        file name for read pairs
+    --read2-only        Only extract from read2
+    --filtered-out=FILTERED_OUT
+                        Write out reads not matching regex pattern to this
+                        file
+    --filtered-out2=FILTERED_OUT2
+                        Write out paired reads not matching regex pattern to
+                        this file
+    --ignore-read-pair-suffixes
+                        Ignore '\1' and '\2' read name suffixes
+
+  input/output options:
+    -I FILE, --stdin=FILE
+                        file to read stdin from [default = stdin].
+    -L FILE, --log=FILE
+                        file with logging information [default = stdout].
+    -E FILE, --error=FILE
+                        file with error information [default = stderr].
+    -S FILE, --stdout=FILE
+                        file where output is to go [default = stdout].
+    --temp-dir=FILE     Directory for temporary files. If not set, the bash
+                        environmental variable TMPDIR is used[default = None].
+    --log2stderr        send logging information to stderr [default = False].
+    --compresslevel=COMPRESSLEVEL
+                        Level of Gzip compression to use. Default (6)
+                        matchesGNU gzip rather than python gzip default (which
+                        is 9)
+
+  profiling options:
+    --timeit=TIMEIT_FILE
+                        store timeing information in file [none].
+    --timeit-name=TIMEIT_NAME
+                        name in timing file for this class of jobs [all].
+    --timeit-header     add header for timing information [none].
+
+  common options:
+    -v LOGLEVEL, --verbose=LOGLEVEL
+                        loglevel [1]. The higher, the more output.
+    -h, --help          output short help (command line options only).
+    --help-extended     Output full documentation
+    --random-seed=RANDOM_SEED
+                        random seed to initialize number generator with
+                        [none].

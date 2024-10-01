@@ -44,7 +44,7 @@ expectation.
 
 Use this option to generate a stats outfile called:
 
-[PREFIX]_stats_edit_distance.tsv
+[PREFIX]_edit_distance.tsv
   Reports the (binned) average edit distance between the UMIs at each
   position. Positions with a single UMI are reported seperately.  The
   edit distances are reported pre- and post-deduplication alongside
@@ -63,8 +63,8 @@ Each unique UMI sequence may be observed [0-many] times at multiple
 positions in the BAM. The following files report the distribution for
 the frequencies of each UMI.
 
-[PREFIX]_stats_per_umi_per_position.tsv
-  The `_stats_per_umi_per_position.tsv` file simply tabulates the
+[PREFIX]_per_umi_per_position.tsv
+  The `_per_umi_per_position.tsv` file simply tabulates the
   counts for unique combinations of UMI and position. E.g if prior to
   deduplication, we have two positions in the BAM (POSa, POSb), at
   POSa we have observed 2*UMIa, 1*UMIb and at POSb: 1*UMIc, 3*UMId,
@@ -90,8 +90,8 @@ the frequencies of each UMI.
   3      1             2
   ====== ============= ==============
 
-[PREFIX]_stats_per_umi_per.tsv
-  The `_stats_per_umi_per.tsv` table provides UMI-level summary
+[PREFIX]_per_umi.tsv
+  The `_per_umi.tsv` table provides UMI-level summary
   statistics. Keeping in mind that each unique UMI sequence can be
   observed at [0-many] times across multiple positions in the BAM,
 
@@ -167,7 +167,7 @@ def aggregateStatsDF(stats_df):
 
     grouped = stats_df.groupby("UMI")
 
-    agg_dict = {'counts': [np.median, len, np.sum]}
+    agg_dict = {'counts': ['median', len, 'sum']}
     agg_df = grouped.agg(agg_dict)
 
     agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
@@ -187,6 +187,11 @@ def main(argv=None):
     parser = U.OptionParser(version="%prog version: $Id$",
                             usage=usage,
                             description=globals()["__doc__"])
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
+
     group = U.OptionGroup(parser, "dedup-specific options")
 
     group.add_option("--output-stats", dest="stats", type="string",
@@ -196,7 +201,7 @@ def main(argv=None):
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv, add_dedup_count_sam_options=True)
 
     U.validateSamOptions(options, group=False)
 
@@ -439,8 +444,10 @@ def main(argv=None):
             columns=["unique", "unique_null", options.method,
                      "%s_null" % options.method, "edit_distance"])
 
+        edit_distance_df['edit_distance'] = edit_distance_df['edit_distance'].astype(str)
+
         # TS - set lowest bin (-1) to "Single_UMI"
-        edit_distance_df['edit_distance'][0] = "Single_UMI"
+        edit_distance_df.loc[0, 'edit_distance'] = "Single_UMI"
 
         edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
                                 index=False, sep="\t")

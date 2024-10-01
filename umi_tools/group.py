@@ -127,6 +127,11 @@ def main(argv=None):
                             usage=usage,
                             description=globals()["__doc__"])
 
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
+
     group = U.OptionGroup(parser, "group-specific options")
 
     group.add_option("--group-out", dest="tsv", type="string",
@@ -145,7 +150,7 @@ def main(argv=None):
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv)
+    (options, args) = U.Start(parser, argv=argv, add_group_sam_options=True)
 
     U.validateSamOptions(options, group=True)
 
@@ -281,7 +286,10 @@ def main(argv=None):
 
                     if options.tsv:
                         if options.per_gene:
-                            gene = read.get_tag(gene_tag)
+                            if options.per_contig:
+                                gene = read.reference_name
+                            else:
+                                gene = read.get_tag(gene_tag)
                         else:
                             gene = "NA"
                         mapping_outfile.write("%s\n" % "\t".join(map(str, (

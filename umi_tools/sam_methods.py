@@ -97,8 +97,8 @@ def get_cell_umi_read_string(read_id, sep="_"):
     string) using the specified separator '''
 
     try:
-        return (read_id.split(sep)[-1].encode('utf-8'),
-                read_id.split(sep)[-2].encode('utf-8'))
+        return (read_id.split(sep)[-2].encode('utf-8'),
+                read_id.split(sep)[-1].encode('utf-8'))
     except IndexError:
         raise ValueError(
             "Could not extract UMI or CB from the read ID, please"

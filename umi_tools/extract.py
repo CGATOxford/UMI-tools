@@ -186,6 +186,11 @@ def main(argv=None):
                             usage=usage,
                             description=globals()["__doc__"])
 
+    if len(argv) == 1:
+        parser.print_usage()
+        print ("Required options missing, see --help for more details")
+        return 1
+
     group = U.OptionGroup(parser, "extract-specific options")
 
     # (Experimental option) Retain the UMI in the sequence read"
@@ -256,6 +261,9 @@ def main(argv=None):
                            "are not present in read1 input. This allows cell "
                            "barcode filtering of read1s without "
                            "considering read2s"))
+    group.add_option("--umi-separator",
+                     dest="umi_separator", type="string",
+                     help=("Separator to use to add UMI to the read name. Default: _"))
     parser.add_option_group(group)
 
     group = U.OptionGroup(parser, "[EXPERIMENTAl] barcode extraction options")
@@ -283,12 +291,14 @@ def main(argv=None):
                         pattern2=None,
                         read2_in=None,
                         read2_out=False,
+                        read2_only=False,
                         read2_stdout=False,
                         quality_filter_threshold=None,
                         quality_encoding=None,
                         reconcile=False,
                         either_read=False,
                         either_read_resolve="discard",
+                        umi_separator="_",
                         ignore_suffix=False)
 
     # add common options (-h/--help, ...) and parse command line
@@ -353,7 +363,7 @@ def main(argv=None):
                             options.pattern, options.pattern2))
             elif options.extract_method == "regex":
                 U.error("barcode regex(es) do not include any umi groups "
-                        "(starting with 'umi_') %s, %s" (
+                        "(starting with 'umi_') %s, %s" % (
                             options.pattern, options.pattern2))
 
     if options.whitelist:
@@ -368,7 +378,8 @@ def main(argv=None):
                         "(starting with 'cell_') %s, %s" % (
                             options.pattern, options.pattern2))
 
-    read1s = umi_methods.fastqIterate(options.stdin)
+    read1s = umi_methods.fastqIterate(options.stdin,
+                                      remove_suffix=options.ignore_suffix)
 
     # set up read extractor
     ReadExtractor = extract_methods.ExtractFilterAndUpdate(
@@ -384,7 +395,8 @@ def main(argv=None):
         options.filter_cell_barcode,
         options.retain_umi,
         options.either_read,
-        options.either_read_resolve)
+        options.either_read_resolve,
+        options.umi_separator)
 
     if options.filter_umi:
         umi_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
@@ -453,7 +465,8 @@ def main(argv=None):
         if options.filtered_out2:
             filtered_out2 = U.openFile(options.filtered_out2, "w")
 
-        read2s = umi_methods.fastqIterate(U.openFile(options.read2_in))
+        read2s = umi_methods.fastqIterate(U.openFile(options.read2_in),
+                                          remove_suffix=options.ignore_suffix)
 
         if options.read2_out:
             read2_out = U.openFile(options.read2_out, "w")
@@ -464,7 +477,7 @@ def main(argv=None):
             strict = True
 
         for read1, read2 in umi_methods.joinedFastqIterate(
-                read1s, read2s, strict, options.ignore_suffix):
+                read1s, read2s, strict):
 
             # incrementing count for monitoring progress
             progCount += 1

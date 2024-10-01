@@ -1,0 +1,135 @@
+UMI-Tools: Version 1.1.4
+
+dedup - Deduplicate reads using UMI and mapping coordinates
+
+Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr 
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/
+
+Options:
+  --version             show program's version number and exit
+
+  dedup-specific options:
+    --output-stats=STATS
+                        Specify location to output stats
+
+  Barcode extraction options:
+    --extract-umi-method=GET_UMI_METHOD
+                        how is the read UMI +/ cell barcode encoded?
+                        [default=read_id]
+    --umi-separator=UMI_SEP
+                        separator between read id and UMI
+    --umi-tag=UMI_TAG   tag containing umi
+    --umi-tag-split=UMI_TAG_SPLIT
+                        split UMI in tag and take the first element
+    --umi-tag-delimiter=UMI_TAG_DELIM
+                        concatenate UMI in tag separated by delimiter
+    --cell-tag=CELL_TAG
+                        tag containing cell barcode
+    --cell-tag-split=CELL_TAG_SPLIT
+                        split cell barcode in tag and take the firstelement
+                        for e.g 10X GEM tags
+    --cell-tag-delimiter=CELL_TAG_DELIM
+                        concatenate cell barcode in tag separated by delimiter
+
+  UMI grouping options:
+    --method=METHOD     method to use for umi grouping [default=directional]
+    --edit-distance-threshold=THRESHOLD
+                        Edit distance theshold at which to join two UMIs when
+                        grouping UMIs. [default=1]
+    --spliced-is-unique
+                        Treat a spliced read as different to an unspliced one
+                        [default=False]
+    --soft-clip-threshold=SOFT_CLIP_THRESHOLD
+                        number of bases clipped from 5' end before read is
+                        counted as spliced [default=4]
+    --read-length       use read length in addition to position and UMI to
+                        identify possible duplicates [default=False]
+
+  single-cell RNA-Seq options:
+    --per-gene          Group/Dedup/Count per gene. Must combine with either
+                        --gene-tag or --per-contig
+    --gene-tag=GENE_TAG
+                        Gene is defined by this bam tag [default=none]
+    --assigned-status-tag=ASSIGNED_TAG
+                        Bam tag describing whether read is assigned to a gene
+                        By defualt, this is set as the same tag as --gene-tag
+    --skip-tags-regex=SKIP_REGEX
+                        Used with --gene-tag. Ignore reads where the gene-tag
+                        matches this regex
+    --per-contig        group/dedup/count UMIs per contig (field 3 in BAM;
+                        RNAME), e.g for transcriptome where contig = gene
+    --gene-transcript-map=GENE_TRANSCRIPT_MAP
+                        File mapping transcripts to genes (tab separated)
+    --per-cell          group/dedup/count per cell
+
+  group/dedup options:
+    --buffer-whole-contig
+                        Read whole contig before outputting bundles:
+                        guarantees that no reads are missed, but increases
+                        memory usage
+    --multimapping-detection-method=DETECTION_METHOD
+                        Some aligners identify multimapping using bam tags.
+                        Setting this option to NH, X0 or XT will use these
+                        tags when selecting the best read amongst reads with
+                        the same position and umi [default=none]
+
+  SAM/BAM options:
+    --mapping-quality=MAPPING_QUALITY
+                        Minimum mapping quality for a read to be retained
+                        [default=0]
+    --unmapped-reads=UNMAPPED_READS
+                        How to handle unmapped reads. Options are 'discard',
+                        'use' or 'correct' [default=discard]
+    --chimeric-pairs=CHIMERIC_PAIRS
+                        How to handle chimeric read pairs. Options are
+                        'discard', 'use' or 'correct' [default=use]
+    --unpaired-reads=UNPAIRED_READS
+                        How to handle unpaired reads. Options are 'discard',
+                        'use' or 'correct' [default=use]
+    --ignore-umi        Ignore UMI and dedup only on position
+    --ignore-tlen       Option to dedup paired end reads based solely on
+                        read1, whether or not the template length is the same
+    --chrom=CHROM       Restrict to one chromosome
+    --subset=SUBSET     Use only a fraction of reads, specified by subset
+    -i, --in-sam        Input file is in sam format [default=False]
+    --paired            paired input BAM. [default=False]
+    -o, --out-sam       Output alignments in sam format [default=False]
+    --no-sort-output    Don't Sort the output
+
+  input/output options:
+    -I FILE, --stdin=FILE
+                        file to read stdin from [default = stdin].
+    -L FILE, --log=FILE
+                        file with logging information [default = stdout].
+    -E FILE, --error=FILE
+                        file with error information [default = stderr].
+    -S FILE, --stdout=FILE
+                        file where output is to go [default = stdout].
+    --temp-dir=FILE     Directory for temporary files. If not set, the bash
+                        environmental variable TMPDIR is used[default = None].
+    --log2stderr        send logging information to stderr [default = False].
+    --compresslevel=COMPRESSLEVEL
+                        Level of Gzip compression to use. Default (6)
+                        matchesGNU gzip rather than python gzip default (which
+                        is 9)
+
+  profiling options:
+    --timeit=TIMEIT_FILE
+                        store timeing information in file [none].
+    --timeit-name=TIMEIT_NAME
+                        name in timing file for this class of jobs [all].
+    --timeit-header     add header for timing information [none].
+
+  common options:
+    -v LOGLEVEL, --verbose=LOGLEVEL
+                        loglevel [1]. The higher, the more output.
+    -h, --help          output short help (command line options only).
+    --help-extended     Output full documentation
+    --random-seed=RANDOM_SEED
+                        random seed to initialize number generator with
+                        [none].

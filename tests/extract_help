@@ -1,0 +1,113 @@
+
+extract - Extract UMI from fastq
+
+Usage:
+
+   Single-end:
+      umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]]
+
+   Paired end:
+      umi_tools extract [OPTIONS] -p PATTERN [-I IN_FASTQ[.gz]] [-S OUT_FASTQ[.gz]] --read2-in=IN2_FASTQ[.gz] --read2-out=OUT2_FASTQ[.gz]
+
+   note: If -I/-S are ommited standard in and standard out are used
+         for input and output.  To generate a valid BAM file on
+         standard out, please redirect log with --log=LOGFILE or
+         --log2stderr. Input/Output will be (de)compressed if a
+         filename provided to -S/-I/--read2-in/read2-out ends in .gz
+         
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/
+
+Options:
+  --version             show program's version number and exit
+
+  extract-specific options:
+    --read2-out=READ2_OUT
+                        file to output processed paired read to
+    --read2-stdout      Paired reads, send read2 to stdout, discarding read1
+    --quality-filter-threshold=QUALITY_FILTER_THRESHOLD
+                        Remove reads where any UMI base quality score falls
+                        below this threshold
+    --quality-filter-mask=QUALITY_FILTER_MASK
+                        If a UMI base has a quality below this threshold,
+                        replace the base with 'N'
+    --quality-encoding=QUALITY_ENCODING
+                        Quality score encoding. Choose from 'phred33'[33-77]
+                        'phred64' [64-106] or 'solexa' [59-106]
+    --error-correct-cell
+                        Correct errors in the cell barcode
+    --whitelist=WHITELIST
+                        A whitelist of accepted cell barcodes
+    --blacklist=BLACKLIST
+                        A blacklist of rejected cell barcodes
+    --subset-reads=READS_SUBSET, --reads-subset=READS_SUBSET
+                        Only extract from the first N reads. If N is greater
+                        than the number of reads, all reads will be used
+    --reconcile-pairs   Allow the presences of reads in read2 input that are
+                        not present in read1 input. This allows cell barcode
+                        filtering of read1s without considering read2s
+    --umi-separator=UMI_SEPARATOR
+                        Separator to use to add UMI to the read name. Default:
+                        _
+
+  [EXPERIMENTAl] barcode extraction options:
+    --either-read       UMI may be on either read (see --either-read-resolve)
+                        for options to resolve cases whereUMI is on both reads
+    --either-read-resolve=EITHER_READ_RESOLVE
+                        How to resolve instances where both reads contain a
+                        UMI but using --either-read.Choose from 'discard' or
+                        'quality'(use highest quality). default=dicard
+
+  fastq barcode extraction options:
+    --extract-method=EXTRACT_METHOD
+                        How to extract the umi +/- cell barcodes, Choose from
+                        'string' or 'regex'
+    -p PATTERN, --bc-pattern=PATTERN
+                        Barcode pattern
+    --bc-pattern2=PATTERN2
+                        Barcode pattern for paired reads
+    --3prime            barcode is on 3' end of read.
+    --read2-in=READ2_IN
+                        file name for read pairs
+    --read2-only        Only extract from read2
+    --filtered-out=FILTERED_OUT
+                        Write out reads not matching regex pattern to this
+                        file
+    --filtered-out2=FILTERED_OUT2
+                        Write out paired reads not matching regex pattern to
+                        this file
+    --ignore-read-pair-suffixes
+                        Ignore '\1' and '\2' read name suffixes
+
+  input/output options:
+    -I FILE, --stdin=FILE
+                        file to read stdin from [default = stdin].
+    -L FILE, --log=FILE
+                        file with logging information [default = stdout].
+    -E FILE, --error=FILE
+                        file with error information [default = stderr].
+    -S FILE, --stdout=FILE
+                        file where output is to go [default = stdout].
+    --temp-dir=FILE     Directory for temporary files. If not set, the bash
+                        environmental variable TMPDIR is used[default = None].
+    --log2stderr        send logging information to stderr [default = False].
+    --compresslevel=COMPRESSLEVEL
+                        Level of Gzip compression to use. Default (6)
+                        matchesGNU gzip rather than python gzip default (which
+                        is 9)
+
+  profiling options:
+    --timeit=TIMEIT_FILE
+                        store timeing information in file [none].
+    --timeit-name=TIMEIT_NAME
+                        name in timing file for this class of jobs [all].
+    --timeit-header     add header for timing information [none].
+
+  common options:
+    -v LOGLEVEL, --verbose=LOGLEVEL
+                        loglevel [1]. The higher, the more output.
+    -h, --help          output short help (command line options only).
+    --help-extended     Output full documentation
+    --random-seed=RANDOM_SEED
+                        random seed to initialize number generator with
+                        [none].

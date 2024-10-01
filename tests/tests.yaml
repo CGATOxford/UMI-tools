@@ -72,6 +72,18 @@ extract_either_read:
       references: [either_read_out.1.fastq, either_read_out.2.fastq]
       options: extract --extract-method=regex --read2-in=<DIR>/either_read.fastq.2.gz --bc-pattern="(?P<discard_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<discard_3>.{8})(?P<umi_1>.{6})T{3}.*" --bc-pattern2="(?P<discard_1>.{8,12})(?P<discard_2>GAGTGATTGCTTGTGACGCCTT{s<=2})(?P<discard_3>.{8})(?P<umi_1>.{6})T{3}.*" -L test.log --either-read --read2-out=either_read_out.2.fastq
 
+extract_read2_only_string:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [stdout, read2_only_string.1.fastq]
+      references: [read2_only_string.2.fastq,  read2_only_string.1.fastq]
+      options: extract  --extract-method=string --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern2=NNNNNNNNNN --read2-out=read2_only_string.1.fastq -L test.log
+
+extract_read2_only_regex:
+      stdin: scrb_seq_fastq.1.gz
+      outputs: [stdout, read2_only_string.1.fastq]
+      references: [read2_only_string.2.fastq,  read2_only_string.1.fastq]
+      options: extract  --extract-method=regex --read2-in=<DIR>/scrb_seq_fastq.2.gz --bc-pattern2="^(?P<umi_1>.{10}).*" --read2-out=read2_only_string.1.fastq  -L test.log
+
 # TS: add tests to cover options for what to do when both reads match
 # the regexes (e.g discard + prioritise based on quality)
 
@@ -344,6 +356,56 @@ group_paired_use_unmapped:
       references: [paired_group_use_unmapped.sam]
       options: group -L test.log --out-sam --random-seed=123456789 --method=directional --no-sort-output --output-bam --unmapped=use --paired
 
+group_contig_no_gene_tag:
+      sort: True
+      stdin: chr19.bam
+      outputs: [group_contig_no_gene_tag.tsv]
+      references: [group_contig_no_gene_tag.tsv]
+      options: group -L test.log --out-sam --per-contig --per-gene --random-seed=123456789 --method=directional --no-sort-output --output-bam --group-out=group_contig_no_gene_tag.tsv
+
+umi_tools_help:
+      sort: False
+      outputs: [stdout]
+      references: [umi_tools_help]
+      options: --help
+
+whitelist_help:
+      sort: False
+      outputs: [stdout]
+      references: [whitelist_help]
+      options: whitelist --help
+
+extract_help:
+      sort: False
+      outputs: [stdout]
+      references: [extract_help]
+      options: extract --help
+
+dedup_help:
+      sort: False
+      outputs: [stdout]
+      references: [dedup_help]
+      options: dedup --help
+
+group_help:
+      sort: False
+      outputs: [stdout]
+      references: [group_help]
+      options: group --help
+
+count_help:
+      sort: False
+      outputs: [stdout]
+      references: [count_help]
+      options: count --help
+
+count_tab_help:
+      sort: False
+      outputs: [stdout]
+      references: [count_tab_help]
+      options: count_tab --help
+
+      
 # ### Tests to implement ####
 
 # ## dedup ##
