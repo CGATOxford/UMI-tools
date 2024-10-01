@@ -63,7 +63,7 @@ def remove_umis(adj_list, cluster, nodes):
                            for x in nodes
                            for node in adj_list[x]] + nodes)
 
-    return cluster - nodes_to_remove
+    return set(cluster) - nodes_to_remove
 
 
 def get_substr_slices(umi_length, idx_size):
@@ -277,7 +277,7 @@ class UMIClusterer:
 
         for cluster in clusters:
             if len(cluster) == 1:
-                groups.append(list(cluster))
+                groups.append(cluster)
 
             else:
                 observed = set()
