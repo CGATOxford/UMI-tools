@@ -22,21 +22,112 @@ import time
 import hashlib
 import sys
 import platform
-
-from nose.tools import ok_
+import pytest
 
 PYTHON_VERSION = platform.python_version()
 IS_PY3 = sys.version_info.major >= 3
-
-
 SUBDIRS = ("gpipe", "optic")
 
 # Setup logging
 LOGFILE = open("test_scripts.log", "a")
 DEBUG = os.environ.get("CGAT_DEBUG", False)
 
+def compute_checksum(filename):
+    '''return md5 checksum of file.'''
+    return hashlib.md5(open(filename, 'rb').read()).hexdigest()
 
-def check_main(script):
+
+def get_tests_directory():
+    """discover and return the absolute path of the root directory"""
+    testdir = os.getcwd()
+    if not testdir.endswith("tests"):
+        testdir = os.path.join(testdir, "tests")
+        if not os.path.exists(testdir):
+            raise ValueError("can not find test directory")
+
+    return testdir
+
+
+def _read(fn):
+    if fn.endswith(".gz"):
+        with gzip.open(fn) as inf:
+            data = inf.read()
+    else:
+        with open(fn, "rb") as inf:
+            data = inf.read()
+
+    if IS_PY3:
+        try:
+            data = data.decode("ascii")
+        except UnicodeDecodeError:
+            return data
+
+    data = [x for x in data.splitlines()
+            if not x.startswith("#")]
+
+    return data
+
+
+def get_scripts():
+    # directory location of tests
+    testing_dir = get_tests_directory()
+
+    # directory location of scripts
+    tool_dir = os.path.join(os.path.dirname(testing_dir), "umi_tools")
+
+    tool = "tests/umi_tools.py"
+    tool_name = os.path.basename(tool)
+
+    return [os.path.abspath(os.path.join(tool_dir, tool_name))]
+
+
+
+def get_script_parameters():
+    '''yield list of scripts to test.'''
+    # the current directory
+    current_dir = os.getcwd()
+
+    # directory location of tests
+    testing_dir = get_tests_directory()
+
+    # directory location of scripts
+    tool_dir = os.path.join(os.path.dirname(testing_dir), "umi_tools")
+
+    tool = "tests/umi_tools.py"
+    tool_name = os.path.basename(tool)
+
+    fn = 'tests/tests.yaml'
+    assert os.path.exists(fn), "tests.yaml does not exist!"
+
+    tool_tests = yaml.safe_load(open(fn))
+
+    parameters = []
+    for test, values in sorted(list(tool_tests.items())):
+        if "skip_python" in values:
+            versions = [x.strip() for x in
+                        str(values["skip_python"]).split(",")]
+            versions = [x for x in versions
+                        if PYTHON_VERSION.startswith(x)]
+            if len(versions) > 0:
+                continue
+        parameters.append((
+            test,
+            values.get('stdin', None),
+            values['options'],
+            values['outputs'],
+            values['references'],
+            current_dir,
+            values.get('sort', False)
+        ))
+    return parameters
+
+#########################################
+# List of tests to perform.
+#########################################
+# The fields are:
+
+@pytest.mark.parametrize("script", get_scripts())
+def test_script_has_main(script):
     '''test is if a script can be imported and has a main function.
     '''
 
@@ -58,26 +149,16 @@ def check_main(script):
         script = re.sub("%s_" % s, "%s/" % s, script)
 
     # check for text match
-    ok_([x for x in open(script) if x.startswith("def main(")],
-        "no main function")
+    assert [x for x in open(script) if x.startswith("def main(")], "no main function"
 
 
-def compute_checksum(filename):
-    '''return md5 checksum of file.'''
-    return hashlib.md5(open(filename, 'rb').read()).hexdigest()
-
-#########################################
-# List of tests to perform.
-#########################################
-# The fields are:
-
-
-def check_script(test_name,
-                 stdin,
-                 options, outputs,
-                 references,
-                 current_dir,
-                 sort=False):
+@pytest.mark.parametrize("test_name,stdin,options,outputs,references,current_dir,sort", get_script_parameters())
+def test_script(test_name,
+                stdin,
+                options, outputs,
+                references,
+                current_dir,
+                sort):
     '''check script.
     # 1. Name of the script
     # 2. Filename to use as stdin
@@ -204,81 +285,4 @@ def check_script(test_name,
 
     if not DEBUG:
         shutil.rmtree(tmpdir)
-    ok_(not fail, msg)
-
-
-def get_tests_directory():
-    """discover and return the absolute path of the root directory"""
-    testdir = os.getcwd()
-    if not testdir.endswith("tests"):
-        testdir = os.path.join(testdir, "tests")
-        if not os.path.exists(testdir):
-            raise ValueError("can not find test directory")
-
-    return testdir
-
-
-def test_tool():
-    '''yield list of scripts to test.'''
-    # the current directory
-    current_dir = os.getcwd()
-
-    # directory location of tests
-    testing_dir = get_tests_directory()
-
-    # directory location of scripts
-    tool_dir = os.path.join(os.path.dirname(testing_dir), "umi_tools")
-
-    #for test_script in test_dirs:
-
-    check_main.description = os.path.join(tool_dir, "def_main")
-
-    tool = "tests/umi_tools.py"
-    tool_name = os.path.basename(tool)
-
-    yield (check_main,
-           os.path.abspath(os.path.join(tool_dir, tool_name)))
-
-    fn = 'tests/tests.yaml'
-    assert os.path.exists(fn), "tests.yaml does not exist!"
-
-    tool_tests = yaml.safe_load(open(fn))
-
-    for test, values in sorted(list(tool_tests.items())):
-        check_script.description = os.path.join(tool_name, test)
-        if "skip_python" in values:
-            versions = [x.strip() for x in
-                        str(values["skip_python"]).split(",")]
-            versions = [x for x in versions
-                        if PYTHON_VERSION.startswith(x)]
-            if len(versions) > 0:
-                continue
-
-        yield(check_script,
-              test,
-              values.get('stdin', None),
-              values['options'],
-              values['outputs'],
-              values['references'],
-              current_dir,
-              values.get('sort', False))
-
-
-def _read(fn):
-    if fn.endswith(".gz"):
-        with gzip.open(fn) as inf:
-            data = inf.read()
-    else:
-        with open(fn, "rb") as inf:
-            data = inf.read()
-
-    if IS_PY3:
-        try:
-            data = data.decode("ascii")
-        except UnicodeDecodeError:
-            return data
-
-    data = [x for x in data.splitlines()
-            if not x.startswith("#")]
-
-    return data
+    assert not fail, msg
