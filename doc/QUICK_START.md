@@ -80,10 +80,10 @@ de-multiplexed. We specify this using the `--bc-pattern` parameter to
 fixed part. For example, in a standard iCLIP experiment, the barcode
 is made of 3 random bases, followed by a 4 base library barcode,
 followed by 2 more random bases. Thus the `--bc-pattern` would be
-"NNNXXXXNN".
+"XXXNNNNXXX".
 
       Read:          TAGCCGGCTTTGCCCAATTGCCAAATTTTGGGGCCCCTATGAGCTAG 
-      Barcode:       NNNXXXXNN
+      Barcode:       XXXNNNNXXX
                          |
                          v
                      TAGCCGGCT
