@@ -103,11 +103,11 @@ def fastqIterate(infile, remove_suffix=False):
             break
         if not line1.startswith('@'):
             U.error("parsing error: expected '@' in line %s" % line1)
-        line2 = convert2string(infile.readline())
-        line3 = convert2string(infile.readline())
+        line2 = convert2string(infile.readline()).rstrip()
+        line3 = convert2string(infile.readline()).rstrip()
         if not line3.startswith('+'):
             U.error("parsing error: expected '+' in line %s" % line3)
-        line4 = convert2string(infile.readline())
+        line4 = convert2string(infile.readline()).rstrip()
         # incomplete entry
         if not line4:
             U.error("incomplete entry for %s" % line1)
@@ -115,7 +115,7 @@ def fastqIterate(infile, remove_suffix=False):
         if remove_suffix:
             line1 = removeReadIDSuffix(line1)
             
-        yield Record(line1[1:], line2[:-1], line4[:-1])
+        yield Record(line1[1:], line2, line4)
 
 # End of FastqIterate()
 ###############################################################################
