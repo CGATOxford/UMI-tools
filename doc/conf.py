@@ -12,9 +12,23 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
+from mock import Mock as MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return MagicMock()
+
+MOCK_MODULES = [ 'numpy',
+                 'pandas', 
+                 'pysam', 
+                 'regex', "umi_tools._dedup_umi", 
+                 "umi_tools.whitelist_methods"]
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 from recommonmark.parser import CommonMarkParser
 
