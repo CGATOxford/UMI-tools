@@ -161,41 +161,21 @@ def main(argv=None):
         raise ValueError("Input on standard in not currently supported")
 
     if options.stdout != sys.stdout:
-        if options.no_sort_output:
-            out_name = options.stdout.name
-        else:
-            out_name = U.getTempFilename(dir=options.tmpdir)
-            sorted_out_name = options.stdout.name
-        options.stdout.close()
         assert options.output_bam, (
             "To output a bam you must include --output-bam option")
-    else:
-        if options.no_sort_output:
-            out_name = "-"
-        else:
-            out_name = U.getTempFilename(dir=options.tmpdir)
-            sorted_out_name = "-"
 
-    if not options.no_sort_output:  # need to determine the output format for sort
-        if options.out_sam:
-            sort_format = "sam"
-        else:
-            sort_format = "bam"
-
-    if options.in_sam:
-        in_mode = "r"
-    else:
-        in_mode = "rb"
-
-    if options.out_sam:
-        out_mode = "wh"
-    else:
-        out_mode = "wb"
-
-    infile = pysam.Samfile(in_name, in_mode)
+    in_format = U.determine_format(in_name, options.in_sam, options.in_format)
+    infile = U.open_input_alignments(in_name, in_format, options)
 
     if options.output_bam:
-        outfile = pysam.Samfile(out_name, out_mode, template=infile)
+        out_name, out_format, sorted_out_name, sorted_out_format = U.output_names_and_formats(
+            options.stdout,
+            options.out_sam,
+            options.out_format,
+            options.no_sort_output,
+            options.tmpdir
+        )
+        outfile = U.open_output_alignments(out_name, out_format, infile, options)
     else:
         outfile = None
 
@@ -310,9 +290,11 @@ def main(argv=None):
     if outfile:
         outfile.close()
         if not options.no_sort_output:
-            # sort the output
-            pysam.sort("-o", sorted_out_name, "-O", sort_format, "--no-PG", out_name)
-            os.unlink(out_name)  # delete the tempfile
+            U.sort_output(sorted_out_name,
+                          out_name,
+                          format=sorted_out_format,
+                          format_options = options.output_options,
+                          reference_filename=options.reference_filename)
 
     if options.tsv:
         mapping_outfile.close()

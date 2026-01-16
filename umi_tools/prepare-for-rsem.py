@@ -127,12 +127,8 @@ def main(argv=None):
     else:
         in_name = "-"
 
-    if options.sam:
-        mode = ""
-    else:
-        mode = "b"
-
-    inbam = pysam.AlignmentFile(in_name, "r"+mode)
+    informat = U.determine_format(in_name, options.sam, options.in_format)
+    inbam = U.open_input_alignments(in_name, informat, ptions)
 
     if options.stdout != sys.stdout:
         out_name = options.stdout.name
@@ -140,7 +136,8 @@ def main(argv=None):
     else:
         out_name = "-"
 
-    outbam = pysam.AlignmentFile(out_name, "w" + mode, template = inbam)
+    outformat = U.determine_format(out_name, options.sam, options.out_format)
+    outbam = U.open_output_alignments(out_name, outformat, options)
 
     options.tags = options.tags.split(",")
 
