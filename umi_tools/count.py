@@ -106,7 +106,8 @@ def main(argv=None):
     else:
         raise ValueError("Input on standard in not currently supported")
 
-    infile = U.open_input_alignments(in_name, options)
+    informat = U.determine_format(in_name, options.in_sam, options.in_format)
+    infile = U.open_input_alignments(in_name, informat, options)
 
     # write out to tempfile and then sort to stdout
     tmpfilename = U.getTempFilename(dir=options.tmpdir)
