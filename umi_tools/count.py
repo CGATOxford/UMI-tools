@@ -106,12 +106,7 @@ def main(argv=None):
     else:
         raise ValueError("Input on standard in not currently supported")
 
-    if options.in_sam:
-        in_mode = "r"
-    else:
-        in_mode = "rb"
-
-    infile = pysam.Samfile(in_name, in_mode)
+    infile = U.open_input_alignments(in_name, options)
 
     # write out to tempfile and then sort to stdout
     tmpfilename = U.getTempFilename(dir=options.tmpdir)
