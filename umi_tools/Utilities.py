@@ -885,33 +885,33 @@ def Start(parser=None,
                          choices=("sam", "bam", "cram"),
                          default=None,
                          help="File format of the input file. Format is usually" \
-                         "implied from the extension of the filename, but" \
-                         "maybe overridden with this option. Default=bam")
+                         " implied from the extension of the filename, but" \
+                         " maybe overridden with this option. Default=bam")
         group.add_option("--out-format", dest="out_format",
                          type="choice",
                          choices=("sam", "bam", "cram"),
                          default=None,
                          help="File format of the input file. Format is usually" \
-                         "implied from the extension of the filename, but" \
-                         "maybe overridden with this option. Default=bam")
+                         " implied from the extension of the filename, but" \
+                         " maybe overridden with this option. Default=bam")
         group.add_option("--input-options", dest="input_options", action="store",
                          type="str",
                          default=None,
                          help="Format string provided to htslib for reading. Mostly" \
-                         "useful for CRAM formatted files. See samtools documentation")
+                         " useful for CRAM formatted files. See samtools documentation")
         group.add_option("--output-options", dest="output_options", action="store",
                          type="str",
                          default=None,
                          help="Format string provided to htslib for writing. Mostly" \
-                         "useful for CRAM formatted files. See samtools documentation")
+                         " useful for CRAM formatted files. See samtools documentation")
         group.add_option("--reference-filename", dest="reference_filename",
                         action="store",
                         default=None,
                         help="File path or URL to the genome reference to be used" \
-                        "when reading or writing CRAM files. By default, when reading" \
-                        "a CRAM file, the reference recorded in the input file will be" \
-                        "used unless this is specified. When writing, specifying a" \
-                        "reference location is required.")
+                        " when reading or writing CRAM files. By default, when reading" \
+                        " a CRAM file, the reference recorded in the input file will be" \
+                        " used unless this is specified. When writing, specifying a" \
+                        " reference location is required.")
         group.add_option("--mapping-quality", dest="mapping_quality",
                          type="int",
                          help="Minimum mapping quality for a read to be retained"
@@ -1466,8 +1466,8 @@ def debug(message):
 def error(message):
     '''log error message, see the :mod:`logging` module'''
     logging.error(message)
-    raise ValueError("UMI-tools failed with an error. Check the log file")
-
+    sys.stderr.write("UMI-tools failed with an error. Check the log file\n")
+    sys.exit(1)
 
 def critical(message):
     '''log critical message, see the :mod:`logging` module'''
@@ -1746,6 +1746,12 @@ def sort_output(sorted_out_name,
         params.extend(["--output-fmt-options", format_options])
 
     params.append(infile)
-    debug(params)
-    pysam.sort(*params)
+    
+    try:   
+        pysam.sort(*params)
+    except pysam.SamtoolsError as e:
+        error("Sorting output file failed.\n\nSort command was:\n " +  
+             " ".join(params) + "\n\n" +
+             f"Error was:\n {e.value}")    
+
     os.unlink(infile)  # delete the tempfile
