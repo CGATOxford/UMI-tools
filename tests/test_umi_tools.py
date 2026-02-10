@@ -190,6 +190,11 @@ def test_script(test_name,
 
     options = re.sub("\n", "", options)
 
+    # Set COLUMNS variable so that help messages are wrapped same as on
+    # commandline
+    exec_env = os.environ.copy() 
+    exec_env["COLUMNS"] = "80"
+
     # use /bin/bash in order to enable "<( )" syntax in shells
     statement = ("/bin/bash -c "
                  "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
@@ -198,7 +203,8 @@ def test_script(test_name,
                                shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
-                               cwd=tmpdir)
+                               cwd=tmpdir,
+                               env=exec_env)
 
     if DEBUG:
         print("tmpdir={}".format(tmpdir), end=" ")
