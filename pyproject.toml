@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=42", "setuptools-scm", "cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "umi_tools"
+description = "umi_tools: Tools for UMI analyses"
+dynamic = ["version"]
+authors = [
+    {name = "Ian Sudbery", email = "i.sudbery@sheffield.ac.uk" }
+]
+license = "MIT"
+keywords = ["computational", "genomics"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python",
+  "Topic :: Software Development",
+  "Topic :: Scientific/Engineering",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Operating System :: MacOS"
+]
+dependencies = [
+    "numpy>=1.7",
+    "pandas>=0.12.0",
+    "pysam>=0.16.0.1",
+    "future",
+    "regex",
+    "scipy",
+    "matplotlib",
+    "pybktree",
+]
+
+[tool.setuptools]
+ext-modules = [
+    {name = "umi_tools._dedup_umi", sources = ["umi_tools/_dedup_umi.pyx"]}
+]
+
+[tool.setuptools.packages.find]
+
+
+[tool.setuptools_scm]
+
+[project.urls]
+Homepage = "https://github.com/CGATOxford/UMI-tools"
+Repository = "https://github.com/CGATOxford/UMI-tools"
+
+[project.scripts]
+umi_tools = "umi_tools.umi_tools:main"
