@@ -31,9 +31,9 @@ or::
 or grab a zip of the `latest release`_ from github and unpack
 (replace `0.5.5` with version number; replace ``wget`` with ``curl -O`` for OS X)::
 
-    $ unzip 1.0.0.zip
-    $ cd UMI-tools-1.0.0
-    $ python setup.py install --user
+    $ unzip 1.1.6.zip
+    $ cd UMI-tools-1.1.6
+    $ pip install . --user
 
 If these options don't work, see below.
 
@@ -41,16 +41,28 @@ Conda package manager
 ----------------------
 
 This is the easiest way to install ``UMI-tools`` if you are already using
-either anaconda python or miniconda: all depedencies, whether they be
+either anaconda python or miniconda/minimamba: all depedencies, whether they be
 python libraries or system libraries are automatically installed. You
 can also do all your installations in seperate isolated "environments"
 where installing new software will not affect packages in other
 environments. The downside of ``conda`` installation is that if you do not
 already use anaconda or miniconda, you will be building a completely
 new python environment, would have to reinstall all of your libraries
-etc. You can read more `about conda here`_.
+etc. 
 
-1. Install miniconda (if not already installed), see `conda
+Anaconda, the company that created the conda package manager and maintains 
+the anaconda package registry recently made it more difficult for larger
+organisations to use their packages for free.
+
+However, the package manager remains open-source, and the conda-forge project
+provides and independent ecosystem, free from any IP issues around Anaconda.
+
+Installing miniforge gives you the package manager with conda-forge defaults
+already set. 
+
+You can read more `about conda here`_.
+
+1. Install minimamba from miniforge (if not already installed), see `conda
    installation instructions here`_.
 
 2. Type::
@@ -203,8 +215,8 @@ Depedencies from conda/PyPI manager
     `master branch`_ (which should contain the lastest development
     version) and unpack the zip or tar and enter the directory::
 
-        $ unzip 1.0.0.zip
-        $ cd UMI-tools-1.0.0
+        $ unzip 1.1.6.zip
+        $ cd UMI-tools-1.1.6
 
     or clone the repository::
 
@@ -215,20 +227,13 @@ Depedencies from conda/PyPI manager
 
         $ pip install -r requirements.txt
 
-    or with ``conda``::
+    or with ``conda``/``mamba``::
 
-        $ conda install setuptools
-        $ conda install pandas
-        $ conda install future
-        $ conda install scipy
-        $ conda install matplotlib
-        $ conda config --add channels bioconda
-        $ conda install regex
-        $ conda install pysam
+        $ mamba install --only-deps -c bioconda umi_tools 
 
-4.  Install UMI-tools using the ``setup.py`` script::
+4.  Install UMI-tools using the ``pip``::
 
-        $ python setup.py install --user
+        $ pip install . --user
 
 Completely from source
 +++++++++++++++++++++++
