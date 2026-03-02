@@ -128,7 +128,7 @@ def main(argv=None):
         in_name = "-"
 
     informat = U.determine_format(in_name, options.sam, options.in_format)
-    inbam = U.open_input_alignments(in_name, informat, ptions)
+    inbam = U.open_input_alignments(in_name, informat, options)
 
     if options.stdout != sys.stdout:
         out_name = options.stdout.name
