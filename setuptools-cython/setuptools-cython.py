@@ -9,7 +9,6 @@ def get_cython_requirement(config_settings=None):
     e.g.: `--config-settings with-cython=true`
     """
     extra_requirements = []
-    print(f"USING CONFIG_SETTINGS: {config_settings}")
     if config_settings and config_settings.get("with-cython") == "true":
         extra_requirements = ["cython"]
     return extra_requirements
