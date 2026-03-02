@@ -92,7 +92,7 @@ Enter repository and run:
 
 .. code:: bash
 
-   $ python setup.py install
+   $ pip install .
 
 For more detail see `INSTALL.rst <./doc/INSTALL.rst>`_
 
