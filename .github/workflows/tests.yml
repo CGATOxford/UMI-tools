@@ -30,7 +30,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Install
         run: |
-          python setup.py install
+          pip install .
       - name: Test with PyTest
         run: |
           pytest -v tests/test_umi_tools.py
