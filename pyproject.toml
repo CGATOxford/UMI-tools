@@ -10,7 +10,7 @@ dynamic = ["version"]
 authors = [
     {name = "Ian Sudbery", email = "i.sudbery@sheffield.ac.uk" }
 ]
-license = "MIT"
+
 keywords = ["computational", "genomics"]
 classifiers = [
   "Development Status :: 3 - Alpha",
