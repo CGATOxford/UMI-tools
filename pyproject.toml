@@ -1,6 +1,7 @@
 [build-system]
-requires = ["setuptools>=42", "setuptools-scm", "cython"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=42", "setuptools-scm"]
+build-backend = "setuptools-cython"
+backend-path = ["setuptools-cython"]
 
 [project]
 name = "umi_tools"
