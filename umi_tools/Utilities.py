@@ -256,6 +256,8 @@ import random
 import uuid
 import tempfile
 import regex
+import pysam
+
 from umi_tools import __version__
 
 
@@ -878,6 +880,38 @@ def Start(parser=None,
     if add_sam_options:
         group = OptionGroup(parser, "SAM/BAM options")
 
+        group.add_option("--in-format", dest="in_format",
+                         type="choice",
+                         choices=("sam", "bam", "cram"),
+                         default=None,
+                         help="File format of the input file. Format is usually" \
+                         " implied from the extension of the filename, but" \
+                         " maybe overridden with this option. Default=bam")
+        group.add_option("--out-format", dest="out_format",
+                         type="choice",
+                         choices=("sam", "bam", "cram"),
+                         default=None,
+                         help="File format of the input file. Format is usually" \
+                         " implied from the extension of the filename, but" \
+                         " maybe overridden with this option. Default=bam")
+        group.add_option("--input-options", dest="input_options", action="store",
+                         type="str",
+                         default=None,
+                         help="Format string provided to htslib for reading. Mostly" \
+                         " useful for CRAM formatted files. See samtools documentation")
+        group.add_option("--output-options", dest="output_options", action="store",
+                         type="str",
+                         default=None,
+                         help="Format string provided to htslib for writing. Mostly" \
+                         " useful for CRAM formatted files. See samtools documentation")
+        group.add_option("--reference-filename", dest="reference_filename",
+                        action="store",
+                        default=None,
+                        help="File path or URL to the genome reference to be used" \
+                        " when reading or writing CRAM files. By default, when reading" \
+                        " a CRAM file, the reference recorded in the input file will be" \
+                        " used unless this is specified. When writing, specifying a" \
+                        " reference location is required.")
         group.add_option("--mapping-quality", dest="mapping_quality",
                          type="int",
                          help="Minimum mapping quality for a read to be retained"
@@ -1432,8 +1466,8 @@ def debug(message):
 def error(message):
     '''log error message, see the :mod:`logging` module'''
     logging.error(message)
-    raise ValueError("UMI-tools failed with an error. Check the log file")
-
+    sys.stderr.write("UMI-tools failed with an error. Check the log file\n")
+    sys.exit(1)
 
 def critical(message):
     '''log critical message, see the :mod:`logging` module'''
@@ -1493,3 +1527,231 @@ def getTempFilename(dir=None, shared=False, suffix=""):
     tmpfile = getTempFile(dir=dir, shared=shared, suffix=suffix)
     tmpfile.close()
     return tmpfile.name
+
+def determine_format(filename, sam, out_format):
+    '''Determine the alignment file format for input/output.
+    If out_sam is True then the format is SAM, if the out_format is
+    set then use that format, else detect from the extension to the 
+    filename. If the extension can't be matched, then use BAM
+    
+    Arguments
+    ---------
+    filename : string
+        The filename of the input/output file
+    sam : bool
+        The value of the out_sam/in_sam/sam flag from the command line
+        options
+    out_format : string
+        The value of the out_format parameter from the command line options
+
+    Returns
+    -------
+    format : string
+        File format to use. One of sam/bam/cram
+    '''
+
+    if sam:
+        format = "sam"
+    elif out_format:
+        format = out_format
+    elif filename.lower().endswith(".sam"):
+        format = "sam"
+    elif filename.lower().endswith(".cram"):
+        format = "cram"
+    else:
+        format = "bam"
+
+    return (format)
+
+def output_names_and_formats(outfile, sam, outformat, no_sort_out, tmpdir):
+    '''This function handles the detection of what the output filename
+    should be, and what its format should be, as well as the name and the
+    format of any temporary file. 
+
+    The format of the output file is detected from the filename or the 
+    commandline options. 
+
+    The format of any intermediate, unsorted, temporary file is sam
+    if the output file is sam, and bam otherwise. CRAM files should
+    always be sorted. 
+
+    Arguments
+    ---------
+    outfile : filehandle
+      The output file for any *eventual* output file
+    sam : bool
+        The value of the out_sam flag from the command line options
+    outformat : string
+        The value of the out_format paramtere from the command line options
+    no_sort_out : bool
+        Whether or not to skip the sorting of the output. 
+    tmpdir : string
+        directory for temporary file if used
+
+    Returns
+    -------
+    out_name : string
+        the filename for the (maybe temporary) unsorted output file
+    out_format : string
+        the file format for the unsorted output file
+    sorted_out_name : string
+        the name for the sorted output file
+    sorted_out_format : string
+        the file format for the sorted output file
+
+    '''
+
+    if outfile != sys.stdout:
+        eventual_name = outfile.name
+        outfile.close()
+    else:
+        eventual_name = "-"
+
+    eventual_format = determine_format(eventual_name, sam, outformat)
+
+    if not no_sort_out:
+        sorted_out_format = eventual_format
+        sorted_out_name = eventual_name
+        out_name = getTempFilename(dir=tmpdir)
+        out_format = "sam" if eventual_format=="sam" else "bam"
+    else:
+        out_format = eventual_format
+        out_name = eventual_name
+        sorted_out_format = None
+        sorted_out_name = None
+    
+    return (out_name, out_format, sorted_out_name, sorted_out_format)
+    
+
+        
+
+def open_input_alignments(in_name, format, options):
+    '''This function will determine the format of the input file and open 
+    with the apporpriate options. The format will be determined from the 
+    extension, or the --in-format commandline switch. --in-format takes 
+    priority. Filenames ending `.sam` or `.cram` will be opened as such, 
+    otherwise assumed to be `bam`. 
+
+    Arguements
+    ----------
+    in_name : string
+        Filename/path to open.  Extension is not case sensitive
+    format : string
+        File format to use. One of sam, bam or cram
+    options : dict_like
+        An options dictionary, as returned by Start
+
+    Returns
+    -------
+
+    infile : pysam.AlignmentFile
+        The input alignment file
+    '''
+   
+    if format=="sam":
+        mode = "r"
+    elif format=="cram":
+        mode = "rc"
+    else:
+        mode = "rb"
+
+    infile = pysam.AlignmentFile(filepath_or_object=in_name,
+                                 mode=mode,
+                                 reference_filename=options.reference_filename,
+                                 format_options=options.input_options)
+    return(infile)
+
+
+def open_output_alignments(out_name, format, infile, options):
+    '''This function will determine the format of the input file and open 
+    with the apropriate options. The format will be determined from the 
+    extension, or the --out-format commandline switch. --out-format takes 
+    priority. Filenames ending `.sam` or `.cram` will be opened as such, 
+    otherwise assumed to be `bam`. 
+
+    Parameters
+    ----------
+
+    out_name : string
+        Filename to use for the output file. Extension will be used to
+        determine format should the options.out_format not be set.
+    format : string
+        File format to use, one of bam, sam or cram
+    infile : pysam.AlignmentFile
+        The input alignment file. This will be used as a template for the
+        new file.
+    options : dict_like
+        The options dictionary returned by Start, used to get various
+        options, depending on the file format, including out_format, 
+        output_options, and reference_filename, which must be specified
+        if the format is CRAM
+
+    Returns
+    -------
+    outfile : pysam.AlignmentFile
+        The alignment file to be used as output. 
+    '''
+
+    if format=="sam":
+        mode = "w"
+    elif format=="cram":
+        mode = "wc"
+    else:   
+        mode = "wb"
+
+    outfile = pysam.AlignmentFile(filepath_or_object=out_name,
+                                 mode=mode,
+                                 template=infile,
+                                 reference_filename=options.reference_filename,
+                                 format_options=options.output_options)
+    return(outfile)
+
+def sort_output(sorted_out_name,  
+                infile, 
+                format="bam",
+                format_options=None, 
+                reference_filename=None):
+    '''Sort infile into sorted_out_name using an external call to csamtools.
+    Deletes the input file. 
+    
+    Arugments
+    ---------
+    sorted_out_name : string
+        Filename to use for the output of the sort.
+    infile : string
+        Name of file to sort
+    format : string
+        File format to use for the output. One of sam, bam or cram
+    format_options : string
+        Comma seperated list of key=value pairs specifying output format
+         options to samtools
+    reference_filename : string
+        Location of the reference sequence to use for CRAM formatted files
+         required for CRAM output, will be used for input also if specified
+          
+    Returns
+    -------
+        None
+         
+    '''
+    
+    params = ["-o", sorted_out_name,
+              "-O", format,
+              "--no-PG"]
+    
+    if reference_filename:
+        params.extend(["--reference", reference_filename])
+    
+    if format_options:
+        params.extend(["--output-fmt-options", format_options])
+
+    params.append(infile)
+    
+    try:   
+        pysam.sort(*params)
+    except pysam.SamtoolsError as e:
+        error("Sorting output file failed.\n\nSort command was:\n " +  
+             " ".join(params) + "\n\n" +
+             f"Error was:\n {e.value}")    
+
+    os.unlink(infile)  # delete the tempfile
