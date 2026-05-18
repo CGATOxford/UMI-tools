@@ -17,11 +17,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install CA Certificates
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ca-certificates
-          sudo update-ca-certificates
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -37,5 +32,8 @@ jobs:
         run: |
           pip install .
       - name: Test with PyTest
+        env:
+          # This explicitly overrides the hardcoded RedHat paths inside the package
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
           pytest -v tests/test_umi_tools.py
