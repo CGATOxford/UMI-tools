@@ -218,13 +218,13 @@ dedup_from_cram:
       stdin: chr19_1mb.cram
       outputs: [stdout]
       references: [chr19_1mb.dedup.sam]
-      options: dedup  --out-sam --random-seed=123456789 -L test.log
+      options: dedup  --out-sam --random-seed=123456789 -L test.log --reference-file=https://github.com/CGATOxford/UMI-tools/raw/refs/heads/master/tests/chr19_1mb.fa
 
 dedup_to_cram:
       stdin: chr19_1mb.cram
       outputs: [stdout]
       references: [chr19_1mb.dedup.cram]
-      options: dedup --random-seed=123456789 -L test.log --out-format=cram
+      options: dedup --random-seed=123456789 -L test.log --out-format=cram --reference-file=https://github.com/CGATOxford/UMI-tools/raw/refs/heads/master/tests/chr19_1mb.fa
 
 dedup_bam_to_cram:
       stdin: chr19_1mb.bam
