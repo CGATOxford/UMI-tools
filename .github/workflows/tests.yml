@@ -32,5 +32,8 @@ jobs:
         run: |
           pip install .
       - name: Test with PyTest
+        env:
+          # This explicitly overrides the hardcoded RedHat paths inside the package
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
           pytest -v tests/test_umi_tools.py

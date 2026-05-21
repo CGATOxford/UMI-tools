@@ -47,14 +47,27 @@ def get_tests_directory():
 
     return testdir
 
-
-def _read(fn):
+def _read(fn, cram=False):
     if fn.endswith(".gz"):
         with gzip.open(fn) as inf:
             data = inf.read()
     else:
         with open(fn, "rb") as inf:
             data = inf.read()
+
+    if fn.endswith(".cram") or cram:
+        import pysam
+        data = pysam.AlignmentFile(fn)
+        reference = data.header.to_dict()["SQ"]
+        reference = set(x["UR"] for x in reference)
+        assert len(reference) == 1, "Test suite does not support multiple reference files"
+        reference = list(reference)[0]
+        
+        data.close()
+        with pysam.AlignmentFile(fn, reference_filename=reference) as inf:
+            data = [inf.text]
+            data.extend([read.to_string() for read in inf.fetch(until_eof=True)])
+            return data
 
     if IS_PY3:
         try:
@@ -117,7 +130,8 @@ def get_script_parameters():
             values['outputs'],
             values['references'],
             current_dir,
-            values.get('sort', False)
+            values.get('sort', False),
+            values.get('cram', False)
         ))
     return parameters
 
@@ -152,13 +166,14 @@ def test_script_has_main(script):
     assert [x for x in open(script) if x.startswith("def main(")], "no main function"
 
 
-@pytest.mark.parametrize("test_name,stdin,options,outputs,references,current_dir,sort", get_script_parameters())
+@pytest.mark.parametrize("test_name,stdin,options,outputs,references,current_dir,sort,cram", get_script_parameters())
 def test_script(test_name,
                 stdin,
                 options, outputs,
                 references,
                 current_dir,
-                sort):
+                sort,
+                cram):
     '''check script.
     # 1. Name of the script
     # 2. Filename to use as stdin
@@ -190,6 +205,11 @@ def test_script(test_name,
 
     options = re.sub("\n", "", options)
 
+    # Set COLUMNS variable so that help messages are wrapped same as on
+    # commandline
+    exec_env = os.environ.copy() 
+    exec_env["COLUMNS"] = "80"
+
     # use /bin/bash in order to enable "<( )" syntax in shells
     statement = ("/bin/bash -c "
                  "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
@@ -198,7 +218,8 @@ def test_script(test_name,
                                shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
-                               cwd=tmpdir)
+                               cwd=tmpdir,
+                               env=exec_env)
 
     if DEBUG:
         print("tmpdir={}".format(tmpdir), end=" ")
@@ -235,10 +256,13 @@ def test_script(test_name,
                 msg = "reference file '%s' does not exist (%s): %s" %\
                       (reference, tmpdir, statement)
 
+            if reference.endswith(".cram"):
+                cram = True
+
             if not fail:
 
-                a = _read(output)
-                b = _read(reference)
+                a = _read(output, cram)
+                b = _read(reference, cram)
 
                 if sort:
                     a = sorted(a)
@@ -266,7 +290,7 @@ def test_script(test_name,
                                 'in diff are with respect to sorted reference '
                                 'and output files\n\n')
 
-                    msg += "first 10 differences: {}".format(
+                    msg += "\nfirst 10 differences: {}".format(
                         "\n--\n".join(
                             ["\n".join(map(str, (x)))
                              for x in diffs]))

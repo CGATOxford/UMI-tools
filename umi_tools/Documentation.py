@@ -420,6 +420,55 @@ SAM/BAM Options
 Input/Output Options
 ---------------------
 
+The following options deal with input and output format, and are useful for
+outputting CRAM format. In general UMI-tools will attempt to guess the input
+and output formats from the file names, but thing can be over-written using
+the ``out-format`` and ``input-format`` options. The location of  CRAM 
+reference files will be taken from the either the an input CRAM file 
+(if present) or from the ``--reference-filename`` option. Otherwise
+the reference will be embedded in the file. 
+
+"""""""""""""""""""""""""    
+``--in-format=IN_FORMAT``
+"""""""""""""""""""""""""
+      File format of the input file. Format is usually
+      implied from the extension of the filename, but maybe
+      overridden with this option. Default=bam
+
+""""""""""""""""""""""""""" 
+``--out-format=OUT_FORMAT``
+"""""""""""""""""""""""""""
+      File format of the input file. Format is usually
+      implied from the extension of the filename, but maybe
+      overridden with this option. Default=bam
+
+""""""""""""""""""""""""""""""""" 
+``--input-options=INPUT_OPTIONS``
+"""""""""""""""""""""""""""""""""
+
+      Format string provided to htslib for reading. Mostly
+      useful for CRAM formatted files. See samtools
+      documentation
+
+"""""""""""""""""""""""""""""""""""
+``--output-options=OUTPUT_OPTIONS``
+"""""""""""""""""""""""""""""""""""
+      Format string provided to htslib for writing. Mostly
+      useful for CRAM formatted files. See samtools
+      documentation
+
+""""""""""""""""""""""""""""""""""""""""""" 
+``--reference-filename=REFERENCE_FILENAME``
+"""""""""""""""""""""""""""""""""""""""""""
+      File path or URL to the genome reference to be used
+      when reading or writing CRAM files. Can be a path or
+      a URL. By default, when reading a CRAM file, the 
+      reference recorded in the input file will be used
+      unless this is specified. URL references cannot be read
+      from input files, however. When writing, specifying a
+      reference location is required unless specified in input.
+
+
 """""""""""""""""""""""
 ``--in-sam, --out-sam``
 """""""""""""""""""""""
