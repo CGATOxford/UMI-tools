@@ -1655,10 +1655,14 @@ def open_input_alignments(in_name, format, options):
     else:
         mode = "rb"
 
+    format_options = options.input_options
+    if format_options:
+        format_options = format_options.split(",")
+
     infile = pysam.AlignmentFile(filepath_or_object=in_name,
                                  mode=mode,
                                  reference_filename=options.reference_filename,
-                                 format_options=options.input_options)
+                                 format_options=format_options)
     return(infile)
 
 
@@ -1699,11 +1703,18 @@ def open_output_alignments(out_name, format, infile, options):
     else:   
         mode = "wb"
 
+    format_options = options.output_options
+    if format_options:
+        format_options = format_options.split(",")
+        format_options = [o.encode() for o in format_options]
+
+    debug("Opening %s, format %s, for output with options %s" % (out_name, format, format_options))
+
     outfile = pysam.AlignmentFile(filepath_or_object=out_name,
                                  mode=mode,
                                  template=infile,
                                  reference_filename=options.reference_filename,
-                                 format_options=options.output_options)
+                                 format_options=format_options)
     return(outfile)
 
 def sort_output(sorted_out_name,  
@@ -1735,6 +1746,9 @@ def sort_output(sorted_out_name,
          
     '''
     
+    if format_options:
+        format = format + "," + format_options
+        
     params = ["-o", sorted_out_name,
               "-O", format,
               "--no-PG"]
@@ -1742,9 +1756,6 @@ def sort_output(sorted_out_name,
     if reference_filename:
         params.extend(["--reference", reference_filename])
     
-    if format_options:
-        params.extend(["--output-fmt-options", format_options])
-
     params.append(infile)
     
     try:   
