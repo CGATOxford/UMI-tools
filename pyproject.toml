@@ -1,7 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "setuptools-scm"]
-build-backend = "setuptools_cython"
-backend-path = ["setuptools-cython"]
+requires = ["setuptools>=42", "setuptools-scm", "numpy>=1.7"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "umi_tools"
@@ -36,7 +35,7 @@ dependencies = [
 
 [tool.setuptools]
 ext-modules = [
-    {name = "umi_tools._dedup_umi", sources = ["umi_tools/_dedup_umi.pyx"]}
+    {name = "umi_tools._dedup_umi", sources = ["umi_tools/_dedup_umi.c"]}
 ]
 
 [tool.setuptools.packages.find]
@@ -44,9 +43,15 @@ ext-modules = [
 
 [tool.setuptools_scm]
 
+[tool.cibuildwheel]
+# This tells cibuildwheel to inject these flags into pip whenever it runs
+environment = { PIP_ONLY_BINARY = "numpy", PIP_PREFER_BINARY = "1" }
+
+
 [project.urls]
 Homepage = "https://github.com/CGATOxford/UMI-tools"
 Repository = "https://github.com/CGATOxford/UMI-tools"
 
 [project.scripts]
 umi_tools = "umi_tools.umi_tools:main"
+
