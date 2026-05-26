@@ -1,42 +1,88 @@
-# This workflow will upload a Python Package using Twine when a release is created
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+# THis workflow builds wheels and sdist on tag push, and then publishes to PyPI when a release is published. Builds wheels for python >=3.8
+# using cibuildwheel. 
 
 name: Upload Python Package
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
 
-permissions:
-  contents: read
-
 jobs:
-  deploy:
-
-    runs-on: ubuntu-latest
+  # --- JOB 1: BUILD BINARY WHEELS ---
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
     strategy:
       matrix:
-        python-version: ["3.11"]
+        os: [ubuntu-latest, macos-13, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_SKIP: "cp36-* cp37-* pp*"
+          CIBW_ENVIRONMENT: "PIP_ONLY_BINARY=numpy PIP_PREFER_BINARY=1"
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+
+  # --- JOB 2: NEW! BUILD SOURCE DISTRIBUTION (sdist) ---
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tool
+        run: python -m pip install build
+
+      - name: Build sdist
+        run: python -m build --sdist
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  # --- JOB 3: PUBLISH TO PYPI (Collects Wheels + Sdist) ---
+  publish_pypi:
+    name: Publish to PyPI
+    # Crucial: Wait for BOTH wheels and sdist to finish building successfully
+    needs: [build_wheels, build_sdist] 
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
-    - name: Build package
-      run: python -m build --sdist --wheel --outdir dist
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      # This downloads ALL artifacts matching 'cibw-*' (both wheels and sdist) 
+      # and merges them cleanly into the ./dist folder
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./dist
+          pattern: cibw-*
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
