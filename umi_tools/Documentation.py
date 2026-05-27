@@ -369,7 +369,9 @@ SAM/BAM Options
       - discard (default)
           Discard all unmapped reads
       - use
-          If read2 is unmapped, deduplicate using read1 only. Requires
+          If read2 is unmapped, deduplicate using read1 and output read1 only. Note
+          that if read1 is unmapped, read2 will always be descarded irrepsective of
+          whether it is mapped. WARNING: May lead to unpaired reads in output. Requires
           ``--paired``
       - output
           Output unmapped reads/read pairs without UMI
@@ -382,7 +384,10 @@ SAM/BAM Options
       - discard
           Discard all chimeric read pairs
       - use (default)
-          Deduplicate using read1 only
+          Deduplicate using read1 information only. Both read1 and read2 should 
+          still be output, as long as Read2 is actaully found. Can lead to
+          unpaired reads in output if read1 is marked as having a mapped mate,
+          but read2 is never found.
       - output
           Output chimeric read pairs without UMI
           grouping/deduplication.  Only available in umi_tools group
@@ -392,9 +397,12 @@ SAM/BAM Options
 """"""""""""""""""""
      How should unpaired reads be handled. Options are:
       - discard
-          Discard all unpaired reads
+          Discard all unpaired reads. Note: Can still lead to unpaired
+          reads in the output if a read1 is marked as having a mapped
+          mate, but the mate is never found. 
       - use (default)
-          Deduplicate using read1 only
+          Deduplicate unpaired reads using read1 only. Note, unpaired read2s will still 
+          be discarded. 
       - output
           Output unpaired reads without UMI
           grouping/deduplication. Only available in umi_tools group
