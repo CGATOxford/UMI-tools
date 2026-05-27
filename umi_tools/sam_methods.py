@@ -625,7 +625,7 @@ class TwoPassPairWriter:
                len(self.read1s))
 
         found = 0
-        for read in self.mate_file.fetch(until_eof=True, multiple_iterators=False):
+        for read in self.mate_file.fetch(until_eof=True, multiple_iterators=True):
 
             if any((read.is_unmapped, read.mate_is_unmapped, read.is_read1)):
                 continue
