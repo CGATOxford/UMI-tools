@@ -423,12 +423,15 @@ count_tab_help:
       references: [count_tab_help]
       options: count_tab --help
 
-      
-# ### Tests to implement ####
+prepare_for_em_help:
+      sort: False
+      outputs: [stdout]
+      references: [prepare_for_em_help]
+      options: prepare_for_em --help
 
-# ## dedup ##
-# # mapping-quality (Need a BAM with meaningful MAPQ)
-# # paired end (obv. need a paired end BAM)
-# # read-length (ideally with sRNA-Seq BAM?!)
-
-# # unpaired reads (Need a BAM with mixed paired and single end reads)
+prepare_for_em_sam:
+      sort: False
+      stdin: paired_name_sorted.bam
+      outputs: [stdout]
+      references: [prepare_for_em.sam]
+      options: prepare_for_em --out-sam -L test.log

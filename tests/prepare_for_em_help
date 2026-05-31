@@ -1,0 +1,79 @@
+
+prepare_for_rsem - make output from dedup or group compatible with RSEM
+
+Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr 
+
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/
+
+Options:
+  --version             show program's version number and exit
+
+  RSEM preparation specific options:
+    --tags=TAGS         Comma-seperated list of tags to transfer from read1 to
+                        read2
+    --sam               input and output SAM rather than BAM
+
+  Input/Output format options:
+    --in-format=IN_FORMAT
+                        File format of the input file. Format is usually
+                        implied from the extension of the filename, but maybe
+                        overridden with this option. Default=bam
+    --input-options=INPUT_OPTIONS
+                        Format string provided to htslib for reading. Mostly
+                        useful for CRAM formatted files. See samtools
+                        documentation
+    -i, --in-sam        [Deprecated] Input file is in sam format
+                        [default=False]
+    --out-format=OUT_FORMAT
+                        File format of the input file. Format is usually
+                        implied from the extension of the filename, but maybe
+                        overridden with this option. Default=bam
+    --output-options=OUTPUT_OPTIONS
+                        Format string provided to htslib for writing. Mostly
+                        useful for CRAM formatted files. See samtools
+                        documentation
+    -o, --out-sam       [Deprecated] Output alignments in sam format
+                        [default=False]
+    --reference-filename=REFERENCE_FILENAME
+                        File path or URL to the genome reference to be used
+                        when reading or writing CRAM files. By default, when
+                        reading a CRAM file, the reference recorded in the
+                        input file will be used unless this is specified. When
+                        writing, specifying a reference location is required.
+
+  Input/Output pipe options:
+    -I FILE, --stdin=FILE
+                        file to read stdin from [default = stdin].
+    -L FILE, --log=FILE
+                        file with logging information [default = stdout].
+    -E FILE, --error=FILE
+                        file with error information [default = stderr].
+    -S FILE, --stdout=FILE
+                        file where output is to go [default = stdout].
+    --temp-dir=FILE     Directory for temporary files. If not set, the bash
+                        environmental variable TMPDIR is used[default = None].
+    --log2stderr        send logging information to stderr [default = False].
+    --compresslevel=COMPRESSLEVEL
+                        Level of Gzip compression to use. Default (6)
+                        matchesGNU gzip rather than python gzip default (which
+                        is 9)
+
+  profiling options:
+    --timeit=TIMEIT_FILE
+                        store timeing information in file [none].
+    --timeit-name=TIMEIT_NAME
+                        name in timing file for this class of jobs [all].
+    --timeit-header     add header for timing information [none].
+
+  common options:
+    -v LOGLEVEL, --verbose=LOGLEVEL
+                        loglevel [1]. The higher, the more output.
+    -h, --help          output short help (command line options only).
+    --help-extended     Output full documentation
+    --random-seed=RANDOM_SEED
+                        random seed to initialize number generator with
+                        [none].
