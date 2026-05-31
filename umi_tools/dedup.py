@@ -126,21 +126,25 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
-__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
+__doc__ = (
+    __doc__
+    + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
+    + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
+)
 
-usage = '''
+usage = """
 dedup - Deduplicate reads using UMI and mapping coordinates
 
 Usage: umi_tools dedup [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
-             redirect log with --log=LOGFILE or --log2stderr '''
+             redirect log with --log=LOGFILE or --log2stderr """
 
 
 def detect_bam_features(bamfile, n_entries=1000):
-    ''' read the first n entries in the bam file and identify the tags
-    available detecting multimapping '''
+    """read the first n entries in the bam file and identify the tags
+    available detecting multimapping"""
 
     inbam = pysam.Samfile(bamfile)
     inbam = inbam.fetch(until_eof=True)
@@ -164,14 +168,14 @@ def detect_bam_features(bamfile, n_entries=1000):
 
 
 def aggregateStatsDF(stats_df):
-    ''' return a dataframe with aggregated counts per UMI'''
+    """return a dataframe with aggregated counts per UMI"""
 
     grouped = stats_df.groupby("UMI")
 
-    agg_dict = {'counts': ['median', len, 'sum']}
+    agg_dict = {"counts": ["median", len, "sum"]}
     agg_df = grouped.agg(agg_dict)
 
-    agg_df.columns = ['median_counts', 'times_observed', 'total_counts']
+    agg_df.columns = ["median_counts", "times_observed", "total_counts"]
     return agg_df
 
 
@@ -185,25 +189,33 @@ def main(argv=None):
         argv = sys.argv
 
     # setup command line parser
-    parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage,
-                            description=globals()["__doc__"])
+    parser = U.OptionParser(
+        version="%prog version: $Id$", usage=usage, description=globals()["__doc__"]
+    )
     if len(argv) == 1:
         parser.print_usage()
-        print ("Required options missing, see --help for more details")
+        print("Required options missing, see --help for more details")
         return 1
 
     group = U.OptionGroup(parser, "dedup-specific options")
 
-    group.add_option("--output-stats", dest="stats", type="string",
-                     default=False,
-                     help="Specify location to output stats")
+    group.add_option(
+        "--output-stats",
+        dest="stats",
+        type="string",
+        default=False,
+        help="Specify location to output stats",
+    )
 
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_dedup_count_sam_options=True,
-                              add_s_b_cram_format_options=True)
+    (options, args) = U.Start(
+        parser,
+        argv=argv,
+        add_dedup_count_sam_options=True,
+        add_s_b_cram_format_options=True,
+    )
 
     U.validateSamOptions(options, group=False)
 
@@ -217,17 +229,20 @@ def main(argv=None):
         raise ValueError("Input on standard in not currently supported")
 
     in_format = U.determine_format(in_name, options.in_sam, options.in_format)
-    out_name, out_format, sorted_out_name, sorted_out_format = U.output_names_and_formats(
-        options.stdout,
-        options.out_sam,
-        options.out_format,
-        options.no_sort_output,
-        options.tmpdir
+    out_name, out_format, sorted_out_name, sorted_out_format = (
+        U.output_names_and_formats(
+            options.stdout,
+            options.out_sam,
+            options.out_format,
+            options.no_sort_output,
+            options.tmpdir,
+        )
     )
 
     if options.stats and options.ignore_umi:
-        raise ValueError("'--output-stats' and '--ignore-umi' options"
-                         " cannot be used together")
+        raise ValueError(
+            "'--output-stats' and '--ignore-umi' options cannot be used together"
+        )
 
     infile = U.open_input_alignments(in_name, in_format, options)
     outfile = U.open_output_alignments(out_name, out_format, infile, options)
@@ -244,14 +259,18 @@ def main(argv=None):
             if sum(bam_features.values()) == 0:
                 raise ValueError(
                     "There are no bam tags available to detect multimapping. "
-                    "Do not set --multimapping-detection-method")
+                    "Do not set --multimapping-detection-method"
+                )
             else:
                 raise ValueError(
                     "The chosen method of detection for multimapping (%s) "
                     "will not work with this bam. Multimapping can be detected"
-                    " for this bam using any of the following: %s" % (
-                        options.detection_method, ",".join(
-                            [x for x in bam_features if bam_features[x]])))
+                    " for this bam using any of the following: %s"
+                    % (
+                        options.detection_method,
+                        ",".join([x for x in bam_features if bam_features[x]]),
+                    )
+                )
 
     gene_tag = options.gene_tag
     metacontig2contig = None
@@ -262,7 +281,8 @@ def main(argv=None):
     else:
         if options.per_contig and options.gene_transcript_map:
             metacontig2contig = sam_methods.getMetaContig2contig(
-                infile, options.gene_transcript_map)
+                infile, options.gene_transcript_map
+            )
             metatag = "MC"
             inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
@@ -275,8 +295,8 @@ def main(argv=None):
     processor = network.ReadDeduplicator(options)
 
     bundle_iterator = sam_methods.get_bundles(
-        options,
-        metacontig_contig=metacontig2contig)
+        options, metacontig_contig=metacontig2contig
+    )
 
     if options.stats:
         # set up arrays to hold stats data
@@ -289,11 +309,12 @@ def main(argv=None):
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
         read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom,
-            barcode_getter=bundle_iterator.barcode_getter)
+            infile.filename,
+            chrom=options.chrom,
+            barcode_getter=bundle_iterator.barcode_getter,
+        )
 
     for bundle, key, status in bundle_iterator(inreads):
-
         nInput += sum([bundle[umi]["count"] for umi in bundle])
 
         while nOutput >= output_reads + 100000:
@@ -310,11 +331,10 @@ def main(argv=None):
                 outfile.write(bundle[umi]["read"])
 
         else:
-
             # dedup using umis and write out deduped bam
             reads, umis, umi_counts = processor(
-                bundle=bundle,
-                threshold=options.threshold)
+                bundle=bundle, threshold=options.threshold
+            )
 
             # with UMI filtering, it's possible reads
             if len(reads) == 0:
@@ -325,40 +345,52 @@ def main(argv=None):
                 nOutput += 1
 
             if options.stats:
-
                 # generate pre-dudep stats
                 average_distance = umi_methods.get_average_umi_distance(bundle.keys())
 
                 pre_cluster_stats.append(average_distance)
                 cluster_size = len(bundle)
                 random_umis = read_gn.getUmis(cluster_size)
-                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
+                average_distance_null = umi_methods.get_average_umi_distance(
+                    random_umis
+                )
                 pre_cluster_stats_null.append(average_distance_null)
 
-                stats_pre_df_dict['UMI'].extend(bundle)
-                stats_pre_df_dict['counts'].extend(
-                    [bundle[UMI]['count'] for UMI in bundle])
+                stats_pre_df_dict["UMI"].extend(bundle)
+                stats_pre_df_dict["counts"].extend(
+                    [bundle[UMI]["count"] for UMI in bundle]
+                )
 
                 # collect post-dudupe stats
-                post_cluster_umis = [bundle_iterator.barcode_getter(x)[0] for x in reads]
-                stats_post_df_dict['UMI'].extend(umis)
-                stats_post_df_dict['counts'].extend(umi_counts)
+                post_cluster_umis = [
+                    bundle_iterator.barcode_getter(x)[0] for x in reads
+                ]
+                stats_post_df_dict["UMI"].extend(umis)
+                stats_post_df_dict["counts"].extend(umi_counts)
 
-                average_distance = umi_methods.get_average_umi_distance(post_cluster_umis)
+                average_distance = umi_methods.get_average_umi_distance(
+                    post_cluster_umis
+                )
                 post_cluster_stats.append(average_distance)
 
                 cluster_size = len(post_cluster_umis)
                 random_umis = read_gn.getUmis(cluster_size)
-                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
+                average_distance_null = umi_methods.get_average_umi_distance(
+                    random_umis
+                )
                 post_cluster_stats_null.append(average_distance_null)
 
     outfile.close()
 
     if not options.no_sort_output:
         # sort the output
-        U.sort_output(sorted_out_name, out_name, sorted_out_format, 
-                      options.output_options,
-                      options.reference_filename)
+        U.sort_output(
+            sorted_out_name,
+            out_name,
+            sorted_out_format,
+            options.output_options,
+            options.reference_filename,
+        )
 
     if options.stats:
         # generate the stats dataframe
@@ -380,9 +412,15 @@ def main(argv=None):
         agg_pre_df = aggregateStatsDF(stats_pre_df)
         agg_post_df = aggregateStatsDF(stats_post_df)
 
-        agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
-                          left_index=True, right_index=True,
-                          sort=True, suffixes=["_pre", "_post"])
+        agg_df = pd.merge(
+            agg_pre_df,
+            agg_post_df,
+            how="left",
+            left_index=True,
+            right_index=True,
+            sort=True,
+            suffixes=["_pre", "_post"],
+        )
 
         # TS - if count value not observed either pre/post-dedup,
         # merge will leave an empty cell and the column will be cast as a float
@@ -392,25 +430,33 @@ def main(argv=None):
         agg_df = agg_df.fillna(0).astype(int)
 
         agg_df.index = [x.decode() for x in agg_df.index]
-        agg_df.index.name = 'UMI'
+        agg_df.index.name = "UMI"
         agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
         # bin distances into integer bins
-        max_ed = int(max(map(max, [pre_cluster_stats,
-                                   post_cluster_stats,
-                                   pre_cluster_stats_null,
-                                   post_cluster_stats_null])))
+        max_ed = int(
+            max(
+                map(
+                    max,
+                    [
+                        pre_cluster_stats,
+                        post_cluster_stats,
+                        pre_cluster_stats_null,
+                        post_cluster_stats_null,
+                    ],
+                )
+            )
+        )
 
         cluster_bins = range(-1, int(max_ed) + 2)
 
         def bin_clusters(cluster_list, bins=cluster_bins):
-            ''' take list of floats and return bins'''
+            """take list of floats and return bins"""
             return np.digitize(cluster_list, bins, right=True)
 
         def tallyCounts(binned_cluster, max_edit_distance):
-            ''' tally counts per bin '''
-            return np.bincount(binned_cluster,
-                               minlength=max_edit_distance + 3)
+            """tally counts per bin"""
+            return np.bincount(binned_cluster, minlength=max_edit_distance + 3)
 
         pre_cluster_binned = bin_clusters(pre_cluster_stats)
         post_cluster_binned = bin_clusters(post_cluster_stats)
@@ -418,48 +464,76 @@ def main(argv=None):
         post_cluster_null_binned = bin_clusters(post_cluster_stats_null)
 
         edit_distance_df = pd.DataFrame(
-            {"unique": tallyCounts(pre_cluster_binned, max_ed),
-             "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
-             options.method: tallyCounts(post_cluster_binned, max_ed),
-             "%s_null" % options.method: tallyCounts(post_cluster_null_binned, max_ed),
-             "edit_distance": cluster_bins},
-            columns=["unique", "unique_null", options.method,
-                     "%s_null" % options.method, "edit_distance"])
+            {
+                "unique": tallyCounts(pre_cluster_binned, max_ed),
+                "unique_null": tallyCounts(pre_cluster_null_binned, max_ed),
+                options.method: tallyCounts(post_cluster_binned, max_ed),
+                "%s_null" % options.method: tallyCounts(
+                    post_cluster_null_binned, max_ed
+                ),
+                "edit_distance": cluster_bins,
+            },
+            columns=[
+                "unique",
+                "unique_null",
+                options.method,
+                "%s_null" % options.method,
+                "edit_distance",
+            ],
+        )
 
-        edit_distance_df['edit_distance'] = edit_distance_df['edit_distance'].astype(str)
+        edit_distance_df["edit_distance"] = edit_distance_df["edit_distance"].astype(
+            str
+        )
 
         # TS - set lowest bin (-1) to "Single_UMI"
-        edit_distance_df.loc[0, 'edit_distance'] = "Single_UMI"
+        edit_distance_df.loc[0, "edit_distance"] = "Single_UMI"
 
-        edit_distance_df.to_csv(options.stats + "_edit_distance.tsv",
-                                index=False, sep="\t")
+        edit_distance_df.to_csv(
+            options.stats + "_edit_distance.tsv", index=False, sep="\t"
+        )
 
     # write footer and output benchmark information.
     U.info(
-        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
-                                 bundle_iterator.read_events.most_common()]))
+        "Reads: %s"
+        % ", ".join(
+            ["%s: %s" % (x[0], x[1]) for x in bundle_iterator.read_events.most_common()]
+        )
+    )
 
     U.info("Number of reads out: %i" % nOutput)
 
     if not options.ignore_umi:  # otherwise processor has not been used
-        U.info("Total number of positions deduplicated: %i" %
-               processor.UMIClusterer.positions)
+        U.info(
+            "Total number of positions deduplicated: %i"
+            % processor.UMIClusterer.positions
+        )
         if processor.UMIClusterer.positions > 0:
-            U.info("Mean number of unique UMIs per position: %.2f" %
-                   (float(processor.UMIClusterer.total_umis_per_position) /
-                    processor.UMIClusterer.positions))
-            U.info("Max. number of unique UMIs per position: %i" %
-                   processor.UMIClusterer.max_umis_per_position)
+            U.info(
+                "Mean number of unique UMIs per position: %.2f"
+                % (
+                    float(processor.UMIClusterer.total_umis_per_position)
+                    / processor.UMIClusterer.positions
+                )
+            )
+            U.info(
+                "Max. number of unique UMIs per position: %i"
+                % processor.UMIClusterer.max_umis_per_position
+            )
         else:
-            U.warn("The BAM did not contain any valid "
-                   "reads/read pairs for deduplication")
+            U.warn(
+                "The BAM did not contain any valid reads/read pairs for deduplication"
+            )
 
     if options.filter_umi:
-        U.info("%i UMIs were in a group where the top UMI was not a "
-               "whitelist UMI and were therefore discarded"
-               % processor.umi_whitelist_counts["Non-whitelist UMI"])
+        U.info(
+            "%i UMIs were in a group where the top UMI was not a "
+            "whitelist UMI and were therefore discarded"
+            % processor.umi_whitelist_counts["Non-whitelist UMI"]
+        )
 
     U.Stop()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

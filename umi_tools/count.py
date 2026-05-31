@@ -1,4 +1,4 @@
-'''
+"""
 ========================================================================
 count - Count reads per gene from BAM using UMIs and mapping coordinates
 ========================================================================
@@ -29,7 +29,7 @@ note that it has not been tested on bulk RNA-Seq.
 This tool deviates from group and dedup in that the ``--per-gene`` option
 is hardcoded on.
 
-'''
+"""
 
 import sys
 import collections
@@ -54,14 +54,14 @@ __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
 
 
-usage = '''
+usage = """
 count - Count reads per-gene using UMI and mapping coordinates
 
 Usage: umi_tools count [OPTIONS] --stdin=IN_BAM [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
-             redirect log with --log=LOGFILE or --log2stderr '''
+             redirect log with --log=LOGFILE or --log2stderr """
 
 
 def main(argv=None):
@@ -74,27 +74,35 @@ def main(argv=None):
         argv = sys.argv
 
     # setup command line parser
-    parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage,
-                            description=globals()["__doc__"])
+    parser = U.OptionParser(
+        version="%prog version: $Id$", usage=usage, description=globals()["__doc__"]
+    )
     if len(argv) == 1:
         parser.print_usage()
-        print ("Required options missing, see --help for more details")
+        print("Required options missing, see --help for more details")
         return 1
 
     group = U.OptionGroup(parser, "count-specific options")
 
-    parser.add_option("--wide-format-cell-counts", dest="wide_format_cell_counts",
-                      action="store_true",
-                      default=False,
-                      help=("output the cell counts in a wide format "
-                            "(rows=genes, columns=cells)"))
+    parser.add_option(
+        "--wide-format-cell-counts",
+        dest="wide_format_cell_counts",
+        action="store_true",
+        default=False,
+        help=("output the cell counts in a wide format (rows=genes, columns=cells)"),
+    )
 
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False, add_dedup_count_sam_options=True,
-                              add_s_b_cram_format_options=True, exclude_output_format=True)
+    (options, args) = U.Start(
+        parser,
+        argv=argv,
+        add_group_dedup_options=False,
+        add_dedup_count_sam_options=True,
+        add_s_b_cram_format_options=True,
+        exclude_output_format=True,
+    )
 
     options.per_gene = True  # hardcodes counting to per-gene only
 
@@ -126,7 +134,8 @@ def main(argv=None):
     else:
         if options.gene_transcript_map:
             metacontig2contig = sam_methods.getMetaContig2contig(
-                infile, options.gene_transcript_map)
+                infile, options.gene_transcript_map
+            )
             metatag = "MC"
             inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
@@ -134,9 +143,8 @@ def main(argv=None):
             inreads = infile.fetch()
 
     bundle_iterator = sam_methods.get_bundles(
-        options,
-        only_count_reads=True,
-        metacontig_contig=metacontig2contig)
+        options, only_count_reads=True, metacontig_contig=metacontig2contig
+    )
 
     # set up UMIClusterer functor with methods specific to
     # specified options.method
@@ -159,9 +167,7 @@ def main(argv=None):
             U.info("Parsed %i input reads" % input_reads)
 
         # group the umis
-        groups = processor(
-            counts,
-            threshold=options.threshold)
+        groups = processor(counts, threshold=options.threshold)
 
         gene_count = len(groups)
 
@@ -175,7 +181,6 @@ def main(argv=None):
     tmpfile.close()
 
     if options.per_cell:
-
         gene_counts_dict = {}
 
         with U.openFile(tmpfilename, mode="r") as inf:
@@ -192,9 +197,7 @@ def main(argv=None):
                 gene_counts_dict[gene][cell] = gene_count
 
         if options.wide_format_cell_counts:  # write out in wide format
-
-            options.stdout.write(
-                "%s\t%s\n" % ("gene", "\t".join(sorted(cells))))
+            options.stdout.write("%s\t%s\n" % ("gene", "\t".join(sorted(cells))))
 
             for gene in sorted(genes):
                 counts = []
@@ -203,15 +206,15 @@ def main(argv=None):
                         counts.append(gene_counts_dict[gene][cell])
                     else:
                         counts.append(0)
-                options.stdout.write(
-                    "%s\t%s\n" % (gene, "\t".join(map(str, counts))))
+                options.stdout.write("%s\t%s\n" % (gene, "\t".join(map(str, counts))))
 
         else:  # write out in long format
             options.stdout.write("%s\t%s\t%s\n" % ("gene", "cell", "count"))
             for gene in sorted(genes):
                 for cell in sorted(list(gene_counts_dict[gene].keys())):
-                    options.stdout.write("%s\t%s\t%s\n" % (
-                        gene, cell, gene_counts_dict[gene][cell]))
+                    options.stdout.write(
+                        "%s\t%s\t%s\n" % (gene, cell, gene_counts_dict[gene][cell])
+                    )
     else:
         options.stdout.write("%s\t%s\n" % ("gene", "count"))
 
@@ -228,6 +231,7 @@ def main(argv=None):
     U.info("Number of (post deduplication) reads counted: %i" % nOutput)
 
     U.Stop()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

@@ -384,7 +384,7 @@ SAM/BAM Options
       - discard
           Discard all chimeric read pairs
       - use (default)
-          Deduplicate using read1 information only. Both read1 and read2 should 
+          Deduplicate using read1 information only. Both read1 and read2 should
           still be output, as long as Read2 is actaully found. Can lead to
           unpaired reads in output if read1 is marked as having a mapped mate,
           but read2 is never found.
@@ -399,10 +399,10 @@ SAM/BAM Options
       - discard
           Discard all unpaired reads. Note: Can still lead to unpaired
           reads in the output if a read1 is marked as having a mapped
-          mate, but the mate is never found. 
+          mate, but the mate is never found.
       - use (default)
-          Deduplicate unpaired reads using read1 only. Note, unpaired read2s will still 
-          be discarded. 
+          Deduplicate unpaired reads using read1 only. Note, unpaired read2s will still
+          be discarded.
       - output
           Output unpaired reads without UMI
           grouping/deduplication. Only available in umi_tools group
@@ -433,26 +433,26 @@ SAM/BAM Options
 
 '''
 
-GENERIC_DOCSTRING_SBCRAM_INPUT='''
+GENERIC_DOCSTRING_SBCRAM_INPUT = '''
 Input/Output Format Options
 ---------------------
 
 The following options deal with input and output format, and are useful for
 outputting CRAM format. In general UMI-tools will attempt to guess the input
 and output formats from the file names, but thing can be over-written using
-the ``out-format`` and ``input-format`` options. The location of  CRAM 
-reference files will be taken from the either the an input CRAM file 
+the ``out-format`` and ``input-format`` options. The location of  CRAM
+reference files will be taken from the either the an input CRAM file
 (if present) or from the ``--reference-filename`` option. Otherwise
-the reference will be embedded in the file. 
+the reference will be embedded in the file.
 
-"""""""""""""""""""""""""    
+"""""""""""""""""""""""""
 ``--in-format=IN_FORMAT``
 """""""""""""""""""""""""
       File format of the input file. Format is usually
       implied from the extension of the filename, but maybe
       overridden with this option. Default=bam
 
-""""""""""""""""""""""""""""""""" 
+"""""""""""""""""""""""""""""""""
 ``--input-options=INPUT_OPTIONS``
 """""""""""""""""""""""""""""""""
 
@@ -463,16 +463,16 @@ the reference will be embedded in the file.
 """""""""""""""""""""""
 ``--in-sam``
 """""""""""""""""""""""
-      [DEPRECATED] USE ``--in-format`` . By default, inputs are assumed to be 
+      [DEPRECATED] USE ``--in-format`` . By default, inputs are assumed to be
       in BAM format. Use this option to specify the use of SAM format for
       input.
 
-""""""""""""""""""""""""""""""""""""""""""" 
+"""""""""""""""""""""""""""""""""""""""""""
 ``--reference-filename=REFERENCE_FILENAME``
 """""""""""""""""""""""""""""""""""""""""""
       File path or URL to the genome reference to be used
       when reading or writing CRAM files. Can be a path or
-      a URL. By default, when reading a CRAM file, the 
+      a URL. By default, when reading a CRAM file, the
       reference recorded in the input file will be used
       unless this is specified. URL references cannot be read
       from input files, however. When writing, specifying a
@@ -480,8 +480,8 @@ the reference will be embedded in the file.
 
 '''
 
-GENERIC_DOCSTRING_SBCRAM_OUTPUT='''
-""""""""""""""""""""""""""" 
+GENERIC_DOCSTRING_SBCRAM_OUTPUT = '''
+"""""""""""""""""""""""""""
 ``--out-format=OUT_FORMAT``
 """""""""""""""""""""""""""
       File format of the input file. Format is usually
@@ -497,7 +497,6 @@ GENERIC_DOCSTRING_SBCRAM_OUTPUT='''
       documentation
 
 '''
-
 
 
 # generic docstring for dedup/group

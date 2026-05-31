@@ -8,4 +8,3 @@ try:
     from umi_tools.network import UMIClusterer
 except ImportError:
     pass
-

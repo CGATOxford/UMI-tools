@@ -240,7 +240,6 @@ Complete reference
 # https://github.com/CGATOxford/CGATPipelines/blob/master/CGATPipelines/Pipeline/Files.py
 #########################################################################################
 
-
 import re
 import sys
 import time
@@ -269,6 +268,7 @@ class DefaultOptions:
     loglevel = 2
     timeit_file = None
     compresslevel = 6
+
 
 global_starting_time = time.time()
 global_options = DefaultOptions()
@@ -325,29 +325,34 @@ class BetterFormatter(optparse.IndentedHelpFormatter):
 
     def _formatter(self, text):
 
-        return '\n'.join(['\n'.join(p) for p in
-                          map(self.wrapper.wrap,
-                              self.parser.expand_prog_name(text).split('\n'))])
+        return "\n".join(
+            [
+                "\n".join(p)
+                for p in map(
+                    self.wrapper.wrap, self.parser.expand_prog_name(text).split("\n")
+                )
+            ]
+        )
 
     def format_description(self, description):
 
         if description:
-            return self._formatter(description) + '\n'
+            return self._formatter(description) + "\n"
         else:
-            return ''
+            return ""
 
     def format_epilog(self, epilog):
 
         if epilog:
-            return '\n' + self._formatter(epilog) + '\n'
+            return "\n" + self._formatter(epilog) + "\n"
         else:
-            return ''
+            return ""
 
     def format_usage(self, usage):
 
-        msg = '''
+        msg = """
 
-For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/\n'''
+For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest/\n"""
 
         return optparse._(usage) + msg
 
@@ -360,7 +365,7 @@ For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest
         if len(opts) > opt_width:
             opts = "%*s%s\n" % (self.current_indent, "", opts)
             indent_first = self.help_position
-        else:                       # start help on same line as opts
+        else:  # start help on same line as opts
             opts = "%*s%-*s  " % (self.current_indent, "", opt_width, opts)
             indent_first = 0
         result.append(opts)
@@ -372,15 +377,16 @@ For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest
             # Modified the generation of help_line
             help_lines = []
             wrapper = textwrap.TextWrapper(width=self.help_width)
-            for p in map(wrapper.wrap, help_text.split('\n')):
+            for p in map(wrapper.wrap, help_text.split("\n")):
                 if p:
                     help_lines.extend(p)
                 else:
-                    help_lines.append('')
+                    help_lines.append("")
             # End of modification
             result.append("%*s%s\n" % (indent_first, "", help_lines[0]))
-            result.extend(["%*s%s\n" % (self.help_position, "", line)
-                           for line in help_lines[1:]])
+            result.extend(
+                ["%*s%s\n" % (self.help_position, "", line) for line in help_lines[1:]]
+            )
         elif opts[-1] != "\n":
             result.append("\n")
 
@@ -392,38 +398,41 @@ For full UMI-tools documentation, see https://umi-tools.readthedocs.io/en/latest
 #################################################################
 #################################################################
 class AppendCommaOption(optparse.Option):
-
-    '''Option with additional parsing capabilities.
+    """Option with additional parsing capabilities.
 
     * "," in arguments to options that have the action 'append'
       are treated as a list of options. This is what galaxy does,
       but generally convenient.
 
     * Option values of "None" and "" are treated as default values.
-    '''
-#    def check_value( self, opt, value ):
-# do not check type for ',' separated lists
-#        if "," in value:
-#            return value
-#        else:
-#            return optparse.Option.check_value( self, opt, value )
-#
-#    def take_action(self, action, dest, opt, value, values, parser):
-#        if action == "append" and "," in value:
-#            lvalue = value.split(",")
-#            values.ensure_value(dest, []).extend(lvalue)
-#        else:
-#            optparse.Option.take_action(
-#                self, action, dest, opt, value, values, parser)
-#
+    """
+
+    #    def check_value( self, opt, value ):
+    # do not check type for ',' separated lists
+    #        if "," in value:
+    #            return value
+    #        else:
+    #            return optparse.Option.check_value( self, opt, value )
+    #
+    #    def take_action(self, action, dest, opt, value, values, parser):
+    #        if action == "append" and "," in value:
+    #            lvalue = value.split(",")
+    #            values.ensure_value(dest, []).extend(lvalue)
+    #        else:
+    #            optparse.Option.take_action(
+    #                self, action, dest, opt, value, values, parser)
+    #
 
     def convert_value(self, opt, value):
         if value is not None:
             if self.nargs == 1:
                 if self.action == "append":
                     if "," in value:
-                        return [self.check_value(opt, v) for v in
-                                value.split(",") if v != ""]
+                        return [
+                            self.check_value(opt, v)
+                            for v in value.split(",")
+                            if v != ""
+                        ]
                     else:
                         if value != "":
                             return self.check_value(opt, value)
@@ -441,14 +450,11 @@ class AppendCommaOption(optparse.Option):
         if action == "append" and type(value) == list:
             values.ensure_value(dest, []).extend(value)
         else:
-            optparse.Option.take_action(
-                self, action, dest, opt, value, values, parser)
+            optparse.Option.take_action(self, action, dest, opt, value, values, parser)
 
 
 class OptionParser(optparse.OptionParser):
-
-    '''UMI-tools derivative of OptionParser.
-    '''
+    """UMI-tools derivative of OptionParser."""
 
     def __init__(self, *args, **kwargs):
         # if "--short" is a command line option
@@ -456,19 +462,25 @@ class OptionParser(optparse.OptionParser):
         if "--no-usage" in sys.argv:
             kwargs["usage"] = None
 
-        optparse.OptionParser.__init__(self, *args,
-                                       option_class=AppendCommaOption,
-                                       formatter=BetterFormatter(),
-                                       add_help_option=False,
-                                       **kwargs)
+        optparse.OptionParser.__init__(
+            self,
+            *args,
+            option_class=AppendCommaOption,
+            formatter=BetterFormatter(),
+            add_help_option=False,
+            **kwargs,
+        )
 
         # set new option parser
         # parser.formatter = BetterFormatter()
         # parser.formatter.set_parser(parser)
         if "--no-usage" in sys.argv:
-            self.add_option("--no-usage", dest="help_no_usage",
-                            action="store_true",
-                            help="output help without usage information")
+            self.add_option(
+                "--no-usage",
+                dest="help_no_usage",
+                action="store_true",
+                help="output help without usage information",
+            )
 
 
 class OptionGroup(optparse.OptionGroup):
@@ -476,7 +488,7 @@ class OptionGroup(optparse.OptionGroup):
 
 
 def callbackShortHelp(option, opt, value, parser):
-    '''output short help (only command line options).'''
+    """output short help (only command line options)."""
     # clear usage and description
     parser.set_description(None)
     # parser.set_usage(None)
@@ -487,7 +499,7 @@ def callbackShortHelp(option, opt, value, parser):
 
 
 def openFile(filename, mode="r", create_dir=False):
-    '''open file in *filename* with mode *mode*.
+    """open file in *filename* with mode *mode*.
 
     If *create* is set, the directory containing filename
     will be created if it does not exist.
@@ -500,7 +512,7 @@ def openFile(filename, mode="r", create_dir=False):
     ability to seek.
 
     returns a file or file-like object.
-    '''
+    """
 
     _, ext = os.path.splitext(filename)
 
@@ -512,35 +524,41 @@ def openFile(filename, mode="r", create_dir=False):
     if ext.lower() in (".gz", ".z"):
         if sys.version_info.major >= 3:
             if mode == "r":
-                return gzip.open(filename, 'rt', encoding="ascii")
+                return gzip.open(filename, "rt", encoding="ascii")
             elif mode == "w":
-                return gzip.open(filename, 'wt',
-                                 compresslevel=global_options.compresslevel,
-                                 encoding="ascii")
+                return gzip.open(
+                    filename,
+                    "wt",
+                    compresslevel=global_options.compresslevel,
+                    encoding="ascii",
+                )
             else:
-                raise NotImplementedError(
-                    "mode '{}' not implemented".format(mode))
+                raise NotImplementedError("mode '{}' not implemented".format(mode))
         else:
-            return gzip.open(filename, mode,
-                             compresslevel=global_options.compresslevel)
+            return gzip.open(filename, mode, compresslevel=global_options.compresslevel)
     else:
         return open(filename, mode)
 
 
 def getHeader():
-    """return a header string with command line options and timestamp
-
-    """
+    """return a header string with command line options and timestamp"""
     system, host, release, version, machine = os.uname()
 
-    return "# UMI-tools version: %s\n# output generated by %s\n# job started at %s on %s -- %s\n# pid: %i, system: %s %s %s %s" %\
-           (__version__,
+    return (
+        "# UMI-tools version: %s\n# output generated by %s\n# job started at %s on %s -- %s\n# pid: %i, system: %s %s %s %s"
+        % (
+            __version__,
             " ".join(sys.argv),
             time.asctime(time.localtime(time.time())),
             host,
             global_id,
             os.getpid(),
-            system, release, version, machine)
+            system,
+            release,
+            version,
+            machine,
+        )
+    )
 
 
 def getParams(options=None):
@@ -556,8 +574,7 @@ def getParams(options=None):
     else:
         vars = inspect.currentframe().f_back.f_locals
         for var in filter(lambda x: re.match("param_", x), vars.keys()):
-            result.append("# %-40s: %s" %
-                          (var, str(vars[var])))
+            result.append("# %-40s: %s" % (var, str(vars[var])))
 
     if result:
         return "\n".join(result)
@@ -569,16 +586,16 @@ def getFooter():
     """return a header string with command line options and
     timestamp.
     """
-    return "# job finished in %i seconds at %s -- %s -- %s" %\
-           (time.time() - global_starting_time,
-            time.asctime(time.localtime(time.time())),
-            " ".join(map(lambda x: "%5.2f" % x, os.times()[:4])),
-            global_id)
+    return "# job finished in %i seconds at %s -- %s -- %s" % (
+        time.time() - global_starting_time,
+        time.asctime(time.localtime(time.time())),
+        " ".join(map(lambda x: "%5.2f" % x, os.times()[:4])),
+        global_id,
+    )
 
 
 class MultiLineFormatter(logging.Formatter):
-
-    '''logfile formatter: add identation for multi-line entries.'''
+    """logfile formatter: add identation for multi-line entries."""
 
     def format(self, record):
         s = logging.Formatter.format(self, record)
@@ -588,23 +605,25 @@ class MultiLineFormatter(logging.Formatter):
             prefix = ""
         if record.message:
             header, footer = s.split(record.message)
-            s = prefix + s.replace('\n', '\n%s' % prefix + ' ' * len(header))
+            s = prefix + s.replace("\n", "\n%s" % prefix + " " * len(header))
         return s
 
 
-def Start(parser=None,
-          argv=sys.argv,
-          quiet=False,
-          add_pipe_options=True,
-          add_extract_options=False,
-          add_group_dedup_options=True,
-          add_sam_options=True,
-          add_dedup_count_sam_options=False,
-          add_group_sam_options=False,
-          add_umi_grouping_options=True,
-          add_s_b_cram_format_options=False,
-          exclude_output_format=False,
-          return_parser=False):
+def Start(
+    parser=None,
+    argv=sys.argv,
+    quiet=False,
+    add_pipe_options=True,
+    add_extract_options=False,
+    add_group_dedup_options=True,
+    add_sam_options=True,
+    add_dedup_count_sam_options=False,
+    add_group_sam_options=False,
+    add_umi_grouping_options=True,
+    add_s_b_cram_format_options=False,
+    exclude_output_format=False,
+    return_parser=False,
+):
     """set up an experiment.
 
     The :py:func:`Start` method will set up a file logger and add some
@@ -674,8 +693,7 @@ def Start(parser=None,
     """
 
     if not parser:
-        parser = OptionParser(
-            version="%prog version: $Id$")
+        parser = OptionParser(version="%prog version: $Id$")
 
     global global_options, global_args, global_starting_time
 
@@ -685,363 +703,598 @@ def Start(parser=None,
     global_starting_time = time.time()
 
     if add_extract_options:
-
         group = OptionGroup(parser, "fastq barcode extraction options")
 
-        group.add_option("--extract-method",
-                         dest="extract_method", type="choice",
-                         choices=["string", "regex"],
-                         help=("How to extract the umi +/- cell barcodes, "
-                               "Choose from 'string' or 'regex'"))
-        group.add_option("-p", "--bc-pattern", dest="pattern", type="string",
-                         help="Barcode pattern")
-        group.add_option("--bc-pattern2", dest="pattern2", type="string",
-                         help="Barcode pattern for paired reads")
-        group.add_option("--3prime", dest="prime3", action="store_true",
-                         help="barcode is on 3' end of read.")
-        group.add_option("--read2-in", dest="read2_in", type="string",
-                         help="file name for read pairs")
-        group.add_option("--read2-only", dest="read2_only", action='store_true',
-                         help="Only extract from read2")
-        group.add_option("--filtered-out",
-                         dest="filtered_out", type="string", default=None,
-                         help=("Write out reads not matching regex pattern"
-                               " to this file"))
-        group.add_option("--filtered-out2",
-                         dest="filtered_out2", type="string", default=None,
-                         help=("Write out paired reads not matching regex"
-                               " pattern to this file"))
-        group.add_option("--ignore-read-pair-suffixes",
-                         dest="ignore_suffix", action="store_true",
-                         help="Ignore '\\1' and '\\2' read name suffixes")
+        group.add_option(
+            "--extract-method",
+            dest="extract_method",
+            type="choice",
+            choices=["string", "regex"],
+            help=(
+                "How to extract the umi +/- cell barcodes, "
+                "Choose from 'string' or 'regex'"
+            ),
+        )
+        group.add_option(
+            "-p", "--bc-pattern", dest="pattern", type="string", help="Barcode pattern"
+        )
+        group.add_option(
+            "--bc-pattern2",
+            dest="pattern2",
+            type="string",
+            help="Barcode pattern for paired reads",
+        )
+        group.add_option(
+            "--3prime",
+            dest="prime3",
+            action="store_true",
+            help="barcode is on 3' end of read.",
+        )
+        group.add_option(
+            "--read2-in",
+            dest="read2_in",
+            type="string",
+            help="file name for read pairs",
+        )
+        group.add_option(
+            "--read2-only",
+            dest="read2_only",
+            action="store_true",
+            help="Only extract from read2",
+        )
+        group.add_option(
+            "--filtered-out",
+            dest="filtered_out",
+            type="string",
+            default=None,
+            help=("Write out reads not matching regex pattern to this file"),
+        )
+        group.add_option(
+            "--filtered-out2",
+            dest="filtered_out2",
+            type="string",
+            default=None,
+            help=("Write out paired reads not matching regex pattern to this file"),
+        )
+        group.add_option(
+            "--ignore-read-pair-suffixes",
+            dest="ignore_suffix",
+            action="store_true",
+            help="Ignore '\\1' and '\\2' read name suffixes",
+        )
         parser.add_option_group(group)
 
     if add_sam_options:
         group = OptionGroup(parser, "Barcode extraction options")
 
-        group.add_option("--extract-umi-method", dest="get_umi_method", type="choice",
-                         choices=("read_id", "tag", "umis"), default="read_id",
-                         help="how is the read UMI +/ cell barcode encoded? "
-                         "[default=%default]")
+        group.add_option(
+            "--extract-umi-method",
+            dest="get_umi_method",
+            type="choice",
+            choices=("read_id", "tag", "umis"),
+            default="read_id",
+            help="how is the read UMI +/ cell barcode encoded? [default=%default]",
+        )
 
-        group.add_option("--umi-separator", dest="umi_sep",
-                         type="string", help="separator between read id and UMI",
-                         default="_")
+        group.add_option(
+            "--umi-separator",
+            dest="umi_sep",
+            type="string",
+            help="separator between read id and UMI",
+            default="_",
+        )
 
-        group.add_option("--umi-tag", dest="umi_tag",
-                         type="string", help="tag containing umi",
-                         default='RX')
+        group.add_option(
+            "--umi-tag",
+            dest="umi_tag",
+            type="string",
+            help="tag containing umi",
+            default="RX",
+        )
 
-        group.add_option("--umi-tag-split", dest="umi_tag_split",
-                         type="string",
-                         help="split UMI in tag and take the first element",
-                         default=None)
+        group.add_option(
+            "--umi-tag-split",
+            dest="umi_tag_split",
+            type="string",
+            help="split UMI in tag and take the first element",
+            default=None,
+        )
 
-        group.add_option("--umi-tag-delimiter", dest="umi_tag_delim",
-                         type="string",
-                         help="concatenate UMI in tag separated by delimiter",
-                         default=None)
+        group.add_option(
+            "--umi-tag-delimiter",
+            dest="umi_tag_delim",
+            type="string",
+            help="concatenate UMI in tag separated by delimiter",
+            default=None,
+        )
 
-        group.add_option("--cell-tag", dest="cell_tag",
-                         type="string", help="tag containing cell barcode",
-                         default=None)
+        group.add_option(
+            "--cell-tag",
+            dest="cell_tag",
+            type="string",
+            help="tag containing cell barcode",
+            default=None,
+        )
 
-        group.add_option("--cell-tag-split", dest="cell_tag_split",
-                         type="string",
-                         help=("split cell barcode in tag and take the first"
-                               "element for e.g 10X GEM tags"),
-                         default='-')
+        group.add_option(
+            "--cell-tag-split",
+            dest="cell_tag_split",
+            type="string",
+            help=(
+                "split cell barcode in tag and take the first"
+                "element for e.g 10X GEM tags"
+            ),
+            default="-",
+        )
 
-        group.add_option("--cell-tag-delimiter", dest="cell_tag_delim",
-                         type="string",
-                         help="concatenate cell barcode in tag separated by delimiter",
-                         default=None)
+        group.add_option(
+            "--cell-tag-delimiter",
+            dest="cell_tag_delim",
+            type="string",
+            help="concatenate cell barcode in tag separated by delimiter",
+            default=None,
+        )
 
-        group.add_option("--filter-umi",
-                         dest="filter_umi",
-                         action="store_true",
-                         #help="Filter the UMIs"
-                         help=optparse.SUPPRESS_HELP)
+        group.add_option(
+            "--filter-umi",
+            dest="filter_umi",
+            action="store_true",
+            # help="Filter the UMIs"
+            help=optparse.SUPPRESS_HELP,
+        )
 
-        group.add_option("--umi-whitelist", dest="umi_whitelist",
-                         type="string", default=None,
-                         #help="A whitelist of accepted UMIs"
-                         #"[default=%default]"
-                         help=optparse.SUPPRESS_HELP)
+        group.add_option(
+            "--umi-whitelist",
+            dest="umi_whitelist",
+            type="string",
+            default=None,
+            # help="A whitelist of accepted UMIs"
+            # "[default=%default]"
+            help=optparse.SUPPRESS_HELP,
+        )
 
-        group.add_option("--umi-whitelist-paired", dest="umi_whitelist_paired",
-                         type="string", default=None,
-                         #help="A whitelist of accepted UMIs for "
-                         #"read2[default=%default]"
-                         help=optparse.SUPPRESS_HELP)
+        group.add_option(
+            "--umi-whitelist-paired",
+            dest="umi_whitelist_paired",
+            type="string",
+            default=None,
+            # help="A whitelist of accepted UMIs for "
+            # "read2[default=%default]"
+            help=optparse.SUPPRESS_HELP,
+        )
 
         parser.add_option_group(group)
 
     if add_umi_grouping_options:
         group = OptionGroup(parser, "UMI grouping options")
 
-        group.add_option("--method", dest="method", type="choice",
-                         choices=("adjacency", "directional",
-                                  "percentile", "unique", "cluster"),
-                         default="directional",
-                         help="method to use for umi grouping [default=%default]")
+        group.add_option(
+            "--method",
+            dest="method",
+            type="choice",
+            choices=("adjacency", "directional", "percentile", "unique", "cluster"),
+            default="directional",
+            help="method to use for umi grouping [default=%default]",
+        )
 
-        group.add_option("--edit-distance-threshold", dest="threshold",
-                         type="int",
-                         default=1,
-                         help="Edit distance theshold at which to join two UMIs "
-                         "when grouping UMIs. [default=%default]")
+        group.add_option(
+            "--edit-distance-threshold",
+            dest="threshold",
+            type="int",
+            default=1,
+            help="Edit distance theshold at which to join two UMIs "
+            "when grouping UMIs. [default=%default]",
+        )
 
-        group.add_option("--spliced-is-unique", dest="spliced",
-                         action="store_true",
-                         help="Treat a spliced read as different to an unspliced"
-                         " one [default=%default]",
-                         default=False)
+        group.add_option(
+            "--spliced-is-unique",
+            dest="spliced",
+            action="store_true",
+            help="Treat a spliced read as different to an unspliced"
+            " one [default=%default]",
+            default=False,
+        )
 
-        group.add_option("--soft-clip-threshold", dest="soft_clip_threshold",
-                         type="float",
-                         help="number of bases clipped from 5' end before "
-                         "read is counted as spliced [default=%default]",
-                         default=4)
+        group.add_option(
+            "--soft-clip-threshold",
+            dest="soft_clip_threshold",
+            type="float",
+            help="number of bases clipped from 5' end before "
+            "read is counted as spliced [default=%default]",
+            default=4,
+        )
 
-        group.add_option("--read-length", dest="read_length",
-                         action="store_true", default=False,
-                         help="use read length in addition to position and UMI "
-                         "to identify possible duplicates [default=%default]")
+        group.add_option(
+            "--read-length",
+            dest="read_length",
+            action="store_true",
+            default=False,
+            help="use read length in addition to position and UMI "
+            "to identify possible duplicates [default=%default]",
+        )
 
         parser.add_option_group(group)
 
     if add_sam_options:
         group = OptionGroup(parser, "single-cell RNA-Seq options")
 
-        group.add_option("--per-gene", dest="per_gene", action="store_true",
-                         default=False,
-                         help="Group/Dedup/Count per gene. Must combine with "
-                         "either --gene-tag or --per-contig")
+        group.add_option(
+            "--per-gene",
+            dest="per_gene",
+            action="store_true",
+            default=False,
+            help="Group/Dedup/Count per gene. Must combine with "
+            "either --gene-tag or --per-contig",
+        )
 
-        group.add_option("--gene-tag", dest="gene_tag",
-                         type="string",
-                         help="Gene is defined by this bam tag [default=%default]",
-                         default=None)
+        group.add_option(
+            "--gene-tag",
+            dest="gene_tag",
+            type="string",
+            help="Gene is defined by this bam tag [default=%default]",
+            default=None,
+        )
 
-        group.add_option("--assigned-status-tag", dest="assigned_tag",
-                         type="string",
-                         help="Bam tag describing whether read is assigned to a gene "
-                         "By defualt, this is set as the same tag as --gene-tag",
-                         default=None)
+        group.add_option(
+            "--assigned-status-tag",
+            dest="assigned_tag",
+            type="string",
+            help="Bam tag describing whether read is assigned to a gene "
+            "By defualt, this is set as the same tag as --gene-tag",
+            default=None,
+        )
 
-        group.add_option("--skip-tags-regex", dest="skip_regex",
-                         type="string",
-                         help="Used with --gene-tag. "
-                         "Ignore reads where the gene-tag matches this regex",
-                         default="^(__|Unassigned)")
+        group.add_option(
+            "--skip-tags-regex",
+            dest="skip_regex",
+            type="string",
+            help="Used with --gene-tag. "
+            "Ignore reads where the gene-tag matches this regex",
+            default="^(__|Unassigned)",
+        )
 
-        group.add_option("--per-contig", dest="per_contig", action="store_true",
-                         default=False,
-                         help="group/dedup/count UMIs per contig (field 3 in BAM; RNAME),"
-                         " e.g for transcriptome where contig = gene")
+        group.add_option(
+            "--per-contig",
+            dest="per_contig",
+            action="store_true",
+            default=False,
+            help="group/dedup/count UMIs per contig (field 3 in BAM; RNAME),"
+            " e.g for transcriptome where contig = gene",
+        )
 
-        group.add_option("--gene-transcript-map", dest="gene_transcript_map",
-                         type="string",
-                         help="File mapping transcripts to genes (tab separated)",
-                         default=None)
+        group.add_option(
+            "--gene-transcript-map",
+            dest="gene_transcript_map",
+            type="string",
+            help="File mapping transcripts to genes (tab separated)",
+            default=None,
+        )
 
-        group.add_option("--per-cell", dest="per_cell", action="store_true",
-                         default=False,
-                         help="group/dedup/count per cell")
+        group.add_option(
+            "--per-cell",
+            dest="per_cell",
+            action="store_true",
+            default=False,
+            help="group/dedup/count per cell",
+        )
 
         parser.add_option_group(group)
 
     if add_group_dedup_options:
-
         group = OptionGroup(parser, "group/dedup options")
 
-        group.add_option("--buffer-whole-contig", dest="whole_contig",
-                         action="store_true", default=False,
-                         help="Read whole contig before outputting bundles: "
-                         "guarantees that no reads are missed, but increases "
-                         "memory usage")
+        group.add_option(
+            "--buffer-whole-contig",
+            dest="whole_contig",
+            action="store_true",
+            default=False,
+            help="Read whole contig before outputting bundles: "
+            "guarantees that no reads are missed, but increases "
+            "memory usage",
+        )
 
-        group.add_option("--whole-contig", dest="whole_contig",
-                         action="store_true", default=False,
-                         help=optparse.SUPPRESS_HELP)
+        group.add_option(
+            "--whole-contig",
+            dest="whole_contig",
+            action="store_true",
+            default=False,
+            help=optparse.SUPPRESS_HELP,
+        )
 
-        group.add_option("--multimapping-detection-method",
-                         dest="detection_method", type="choice",
-                         choices=("NH", "X0", "XT"),
-                         default=None,
-                         help="Some aligners identify multimapping using bam "
-                         "tags. Setting this option to NH, X0 or XT will "
-                         "use these tags when selecting the best read "
-                         "amongst reads with the same position and umi "
-                         "[default=%default]")
+        group.add_option(
+            "--multimapping-detection-method",
+            dest="detection_method",
+            type="choice",
+            choices=("NH", "X0", "XT"),
+            default=None,
+            help="Some aligners identify multimapping using bam "
+            "tags. Setting this option to NH, X0 or XT will "
+            "use these tags when selecting the best read "
+            "amongst reads with the same position and umi "
+            "[default=%default]",
+        )
 
         parser.add_option_group(group)
 
     # options added separately here to maintain better output order
     if add_s_b_cram_format_options:
-   
         group = OptionGroup(parser, "Input/Output format options")
-        group.add_option("--in-format", dest="in_format",
-                         type="choice",
-                         choices=("sam", "bam", "cram"),
-                         default=None,
-                         help="File format of the input file. Format is usually" \
-                         " implied from the extension of the filename, but" \
-                         " maybe overridden with this option. Default=bam")
-        group.add_option("--input-options", dest="input_options", action="store",
-                         type="str",
-                         default=None,
-                         help="Format string provided to htslib for reading. Mostly" \
-                         " useful for CRAM formatted files. See samtools documentation")
-        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                         help="[Deprecated] Input file is in sam format [default=%default]",
-                         default=False)
-        
+        group.add_option(
+            "--in-format",
+            dest="in_format",
+            type="choice",
+            choices=("sam", "bam", "cram"),
+            default=None,
+            help="File format of the input file. Format is usually"
+            " implied from the extension of the filename, but"
+            " maybe overridden with this option. Default=bam",
+        )
+        group.add_option(
+            "--input-options",
+            dest="input_options",
+            action="store",
+            type="str",
+            default=None,
+            help="Format string provided to htslib for reading. Mostly"
+            " useful for CRAM formatted files. See samtools documentation",
+        )
+        group.add_option(
+            "-i",
+            "--in-sam",
+            dest="in_sam",
+            action="store_true",
+            help="[Deprecated] Input file is in sam format [default=%default]",
+            default=False,
+        )
+
         if not exclude_output_format:
-            group.add_option("--out-format", dest="out_format",
-                         type="choice",
-                         choices=("sam", "bam", "cram"),
-                         default=None,
-                         help="File format of the input file. Format is usually" \
-                         " implied from the extension of the filename, but" \
-                         " maybe overridden with this option. Default=bam")
-            group.add_option("--output-options", dest="output_options", action="store",
-                         type="str",
-                         default=None,
-                         help="Format string provided to htslib for writing. Mostly" \
-                         " useful for CRAM formatted files. See samtools documentation")
-            group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                         help="[Deprecated] Output alignments in sam format [default=%default]",
-                         default=False)
-            
-        group.add_option("--reference-filename", dest="reference_filename",
-                        action="store",
-                        default=None,
-                        help="File path or URL to the genome reference to be used" \
-                        " when reading or writing CRAM files. By default, when reading" \
-                        " a CRAM file, the reference recorded in the input file will be" \
-                        " used unless this is specified. When writing, specifying a" \
-                        " reference location is required.")
+            group.add_option(
+                "--out-format",
+                dest="out_format",
+                type="choice",
+                choices=("sam", "bam", "cram"),
+                default=None,
+                help="File format of the input file. Format is usually"
+                " implied from the extension of the filename, but"
+                " maybe overridden with this option. Default=bam",
+            )
+            group.add_option(
+                "--output-options",
+                dest="output_options",
+                action="store",
+                type="str",
+                default=None,
+                help="Format string provided to htslib for writing. Mostly"
+                " useful for CRAM formatted files. See samtools documentation",
+            )
+            group.add_option(
+                "-o",
+                "--out-sam",
+                dest="out_sam",
+                action="store_true",
+                help="[Deprecated] Output alignments in sam format [default=%default]",
+                default=False,
+            )
+
+        group.add_option(
+            "--reference-filename",
+            dest="reference_filename",
+            action="store",
+            default=None,
+            help="File path or URL to the genome reference to be used"
+            " when reading or writing CRAM files. By default, when reading"
+            " a CRAM file, the reference recorded in the input file will be"
+            " used unless this is specified. When writing, specifying a"
+            " reference location is required.",
+        )
 
         parser.add_option_group(group)
 
     if add_sam_options:
         group = OptionGroup(parser, "SAM/BAM filtering options")
-        group.add_option("--mapping-quality", dest="mapping_quality",
-                         type="int",
-                         help="Minimum mapping quality for a read to be retained"
-                         " [default=%default]",
-                         default=0)
+        group.add_option(
+            "--mapping-quality",
+            dest="mapping_quality",
+            type="int",
+            help="Minimum mapping quality for a read to be retained [default=%default]",
+            default=0,
+        )
 
-        group.add_option("--output-unmapped", dest="output_unmapped", action="store_true",
-                         default=False, help=optparse.SUPPRESS_HELP)
+        group.add_option(
+            "--output-unmapped",
+            dest="output_unmapped",
+            action="store_true",
+            default=False,
+            help=optparse.SUPPRESS_HELP,
+        )
 
-        group.add_option("--ignore-umi", dest="ignore_umi",
-                         action="store_true", help="Ignore UMI and dedup"
-                         " only on position", default=False)
+        group.add_option(
+            "--ignore-umi",
+            dest="ignore_umi",
+            action="store_true",
+            help="Ignore UMI and dedup only on position",
+            default=False,
+        )
 
-        group.add_option("--ignore-tlen", dest="ignore_tlen", action="store_true",
-                         default=False,
-                         help="Option to dedup paired end reads based solely on read1, "
-                         "whether or not the template length is the same")
+        group.add_option(
+            "--ignore-tlen",
+            dest="ignore_tlen",
+            action="store_true",
+            default=False,
+            help="Option to dedup paired end reads based solely on read1, "
+            "whether or not the template length is the same",
+        )
 
-        group.add_option("--chrom", dest="chrom", type="string",
-                         help="Restrict to one chromosome",
-                         default=None)
+        group.add_option(
+            "--chrom",
+            dest="chrom",
+            type="string",
+            help="Restrict to one chromosome",
+            default=None,
+        )
 
-        group.add_option("--subset", dest="subset", type="float",
-                         help="Use only a fraction of reads, specified by subset",
-                         default=None)
+        group.add_option(
+            "--subset",
+            dest="subset",
+            type="float",
+            help="Use only a fraction of reads, specified by subset",
+            default=None,
+        )
 
-        group.add_option("--paired", dest="paired", action="store_true",
-                         default=False,
-                         help="paired input BAM. [default=%default]")
+        group.add_option(
+            "--paired",
+            dest="paired",
+            action="store_true",
+            default=False,
+            help="paired input BAM. [default=%default]",
+        )
 
-        group.add_option("--no-sort-output", dest="no_sort_output",
-                         action="store_true", default=False,
-                         help="Don't Sort the output")
+        group.add_option(
+            "--no-sort-output",
+            dest="no_sort_output",
+            action="store_true",
+            default=False,
+            help="Don't Sort the output",
+        )
 
         parser.add_option_group(group)
 
     if add_dedup_count_sam_options:
         group = OptionGroup(parser, "Dedup and Count SAM/BAM options")
 
-        group.add_option("--unmapped-reads", dest="unmapped_reads",
-                         type="choice",
-                         choices=("discard", "use"),
-                         default="discard",
-                         help=("How to handle unmapped reads. Options are "
-                               "'discard' or 'use' [default=%default]"))
+        group.add_option(
+            "--unmapped-reads",
+            dest="unmapped_reads",
+            type="choice",
+            choices=("discard", "use"),
+            default="discard",
+            help=(
+                "How to handle unmapped reads. Options are "
+                "'discard' or 'use' [default=%default]"
+            ),
+        )
 
-        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
-                         type="choice",
-                         choices=("discard", "use"),
-                         default="use",
-                         help=("How to handle chimeric read pairs. Options are "
-                               "'discard' or 'use'  [default=%default]"))
+        group.add_option(
+            "--chimeric-pairs",
+            dest="chimeric_pairs",
+            type="choice",
+            choices=("discard", "use"),
+            default="use",
+            help=(
+                "How to handle chimeric read pairs. Options are "
+                "'discard' or 'use'  [default=%default]"
+            ),
+        )
 
-        group.add_option("--unpaired-reads", dest="unpaired_reads",
-                         type="choice",
-                         choices=("discard", "use"),
-                         default="use",
-                         help=("How to handle unpaired reads. Options are "
-                               "'discard'or 'use' [default=%default]"))
+        group.add_option(
+            "--unpaired-reads",
+            dest="unpaired_reads",
+            type="choice",
+            choices=("discard", "use"),
+            default="use",
+            help=(
+                "How to handle unpaired reads. Options are "
+                "'discard'or 'use' [default=%default]"
+            ),
+        )
         parser.add_option_group(group)
 
     if add_group_sam_options:
         group = OptionGroup(parser, "Group SAM/BAM options")
 
-        group.add_option("--unmapped-reads", dest="unmapped_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="discard",
-                         help=("How to handle unmapped reads. Options are "
-                               "'discard', 'use' or 'output' [default=%default]"))
+        group.add_option(
+            "--unmapped-reads",
+            dest="unmapped_reads",
+            type="choice",
+            choices=("discard", "use", "output"),
+            default="discard",
+            help=(
+                "How to handle unmapped reads. Options are "
+                "'discard', 'use' or 'output' [default=%default]"
+            ),
+        )
 
-        group.add_option("--chimeric-pairs", dest="chimeric_pairs",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle chimeric read pairs. Options are "
-                               "'discard', 'use' or 'output' [default=%default]"))
+        group.add_option(
+            "--chimeric-pairs",
+            dest="chimeric_pairs",
+            type="choice",
+            choices=("discard", "use", "output"),
+            default="use",
+            help=(
+                "How to handle chimeric read pairs. Options are "
+                "'discard', 'use' or 'output' [default=%default]"
+            ),
+        )
 
-        group.add_option("--unpaired-reads", dest="unpaired_reads",
-                         type="choice",
-                         choices=("discard", "use", "output"),
-                         default="use",
-                         help=("How to handle unpaired reads. Options are "
-                               "'discard', 'use' or 'output' [default=%default]"))
+        group.add_option(
+            "--unpaired-reads",
+            dest="unpaired_reads",
+            type="choice",
+            choices=("discard", "use", "output"),
+            default="use",
+            help=(
+                "How to handle unpaired reads. Options are "
+                "'discard', 'use' or 'output' [default=%default]"
+            ),
+        )
         parser.add_option_group(group)
 
     if add_pipe_options:
         group = OptionGroup(parser, "Input/Output pipe options")
-        group.add_option("-I", "--stdin", dest="stdin", type="string",
-                         help="file to read stdin from [default = stdin].",
-                         metavar="FILE")
-        group.add_option("-L", "--log", dest="stdlog", type="string",
-                         help="file with logging information "
-                         "[default = stdout].",
-                         metavar="FILE")
-        group.add_option("-E", "--error", dest="stderr", type="string",
-                         help="file with error information "
-                         "[default = stderr].",
-                         metavar="FILE")
-        group.add_option("-S", "--stdout", dest="stdout", type="string",
-                         help="file where output is to go "
-                         "[default = stdout].",
-                         metavar="FILE")
-        group.add_option("--temp-dir", dest="tmpdir", type="string",
-                         help="Directory for temporary files. If not set,"
-                         " the bash environmental variable TMPDIR is used"
-                         "[default = None].",
-                         metavar="FILE")
-        group.add_option("--log2stderr", dest="log2stderr",
-                         action="store_true", help="send logging information"
-                         " to stderr [default = False].")
-        group.add_option("--compresslevel", dest="compresslevel", type="int",
-                         help="Level of Gzip compression to use. Default (6) matches"
-                         "GNU gzip rather than python gzip default (which is 9)")
+        group.add_option(
+            "-I",
+            "--stdin",
+            dest="stdin",
+            type="string",
+            help="file to read stdin from [default = stdin].",
+            metavar="FILE",
+        )
+        group.add_option(
+            "-L",
+            "--log",
+            dest="stdlog",
+            type="string",
+            help="file with logging information [default = stdout].",
+            metavar="FILE",
+        )
+        group.add_option(
+            "-E",
+            "--error",
+            dest="stderr",
+            type="string",
+            help="file with error information [default = stderr].",
+            metavar="FILE",
+        )
+        group.add_option(
+            "-S",
+            "--stdout",
+            dest="stdout",
+            type="string",
+            help="file where output is to go [default = stdout].",
+            metavar="FILE",
+        )
+        group.add_option(
+            "--temp-dir",
+            dest="tmpdir",
+            type="string",
+            help="Directory for temporary files. If not set,"
+            " the bash environmental variable TMPDIR is used"
+            "[default = None].",
+            metavar="FILE",
+        )
+        group.add_option(
+            "--log2stderr",
+            dest="log2stderr",
+            action="store_true",
+            help="send logging information to stderr [default = False].",
+        )
+        group.add_option(
+            "--compresslevel",
+            dest="compresslevel",
+            type="int",
+            help="Level of Gzip compression to use. Default (6) matches"
+            "GNU gzip rather than python gzip default (which is 9)",
+        )
 
         parser.set_defaults(stderr=sys.stderr)
         parser.set_defaults(stdout=sys.stdout)
@@ -1055,34 +1308,56 @@ def Start(parser=None,
 
     group = OptionGroup(parser, "profiling options")
 
-    group.add_option("--timeit", dest='timeit_file', type="string",
-                     help="store timeing information in file [%default].")
+    group.add_option(
+        "--timeit",
+        dest="timeit_file",
+        type="string",
+        help="store timeing information in file [%default].",
+    )
 
-    group.add_option("--timeit-name", dest='timeit_name', type="string",
-                     help="name in timing file for this class of jobs "
-                     "[%default].")
+    group.add_option(
+        "--timeit-name",
+        dest="timeit_name",
+        type="string",
+        help="name in timing file for this class of jobs [%default].",
+    )
 
-    group.add_option("--timeit-header", dest='timeit_header',
-                     action="store_true",
-                     help="add header for timing information [%default].")
+    group.add_option(
+        "--timeit-header",
+        dest="timeit_header",
+        action="store_true",
+        help="add header for timing information [%default].",
+    )
 
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "common options")
 
-    group.add_option("-v", "--verbose", dest="loglevel", type="int",
-                     help="loglevel [%default]. The higher, the more output.")
+    group.add_option(
+        "-v",
+        "--verbose",
+        dest="loglevel",
+        type="int",
+        help="loglevel [%default]. The higher, the more output.",
+    )
 
-    group.add_option("-h", "--help", dest="short_help", action="callback",
-                     callback=callbackShortHelp,
-                     help="output short help (command line options only).")
+    group.add_option(
+        "-h",
+        "--help",
+        dest="short_help",
+        action="callback",
+        callback=callbackShortHelp,
+        help="output short help (command line options only).",
+    )
 
-    group.add_option('--help-extended', action='help',
-                     help='Output full documentation')
+    group.add_option("--help-extended", action="help", help="Output full documentation")
 
-    group.add_option("--random-seed", dest='random_seed', type="int",
-                     help="random seed to initialize number generator "
-                     "with [%default].")
+    group.add_option(
+        "--random-seed",
+        dest="random_seed",
+        type="int",
+        help="random seed to initialize number generator with [%default].",
+    )
 
     parser.add_option_group(group)
 
@@ -1096,7 +1371,7 @@ def Start(parser=None,
 
     parser.set_defaults(
         timeit_file=None,
-        timeit_name='all',
+        timeit_name="all",
         timeit_header=None,
         random_seed=None,
     )
@@ -1150,14 +1425,11 @@ def Start(parser=None,
         lvl = logging.DEBUG
 
     if global_options.stdout == global_options.stdlog:
-        format = '# %(asctime)s %(levelname)s %(message)s'
+        format = "# %(asctime)s %(levelname)s %(message)s"
     else:
-        format = '%(asctime)s %(levelname)s %(message)s'
+        format = "%(asctime)s %(levelname)s %(message)s"
 
-    logging.basicConfig(
-        level=lvl,
-        format=format,
-        stream=global_options.stdlog)
+    logging.basicConfig(level=lvl, format=format, stream=global_options.stdlog)
 
     # set up multi-line logging
     # Note that .handlers is not part of the API, might change
@@ -1169,10 +1441,9 @@ def Start(parser=None,
 
 
 def validateExtractOptions(options):
-    ''' Check the validity of the option combinations for barcode extraction'''
+    """Check the validity of the option combinations for barcode extraction"""
 
     if options.read2_only:
-
         if not options.pattern2:
             raise ValueError("Must supply --bc-pattern2 if extracting from just read2")
 
@@ -1183,8 +1454,9 @@ def validateExtractOptions(options):
         if not options.read2_in:
             raise ValueError("Must supply --bc-pattern for single-end")
         else:
-            raise ValueError("Must supply --bc-pattern and/or --bc-pattern2 "
-                             "if paired-end ")
+            raise ValueError(
+                "Must supply --bc-pattern and/or --bc-pattern2 if paired-end "
+            )
 
     if options.pattern2:
         if not options.read2_in:
@@ -1197,9 +1469,12 @@ def validateExtractOptions(options):
         raise ValueError("Cannot use --filtered-out2 without read2 input (--read2-in)")
 
     if ((options.read2_in and options.filtered_out) and not options.filtered_out2) or (
-            options.filtered_out2 and not options.filtered_out):
-        raise ValueError("Must supply both --filtered-out and --filtered-out2"
-                         "to write out filtered reads for paired end")
+        options.filtered_out2 and not options.filtered_out
+    ):
+        raise ValueError(
+            "Must supply both --filtered-out and --filtered-out2"
+            "to write out filtered reads for paired end"
+        )
 
     extract_cell = False
     extract_umi = False
@@ -1211,15 +1486,17 @@ def validateExtractOptions(options):
             try:
                 options.pattern = regex.compile(options.pattern)
             except regex.error:
-                raise ValueError("--bc-pattern '%s' is not a "
-                                 "valid regex" % options.pattern)
+                raise ValueError(
+                    "--bc-pattern '%s' is not a valid regex" % options.pattern
+                )
 
         if options.pattern2:
             try:
                 options.pattern2 = regex.compile(options.pattern2)
             except regex.Error:
-                raise ValueError("--bc-pattern2 '%s' is not a "
-                                 "valid regex" % options.pattern2)
+                raise ValueError(
+                    "--bc-pattern2 '%s' is not a valid regex" % options.pattern2
+                )
 
     # check whether the regex contains a umi group(s) and cell groups(s)
     if options.extract_method == "regex":
@@ -1251,28 +1528,33 @@ def validateExtractOptions(options):
 
     if not extract_umi:
         if options.extract_method == "string":
-            raise ValueError("barcode pattern(s) do not include any umi bases "
-                             "(marked with 'Ns') %s, %s" % (
-                                 options.pattern, options.pattern2))
+            raise ValueError(
+                "barcode pattern(s) do not include any umi bases "
+                "(marked with 'Ns') %s, %s" % (options.pattern, options.pattern2)
+            )
         elif options.extract_method == "regex":
-            raise ValueError("barcode regex(es) do not include any umi groups "
-                             "(starting with 'umi_') %s, %s" % (
-                                 options.pattern, options.pattern2))
+            raise ValueError(
+                "barcode regex(es) do not include any umi groups "
+                "(starting with 'umi_') %s, %s" % (options.pattern, options.pattern2)
+            )
 
     return (extract_cell, extract_umi)
 
 
 def validateSamOptions(options, group=False):
-    ''' Check the validity of the option combinations for sam/bam input '''
+    """Check the validity of the option combinations for sam/bam input"""
 
     if options.per_gene:
         if options.gene_tag and options.per_contig:
-            raise ValueError("need to use either --per-contig "
-                             "OR --gene-tag, please do not provide both")
+            raise ValueError(
+                "need to use either --per-contig "
+                "OR --gene-tag, please do not provide both"
+            )
 
         if not options.per_contig and not options.gene_tag:
-            raise ValueError("for per-gene applications, must supply "
-                             "--per-contig or --gene-tag")
+            raise ValueError(
+                "for per-gene applications, must supply --per-contig or --gene-tag"
+            )
 
     if options.per_contig and not options.per_gene:
         raise ValueError("need to use --per-gene with --per-contig")
@@ -1281,8 +1563,9 @@ def validateSamOptions(options, group=False):
         raise ValueError("need to use --per-gene with --gene_tag")
 
     if options.gene_transcript_map and not options.per_contig:
-        raise ValueError("need to use --per-contig and --per-gene"
-                         "with --gene-transcript-map")
+        raise ValueError(
+            "need to use --per-contig and --per-genewith --gene-transcript-map"
+        )
 
     if options.get_umi_method == "tag":
         if options.umi_tag is None:
@@ -1297,86 +1580,110 @@ def validateSamOptions(options, group=False):
         try:
             re.compile(options.skip_regex)
         except re.error:
-            raise ValueError("skip-regex '%s' is not a "
-                             "valid regex" % options.skip_regex)
+            raise ValueError(
+                "skip-regex '%s' is not a valid regex" % options.skip_regex
+            )
 
     if not group:
         if options.unmapped_reads == "output":
-            raise ValueError("Cannot use --unmapped-reads=output. If you want "
-                             "to retain unmapped without deduplicating them, "
-                             "use the group command")
+            raise ValueError(
+                "Cannot use --unmapped-reads=output. If you want "
+                "to retain unmapped without deduplicating them, "
+                "use the group command"
+            )
         if options.chimeric_pairs == "output":
-            raise ValueError("Cannot use --chimeric-pairs=output. If you want "
-                             "to retain chimeric read pairs without "
-                             "deduplicating them, use the group command")
+            raise ValueError(
+                "Cannot use --chimeric-pairs=output. If you want "
+                "to retain chimeric read pairs without "
+                "deduplicating them, use the group command"
+            )
         if options.unpaired_reads == "output":
-            raise ValueError("Cannot use --unpaired-reads=output. If you want "
-                             "to retain unmapped without deduplicating them, "
-                             "use the group command")
+            raise ValueError(
+                "Cannot use --unpaired-reads=output. If you want "
+                "to retain unmapped without deduplicating them, "
+                "use the group command"
+            )
 
     if options.paired:
         if options.chimeric_pairs == "use":
-            warn("Chimeric read pairs are being used. "
-                 "Some read pair UMIs may be grouped/deduplicated using "
-                 "just the mapping coordinates from read1."
-                 "This may also increase the run time and memory usage. "
-                 "Consider --chimeric-pairs==discard to discard these reads "
-                 "or --chimeric-pairs==output (group command only) to "
-                 "output them without grouping")
+            warn(
+                "Chimeric read pairs are being used. "
+                "Some read pair UMIs may be grouped/deduplicated using "
+                "just the mapping coordinates from read1."
+                "This may also increase the run time and memory usage. "
+                "Consider --chimeric-pairs==discard to discard these reads "
+                "or --chimeric-pairs==output (group command only) to "
+                "output them without grouping"
+            )
         if options.unpaired_reads == "use":
-            warn("Unpaired read pairs are being used. "
-                 "Some read pair UMIs may be grouped/deduplicated using "
-                 "just the mapping coordinates from read1."
-                 "This may also increase the run time and memory usage. "
-                 "Consider --unpared-reads==discard to discard these reads "
-                 "or --unpared-reads==output (group command only) to "
-                 "output them without grouping")
+            warn(
+                "Unpaired read pairs are being used. "
+                "Some read pair UMIs may be grouped/deduplicated using "
+                "just the mapping coordinates from read1."
+                "This may also increase the run time and memory usage. "
+                "Consider --unpared-reads==discard to discard these reads "
+                "or --unpared-reads==output (group command only) to "
+                "output them without grouping"
+            )
         if options.unmapped_reads == "use":
-            warn("Unmapped read pairs are being used. "
-                 "Some read pair UMIs may be grouped/deduplicated using "
-                 "just the mapping coordinates from read1. "
-                 "This may also increase the run time and memory usage. "
-                 "Consider --unmapped_reads==discard to discard these reads "
-                 "or --unmapped_reads==output (group command only) to "
-                 "output them without grouping")
+            warn(
+                "Unmapped read pairs are being used. "
+                "Some read pair UMIs may be grouped/deduplicated using "
+                "just the mapping coordinates from read1. "
+                "This may also increase the run time and memory usage. "
+                "Consider --unmapped_reads==discard to discard these reads "
+                "or --unmapped_reads==output (group command only) to "
+                "output them without grouping"
+            )
 
     command = " ".join(sys.argv)
     info("command: %s" % command)
     if "--umi-tag" in command or "--cell-tag" in command:
         if options.get_umi_method != "tag":
-            raise ValueError("--umi-tag and/or --cell-tag options provided. "
-                             "Need to set --extract-umi-method=tag")
+            raise ValueError(
+                "--umi-tag and/or --cell-tag options provided. "
+                "Need to set --extract-umi-method=tag"
+            )
 
     if options.unmapped_reads == "use":
         if not options.paired:
-            raise ValueError("--unmapped-reads=use is only compatible with "
-                             "paired end reads (--paired)")
+            raise ValueError(
+                "--unmapped-reads=use is only compatible with "
+                "paired end reads (--paired)"
+            )
 
     if "--chimeric-pairs" in command:
         info("command: %s" % command)
         if not options.paired:
-            raise ValueError("--chimeric-pairs is only compatible "
-                             "with paired end reads (--paired)")
+            raise ValueError(
+                "--chimeric-pairs is only compatible with paired end reads (--paired)"
+            )
 
     if "--unpaired-reads" in command:
         if not options.paired:
-            raise ValueError("--unpaired-reads is only compatible "
-                             "with paired end reads (--paired)")
+            raise ValueError(
+                "--unpaired-reads is only compatible with paired end reads (--paired)"
+            )
 
     if "--ignore-tlen" in command:
         if not options.paired:
-            raise ValueError("--ignore-tlen is only compatible "
-                             "with paired end reads (--paired)")
+            raise ValueError(
+                "--ignore-tlen is only compatible with paired end reads (--paired)"
+            )
 
     # legacy support for --output-unmapped behaviour
     if options.output_unmapped:
-        warn("--output-unmapped will be removed in the near future. "
-             "Use --unmapped-reads=output instead")
+        warn(
+            "--output-unmapped will be removed in the near future. "
+            "Use --unmapped-reads=output instead"
+        )
         # We will update the value of options.unmapped_reads so we want to
         # check the user has not also supplied this option
         if "--unmapped_reads" in command:
-            raise ValueError("Do not use --output-unmapped in combination with"
-                             "--unmapped-reads. Just use --unmapped-reads")
+            raise ValueError(
+                "Do not use --output-unmapped in combination with"
+                "--unmapped-reads. Just use --unmapped-reads"
+            )
         options.unmapped_reads = "output"
 
 
@@ -1390,14 +1697,16 @@ def Stop():
     if global_options.loglevel >= 1 and global_benchmark:
         t = time.time() - global_starting_time
         global_options.stdlog.write(
-            "######### Time spent in benchmarked functions #########\n")
+            "######### Time spent in benchmarked functions #########\n"
+        )
         global_options.stdlog.write("# function\tseconds\tpercent\n")
         for key, value in global_benchmark.items():
             global_options.stdlog.write(
-                "# %s\t%6i\t%5.2f%%\n" % (key, value,
-                                          (100.0 * float(value) / t)))
+                "# %s\t%6i\t%5.2f%%\n" % (key, value, (100.0 * float(value) / t))
+            )
         global_options.stdlog.write(
-            "#######################################################\n")
+            "#######################################################\n"
+        )
 
     if global_options.loglevel >= 1:
         global_options.stdlog.write(getFooter() + "\n")
@@ -1413,14 +1722,30 @@ def Stop():
         global_options.stderr.close()
 
     if global_options.timeit_file:
-
         outfile = open(global_options.timeit_file, "a")
 
         if global_options.timeit_header:
-            outfile.write("\t".join(
-                ("name", "wall", "user", "sys", "cuser", "csys",
-                 "host", "system", "release", "machine",
-                 "start", "end", "path", "cmd")) + "\n")
+            outfile.write(
+                "\t".join(
+                    (
+                        "name",
+                        "wall",
+                        "user",
+                        "sys",
+                        "cuser",
+                        "csys",
+                        "host",
+                        "system",
+                        "release",
+                        "machine",
+                        "start",
+                        "end",
+                        "path",
+                        "cmd",
+                    )
+                )
+                + "\n"
+            )
 
         csystem, host, release, version, machine = map(str, os.uname())
         uusr, usys, c_usr, c_sys = map(lambda x: "%5.2f" % x, os.times()[:4])
@@ -1434,13 +1759,27 @@ def Stop():
         else:
             cmd = sys.argv[0]
 
-        result = "\t".join((global_options.timeit_name,
-                            c_wall, uusr, usys, c_usr, c_sys,
-                            host, csystem, release, machine,
-                            time.asctime(time.localtime(global_starting_time)),
-                            time.asctime(time.localtime(t_end)),
-                            os.path.abspath(os.getcwd()),
-                            cmd)) + "\n"
+        result = (
+            "\t".join(
+                (
+                    global_options.timeit_name,
+                    c_wall,
+                    uusr,
+                    usys,
+                    c_usr,
+                    c_sys,
+                    host,
+                    csystem,
+                    release,
+                    machine,
+                    time.asctime(time.localtime(global_starting_time)),
+                    time.asctime(time.localtime(t_end)),
+                    os.path.abspath(os.getcwd()),
+                    cmd,
+                )
+            )
+            + "\n"
+        )
 
         outfile.write(result)
         outfile.close()
@@ -1452,38 +1791,39 @@ def log(loglevel, message):
 
 
 def info(message):
-    '''log information message, see the :mod:`logging` module'''
+    """log information message, see the :mod:`logging` module"""
     logging.info(message)
 
 
 def warning(message):
-    '''log warning message, see the :mod:`logging` module'''
+    """log warning message, see the :mod:`logging` module"""
     logging.warning(message)
 
 
 def warn(message):
-    '''log warning message, see the :mod:`logging` module'''
+    """log warning message, see the :mod:`logging` module"""
     logging.warning(message)
 
 
 def debug(message):
-    '''log debugging message, see the :mod:`logging` module'''
+    """log debugging message, see the :mod:`logging` module"""
     logging.debug(message)
 
 
 def error(message):
-    '''log error message, see the :mod:`logging` module'''
+    """log error message, see the :mod:`logging` module"""
     logging.error(message)
     sys.stderr.write("UMI-tools failed with an error. Check the log file\n")
     sys.exit(1)
 
+
 def critical(message):
-    '''log critical message, see the :mod:`logging` module'''
+    """log critical message, see the :mod:`logging` module"""
     logging.critical(message)
 
 
 def getTempFile(dir=None, shared=False, suffix=""):
-    '''get a temporary file.
+    """get a temporary file.
 
     The file is created and the caller needs to close and delete
     the temporary file once it is not used any more.
@@ -1503,14 +1843,15 @@ def getTempFile(dir=None, shared=False, suffix=""):
     -------
     file : File
         A file object of the temporary file.
-    '''
+    """
 
-    return tempfile.NamedTemporaryFile(dir=dir, delete=False, prefix="ctmp",
-                                       suffix=suffix)
+    return tempfile.NamedTemporaryFile(
+        dir=dir, delete=False, prefix="ctmp", suffix=suffix
+    )
 
 
 def getTempFilename(dir=None, shared=False, suffix=""):
-    '''return a temporary filename.
+    """return a temporary filename.
 
     The file is created and the caller needs to delete the temporary
     file once it is not used any more.
@@ -1531,17 +1872,18 @@ def getTempFilename(dir=None, shared=False, suffix=""):
     filename : string
         Absolute pathname of temporary file.
 
-    '''
+    """
     tmpfile = getTempFile(dir=dir, shared=shared, suffix=suffix)
     tmpfile.close()
     return tmpfile.name
 
+
 def determine_format(filename, sam, out_format):
-    '''Determine the alignment file format for input/output.
+    """Determine the alignment file format for input/output.
     If out_sam is True then the format is SAM, if the out_format is
-    set then use that format, else detect from the extension to the 
+    set then use that format, else detect from the extension to the
     filename. If the extension can't be matched, then use BAM
-    
+
     Arguments
     ---------
     filename : string
@@ -1556,7 +1898,7 @@ def determine_format(filename, sam, out_format):
     -------
     format : string
         File format to use. One of sam/bam/cram
-    '''
+    """
 
     if sam:
         format = "sam"
@@ -1569,19 +1911,20 @@ def determine_format(filename, sam, out_format):
     else:
         format = "bam"
 
-    return (format)
+    return format
+
 
 def output_names_and_formats(outfile, sam, outformat, no_sort_out, tmpdir):
-    '''This function handles the detection of what the output filename
+    """This function handles the detection of what the output filename
     should be, and what its format should be, as well as the name and the
-    format of any temporary file. 
+    format of any temporary file.
 
-    The format of the output file is detected from the filename or the 
-    commandline options. 
+    The format of the output file is detected from the filename or the
+    commandline options.
 
     The format of any intermediate, unsorted, temporary file is sam
     if the output file is sam, and bam otherwise. CRAM files should
-    always be sorted. 
+    always be sorted.
 
     Arguments
     ---------
@@ -1592,7 +1935,7 @@ def output_names_and_formats(outfile, sam, outformat, no_sort_out, tmpdir):
     outformat : string
         The value of the out_format paramtere from the command line options
     no_sort_out : bool
-        Whether or not to skip the sorting of the output. 
+        Whether or not to skip the sorting of the output.
     tmpdir : string
         directory for temporary file if used
 
@@ -1607,7 +1950,7 @@ def output_names_and_formats(outfile, sam, outformat, no_sort_out, tmpdir):
     sorted_out_format : string
         the file format for the sorted output file
 
-    '''
+    """
 
     if outfile != sys.stdout:
         eventual_name = outfile.name
@@ -1621,24 +1964,22 @@ def output_names_and_formats(outfile, sam, outformat, no_sort_out, tmpdir):
         sorted_out_format = eventual_format
         sorted_out_name = eventual_name
         out_name = getTempFilename(dir=tmpdir)
-        out_format = "sam" if eventual_format=="sam" else "bam"
+        out_format = "sam" if eventual_format == "sam" else "bam"
     else:
         out_format = eventual_format
         out_name = eventual_name
         sorted_out_format = None
         sorted_out_name = None
-    
-    return (out_name, out_format, sorted_out_name, sorted_out_format)
-    
 
-        
+    return (out_name, out_format, sorted_out_name, sorted_out_format)
+
 
 def open_input_alignments(in_name, format, options):
-    '''This function will determine the format of the input file and open 
-    with the apporpriate options. The format will be determined from the 
-    extension, or the --in-format commandline switch. --in-format takes 
-    priority. Filenames ending `.sam` or `.cram` will be opened as such, 
-    otherwise assumed to be `bam`. 
+    """This function will determine the format of the input file and open
+    with the apporpriate options. The format will be determined from the
+    extension, or the --in-format commandline switch. --in-format takes
+    priority. Filenames ending `.sam` or `.cram` will be opened as such,
+    otherwise assumed to be `bam`.
 
     Arguements
     ----------
@@ -1654,11 +1995,11 @@ def open_input_alignments(in_name, format, options):
 
     infile : pysam.AlignmentFile
         The input alignment file
-    '''
-   
-    if format=="sam":
+    """
+
+    if format == "sam":
         mode = "r"
-    elif format=="cram":
+    elif format == "cram":
         mode = "rc"
     else:
         mode = "rb"
@@ -1667,19 +2008,21 @@ def open_input_alignments(in_name, format, options):
     if format_options:
         format_options = format_options.split(",")
 
-    infile = pysam.AlignmentFile(filepath_or_object=in_name,
-                                 mode=mode,
-                                 reference_filename=options.reference_filename,
-                                 format_options=format_options)
-    return(infile)
+    infile = pysam.AlignmentFile(
+        filepath_or_object=in_name,
+        mode=mode,
+        reference_filename=options.reference_filename,
+        format_options=format_options,
+    )
+    return infile
 
 
 def open_output_alignments(out_name, format, infile, options):
-    '''This function will determine the format of the input file and open 
-    with the apropriate options. The format will be determined from the 
-    extension, or the --out-format commandline switch. --out-format takes 
-    priority. Filenames ending `.sam` or `.cram` will be opened as such, 
-    otherwise assumed to be `bam`. 
+    """This function will determine the format of the input file and open
+    with the apropriate options. The format will be determined from the
+    extension, or the --out-format commandline switch. --out-format takes
+    priority. Filenames ending `.sam` or `.cram` will be opened as such,
+    otherwise assumed to be `bam`.
 
     Parameters
     ----------
@@ -1694,21 +2037,21 @@ def open_output_alignments(out_name, format, infile, options):
         new file.
     options : dict_like
         The options dictionary returned by Start, used to get various
-        options, depending on the file format, including out_format, 
+        options, depending on the file format, including out_format,
         output_options, and reference_filename, which must be specified
         if the format is CRAM
 
     Returns
     -------
     outfile : pysam.AlignmentFile
-        The alignment file to be used as output. 
-    '''
+        The alignment file to be used as output.
+    """
 
-    if format=="sam":
+    if format == "sam":
         mode = "w"
-    elif format=="cram":
+    elif format == "cram":
         mode = "wc"
-    else:   
+    else:
         mode = "wb"
 
     format_options = options.output_options
@@ -1716,23 +2059,27 @@ def open_output_alignments(out_name, format, infile, options):
         format_options = format_options.split(",")
         format_options = [o.encode() for o in format_options]
 
-    debug("Opening %s, format %s, for output with options %s" % (out_name, format, format_options))
+    debug(
+        "Opening %s, format %s, for output with options %s"
+        % (out_name, format, format_options)
+    )
 
-    outfile = pysam.AlignmentFile(filepath_or_object=out_name,
-                                 mode=mode,
-                                 template=infile,
-                                 reference_filename=options.reference_filename,
-                                 format_options=format_options)
-    return(outfile)
+    outfile = pysam.AlignmentFile(
+        filepath_or_object=out_name,
+        mode=mode,
+        template=infile,
+        reference_filename=options.reference_filename,
+        format_options=format_options,
+    )
+    return outfile
 
-def sort_output(sorted_out_name,  
-                infile, 
-                format="bam",
-                format_options=None, 
-                reference_filename=None):
-    '''Sort infile into sorted_out_name using an external call to csamtools.
-    Deletes the input file. 
-    
+
+def sort_output(
+    sorted_out_name, infile, format="bam", format_options=None, reference_filename=None
+):
+    """Sort infile into sorted_out_name using an external call to csamtools.
+    Deletes the input file.
+
     Arugments
     ---------
     sorted_out_name : string
@@ -1747,30 +2094,31 @@ def sort_output(sorted_out_name,
     reference_filename : string
         Location of the reference sequence to use for CRAM formatted files
          required for CRAM output, will be used for input also if specified
-          
+
     Returns
     -------
         None
-         
-    '''
-    
+
+    """
+
     if format_options:
         format = format + "," + format_options
-        
-    params = ["-o", sorted_out_name,
-              "-O", format,
-              "--no-PG"]
-    
+
+    params = ["-o", sorted_out_name, "-O", format, "--no-PG"]
+
     if reference_filename:
         params.extend(["--reference", reference_filename])
-    
+
     params.append(infile)
-    
-    try:   
+
+    try:
         pysam.sort(*params)
     except pysam.SamtoolsError as e:
-        error("Sorting output file failed.\n\nSort command was:\n " +  
-             " ".join(params) + "\n\n" +
-             f"Error was:\n {e.value}")    
+        error(
+            "Sorting output file failed.\n\nSort command was:\n "
+            + " ".join(params)
+            + "\n\n"
+            + f"Error was:\n {e.value}"
+        )
 
     os.unlink(infile)  # delete the tempfile

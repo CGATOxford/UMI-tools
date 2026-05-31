@@ -47,6 +47,25 @@ ext-modules = [
 # This tells cibuildwheel to inject these flags into pip whenever it runs
 environment = { PIP_ONLY_BINARY = "numpy", PIP_PREFER_BINARY = "1" }
 
+[tool.ruff]
+# Target only the folders you care about
+src = ["src", "tests", "umi_tools"]
+
+[tool.ruff.lint]
+# Select what rules to check (E and W cover pycodestyle/pep8)
+select = ["E", "W"]
+
+ignore = ['E201',  # whitespace after '('
+              'E202',  # whitespace before ')'
+              'E265',  # block comment should start with '# '
+              'E402',  # module level import not at top of file because matplotlib
+              'E501',  # line too long (82 > 79 characters)
+              'E731',  # do not assign a lambda expression, use a def
+              'E722',  # do not use bare except
+              'E721',   # Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+              'W191',
+              'W391'
+]
 
 [project.urls]
 Homepage = "https://github.com/CGATOxford/UMI-tools"

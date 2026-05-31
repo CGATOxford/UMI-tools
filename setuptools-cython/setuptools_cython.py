@@ -13,22 +13,25 @@ def get_cython_requirement(config_settings=None):
         extra_requirements = ["cython"]
     return extra_requirements
 
+
 def get_requires_for_build_wheel(config_settings=None):
     """
     The requirements for building a wheel, optionally with cython installed.
-    Adding cython as build requirements will cause the .pyx source files 
+    Adding cython as build requirements will cause the .pyx source files
     to be compiled to C code which is added to the wheel.
     """
-    return _orig.get_requires_for_build_wheel(config_settings) \
-        + get_cython_requirement(config_settings)
+    return _orig.get_requires_for_build_wheel(config_settings) + get_cython_requirement(
+        config_settings
+    )
 
 
 def get_requires_for_build_sdist(config_settings=None):
     """
-    The requirements for building a source distribution (.tar.gz), 
-    optionally with cython installed. Adding cython as build 
-    requirements will cause the .pyx source files to be compiled 
+    The requirements for building a source distribution (.tar.gz),
+    optionally with cython installed. Adding cython as build
+    requirements will cause the .pyx source files to be compiled
     to C code which is added to the tar file.
     """
-    return _orig.get_requires_for_build_sdist(config_settings) \
-        + get_cython_requirement(config_settings)
+    return _orig.get_requires_for_build_sdist(config_settings) + get_cython_requirement(
+        config_settings
+    )

@@ -32,9 +32,10 @@ SUBDIRS = ("gpipe", "optic")
 LOGFILE = open("test_scripts.log", "a")
 DEBUG = os.environ.get("CGAT_DEBUG", False)
 
+
 def compute_checksum(filename):
-    '''return md5 checksum of file.'''
-    return hashlib.md5(open(filename, 'rb').read()).hexdigest()
+    """return md5 checksum of file."""
+    return hashlib.md5(open(filename, "rb").read()).hexdigest()
 
 
 def get_tests_directory():
@@ -47,6 +48,7 @@ def get_tests_directory():
 
     return testdir
 
+
 def _read(fn, cram=False):
     if fn.endswith(".gz"):
         with gzip.open(fn) as inf:
@@ -57,12 +59,15 @@ def _read(fn, cram=False):
 
     if fn.endswith(".cram") or cram:
         import pysam
+
         data = pysam.AlignmentFile(fn)
         reference = data.header.to_dict()["SQ"]
         reference = set(x["UR"] for x in reference)
-        assert len(reference) == 1, "Test suite does not support multiple reference files"
+        assert len(reference) == 1, (
+            "Test suite does not support multiple reference files"
+        )
         reference = list(reference)[0]
-        
+
         data.close()
         with pysam.AlignmentFile(fn, reference_filename=reference) as inf:
             data = [inf.text]
@@ -75,8 +80,7 @@ def _read(fn, cram=False):
         except UnicodeDecodeError:
             return data
 
-    data = [x for x in data.splitlines()
-            if not x.startswith("#")]
+    data = [x for x in data.splitlines() if not x.startswith("#")]
 
     return data
 
@@ -94,9 +98,8 @@ def get_scripts():
     return [os.path.abspath(os.path.join(tool_dir, tool_name))]
 
 
-
 def get_script_parameters():
-    '''yield list of scripts to test.'''
+    """yield list of scripts to test."""
     # the current directory
     current_dir = os.getcwd()
 
@@ -109,7 +112,7 @@ def get_script_parameters():
     tool = "tests/umi_tools.py"
     tool_name = os.path.basename(tool)
 
-    fn = 'tests/tests.yaml'
+    fn = "tests/tests.yaml"
     assert os.path.exists(fn), "tests.yaml does not exist!"
 
     tool_tests = yaml.safe_load(open(fn))
@@ -117,33 +120,34 @@ def get_script_parameters():
     parameters = []
     for test, values in sorted(list(tool_tests.items())):
         if "skip_python" in values:
-            versions = [x.strip() for x in
-                        str(values["skip_python"]).split(",")]
-            versions = [x for x in versions
-                        if PYTHON_VERSION.startswith(x)]
+            versions = [x.strip() for x in str(values["skip_python"]).split(",")]
+            versions = [x for x in versions if PYTHON_VERSION.startswith(x)]
             if len(versions) > 0:
                 continue
-        parameters.append((
-            test,
-            values.get('stdin', None),
-            values['options'],
-            values['outputs'],
-            values['references'],
-            current_dir,
-            values.get('sort', False),
-            values.get('cram', False)
-        ))
+        parameters.append(
+            (
+                test,
+                values.get("stdin", None),
+                values["options"],
+                values["outputs"],
+                values["references"],
+                current_dir,
+                values.get("sort", False),
+                values.get("cram", False),
+            )
+        )
     return parameters
+
 
 #########################################
 # List of tests to perform.
 #########################################
 # The fields are:
 
+
 @pytest.mark.parametrize("script", get_scripts())
 def test_script_has_main(script):
-    '''test is if a script can be imported and has a main function.
-    '''
+    """test is if a script can be imported and has a main function."""
 
     # The following tries importing, but I ran into problems - thus simply
     # do a textual check for now
@@ -166,32 +170,31 @@ def test_script_has_main(script):
     assert [x for x in open(script) if x.startswith("def main(")], "no main function"
 
 
-@pytest.mark.parametrize("test_name,stdin,options,outputs,references,current_dir,sort,cram", get_script_parameters())
-def test_script(test_name,
-                stdin,
-                options, outputs,
-                references,
-                current_dir,
-                sort,
-                cram):
-    '''check script.
+@pytest.mark.parametrize(
+    "test_name,stdin,options,outputs,references,current_dir,sort,cram",
+    get_script_parameters(),
+)
+def test_script(
+    test_name, stdin, options, outputs, references, current_dir, sort, cram
+):
+    """check script.
     # 1. Name of the script
     # 2. Filename to use as stdin
     # 3. Option string
     # 4. List of output files to collect
     # 5. List of reference files
 
-    '''
+    """
     working_dir = "tests"
 
     tmpdir = tempfile.mkdtemp()
 
     t1 = time.time()
 
-    stdout = os.path.join(tmpdir, 'stdout')
+    stdout = os.path.join(tmpdir, "stdout")
 
     if stdin:
-        stdin = '--stdin=%s' % (os.path.join(os.path.abspath(working_dir), stdin))
+        stdin = "--stdin=%s" % (os.path.join(os.path.abspath(working_dir), stdin))
     else:
         stdin = ""
 
@@ -207,19 +210,22 @@ def test_script(test_name,
 
     # Set COLUMNS variable so that help messages are wrapped same as on
     # commandline
-    exec_env = os.environ.copy() 
+    exec_env = os.environ.copy()
     exec_env["COLUMNS"] = "80"
 
     # use /bin/bash in order to enable "<( )" syntax in shells
-    statement = ("/bin/bash -c "
-                 "'umi_tools %(options)s %(stdin)s > %(stdout)s'") % locals()
+    statement = (
+        "/bin/bash -c 'umi_tools %(options)s %(stdin)s > %(stdout)s'"
+    ) % locals()
 
-    process = subprocess.Popen(statement,
-                               shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               cwd=tmpdir,
-                               env=exec_env)
+    process = subprocess.Popen(
+        statement,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=tmpdir,
+        env=exec_env,
+    )
 
     if DEBUG:
         print("tmpdir={}".format(tmpdir), end=" ")
@@ -231,36 +237,35 @@ def test_script(test_name,
 
     if process.returncode != 0:
         fail = True
-        msg = "error in statement: %s; stderr=%s" %\
-              (statement, process_stderr)
+        msg = "error in statement: %s; stderr=%s" % (statement, process_stderr)
 
     if not fail:
         # compare line by line, ignoring comments
         for output, reference in zip(outputs, references):
             if output == "stdout":
                 output = stdout
-            elif output.startswith("<DIR>/") or \
-                    output.startswith("%DIR%/"):
+            elif output.startswith("<DIR>/") or output.startswith("%DIR%/"):
                 output = os.path.join(working_dir, output[6:])
             else:
                 output = os.path.join(tmpdir, output)
 
             if not os.path.exists(output):
                 fail = True
-                msg = "output file '%s'  does not exist: %s" %\
-                      (output, statement)
+                msg = "output file '%s'  does not exist: %s" % (output, statement)
 
             reference = os.path.join(working_dir, reference)
             if not fail and not os.path.exists(reference):
                 fail = True
-                msg = "reference file '%s' does not exist (%s): %s" %\
-                      (reference, tmpdir, statement)
+                msg = "reference file '%s' does not exist (%s): %s" % (
+                    reference,
+                    tmpdir,
+                    statement,
+                )
 
             if reference.endswith(".cram"):
                 cram = True
 
             if not fail:
-
                 a = _read(output, cram)
                 b = _read(reference, cram)
 
@@ -270,13 +275,18 @@ def test_script(test_name,
 
                 if a != b:
                     fail = True
-                    msg = ("files %s and %s are not the same\n"
-                           "%s\nmd5: output=%i, %s reference=%i, %s") %\
-                        (output, reference, statement,
-                         len(a),
-                         compute_checksum(output),
-                         len(b),
-                         compute_checksum(reference))
+                    msg = (
+                        "files %s and %s are not the same\n"
+                        "%s\nmd5: output=%i, %s reference=%i, %s"
+                    ) % (
+                        output,
+                        reference,
+                        statement,
+                        len(a),
+                        compute_checksum(output),
+                        len(b),
+                        compute_checksum(reference),
+                    )
 
                     diffs = []
                     for aa, bb in zip(a, b):
@@ -286,26 +296,26 @@ def test_script(test_name,
                                 break
 
                     if sort:
-                        msg += ('\n\nNote that files were sorted prior to diff so line numbers '
-                                'in diff are with respect to sorted reference '
-                                'and output files\n\n')
+                        msg += (
+                            "\n\nNote that files were sorted prior to diff so line numbers "
+                            "in diff are with respect to sorted reference "
+                            "and output files\n\n"
+                        )
 
                     msg += "\nfirst 10 differences: {}".format(
-                        "\n--\n".join(
-                            ["\n".join(map(str, (x)))
-                             for x in diffs]))
+                        "\n--\n".join(["\n".join(map(str, (x))) for x in diffs])
+                    )
                     break
 
     t2 = time.time()
-    LOGFILE.write("t%s\t%f\n" % (test_name, t2-t1))
+    LOGFILE.write("t%s\t%f\n" % (test_name, t2 - t1))
     LOGFILE.flush()
 
     # preserve coverage information, this gets stored it tmpdir, but
     # needs to be moved to the current directory to be merged.
     coverage_files = glob.glob(os.path.join(tmpdir, ".coverage*"))
     for f in coverage_files:
-        shutil.move(os.path.abspath(f),
-                    os.path.join(current_dir, os.path.basename(f)))
+        shutil.move(os.path.abspath(f), os.path.join(current_dir, os.path.basename(f)))
 
     if not DEBUG:
         shutil.rmtree(tmpdir)

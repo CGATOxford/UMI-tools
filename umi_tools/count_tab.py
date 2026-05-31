@@ -1,4 +1,4 @@
-'''
+"""
 count_tab - Count reads per gene from flatfile using UMIs
 =================================================================
 
@@ -49,7 +49,7 @@ Example::
     NS500668:144:H5FCJBGXY:2:22309:18356:15843_AGTCGA_TCTAA     ENSG00000279457.3
     NS500668:144:H5FCJBGXY:3:23405:39715:19716_GGAGAA_CGATG     ENSG00000225972.1
 
-'''
+"""
 
 import sys
 
@@ -68,7 +68,7 @@ import umi_tools.sam_methods as sam_methods
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
 
-usage = '''
+usage = """
 count_tab - Count reads per gene from flatfile using UMIs
 
 Usage: umi_tools count_tab [OPTIONS] [--stdin=IN_TSV[.gz]] [--stdout=OUT_TSV[.gz]]
@@ -76,7 +76,7 @@ Usage: umi_tools count_tab [OPTIONS] [--stdin=IN_TSV[.gz]] [--stdout=OUT_TSV[.gz
        note: If --stdin/--stdout are ommited standard in and standard
              out are used for input and output. Input/Output will be
              (de)compressed if a filename provided to --stdin/--stdout
-             ends in .gz '''
+             ends in .gz """
 
 
 def main(argv=None):
@@ -89,42 +89,52 @@ def main(argv=None):
         argv = sys.argv
 
     # setup command line parser
-    parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage,
-                            description=globals()["__doc__"])
+    parser = U.OptionParser(
+        version="%prog version: $Id$", usage=usage, description=globals()["__doc__"]
+    )
 
     if len(argv) == 1:
         parser.print_usage()
-        print ("Required options missing, see --help for more details")
+        print("Required options missing, see --help for more details")
         return 1
 
     group = U.OptionGroup(parser, "count_tab-specific options")
 
-    group.add_option("--barcode-separator", dest="bc_sep",
-                     type="string", help="separator between read id and UMI "
-                     " and (optionally) the cell barcode", default="_")
+    group.add_option(
+        "--barcode-separator",
+        dest="bc_sep",
+        type="string",
+        help="separator between read id and UMI  and (optionally) the cell barcode",
+        default="_",
+    )
 
-    group.add_option("--per-cell", dest="per_cell",
-                     action="store_true",
-                     help="Readname includes cell barcode as well as UMI in "
-                     "format: read[sep]UMI[sep]CB")
+    group.add_option(
+        "--per-cell",
+        dest="per_cell",
+        action="store_true",
+        help="Readname includes cell barcode as well as UMI in "
+        "format: read[sep]UMI[sep]CB",
+    )
 
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False,
-                              add_sam_options=False,
-                              add_s_b_cram_format_options=True, exclude_output_format=True)
+    (options, args) = U.Start(
+        parser,
+        argv=argv,
+        add_group_dedup_options=False,
+        add_sam_options=False,
+        add_s_b_cram_format_options=True,
+        exclude_output_format=True,
+    )
 
     nInput, nOutput = 0, 0
 
     # set the method with which to extract umis from reads
     if options.per_cell:
-        bc_getter = partial(
-            sam_methods.get_cell_umi_read_string, sep=options.bc_sep)
+        bc_getter = partial(sam_methods.get_cell_umi_read_string, sep=options.bc_sep)
     else:
-        bc_getter = partial(
-            sam_methods.get_umi_read_string, sep=options.bc_sep)
+        bc_getter = partial(sam_methods.get_umi_read_string, sep=options.bc_sep)
 
     if options.per_cell:
         options.stdout.write("%s\t%s\t%s\n" % ("cell", "gene", "count"))
@@ -136,18 +146,15 @@ def main(argv=None):
     processor = network.UMIClusterer(options.method)
 
     for gene, counts in sam_methods.get_gene_count_tab(
-            options.stdin,
-            bc_getter=bc_getter):
-
+        options.stdin, bc_getter=bc_getter
+    ):
         for cell in counts.keys():
             umis = counts[cell].keys()
 
             nInput += sum(counts[cell].values())
 
             # group the umis
-            groups = processor(
-                counts[cell],
-                threshold=options.threshold)
+            groups = processor(counts[cell], threshold=options.threshold)
 
             gene_count = len(groups)
             try:
@@ -167,6 +174,7 @@ def main(argv=None):
     U.info("Number of reads counted: %i" % nOutput)
 
     U.Stop()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

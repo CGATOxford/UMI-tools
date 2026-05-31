@@ -1,8 +1,8 @@
-'''
+"""
 umi_methods.py - Methods for dealing with UMIs
 =========================================================
 
-'''
+"""
 
 from __future__ import absolute_import
 import itertools
@@ -18,9 +18,9 @@ import umi_tools.Utilities as U
 from umi_tools._dedup_umi import edit_distance
 
 RANGES = {
-    'phred33': (33, 77),
-    'solexa': (59, 106),
-    'phred64': (64, 106),
+    "phred33": (33, 77),
+    "solexa": (59, 106),
+    "phred64": (64, 106),
 }
 
 ###############################################################################
@@ -45,13 +45,18 @@ class Record:
        ``phred33``, ``phred64`` or ``solexa``.
 
     """
+
     def __init__(self, identifier, seq, quals, entry_format=None):
         self.identifier, self.seq, self.quals, entry_format = (
-            identifier, seq, quals, entry_format)
+            identifier,
+            seq,
+            quals,
+            entry_format,
+        )
 
     def guessFormat(self):
-        '''return quality score format -
-        might return several if ambiguous.'''
+        """return quality score format -
+        might return several if ambiguous."""
 
         c = [ord(x) for x in self.quals]
         mi, ma = min(c), max(c)
@@ -67,45 +72,46 @@ class Record:
 
 
 def fastqIterate(infile, remove_suffix=False):
-    '''iterate over contents of fastq file. If remove_suffic is True then /1 
+    """iterate over contents of fastq file. If remove_suffic is True then /1
     and /2 is removed from the first field of the identifier. Raises ValueError
     if remove_suffix is true and /1 or /2 is not present at the end of the
-    first field of any reads'''
+    first field of any reads"""
 
     def convert2string(b):
         if type(b) == str:
             return b
         else:
             return b.decode("utf-8")
- 
+
     def removeReadIDSuffix(line):
-        '''Removes /1 or /2 from the a provided identifier :param:line.
+        """Removes /1 or /2 from the a provided identifier :param:line.
         Identifier must be in the first field of the identifier (with ' ' as
         the field seperator) and sepreated with a '/'. Raises ValueError if this
-        is not the case'''
-        
-        components = line.split(' ')
+        is not the case"""
+
+        components = line.split(" ")
         read_id = components[0]
-        
-        if not read_id[-2:] in ['/1', '/2']:
+
+        if read_id[-2:] not in ["/1", "/2"]:
             raise ValueError(
-                'read suffix must be /1 or /2. Observed: %s' % read_id[-2:])
+                "read suffix must be /1 or /2. Observed: %s" % read_id[-2:]
+            )
 
         read_id = read_id[:-2]
         components[0] = read_id
-        line = ' '.join(components)
-        
-        return(line)
-     
+        line = " ".join(components)
+
+        return line
+
     while 1:
         line1 = convert2string(infile.readline()).strip()
         if not line1:
             break
-        if not line1.startswith('@'):
+        if not line1.startswith("@"):
             U.error("parsing error: expected '@' in line %s" % line1)
         line2 = convert2string(infile.readline()).rstrip()
         line3 = convert2string(infile.readline()).rstrip()
-        if not line3.startswith('+'):
+        if not line3.startswith("+"):
             U.error("parsing error: expected '+' in line %s" % line3)
         line4 = convert2string(infile.readline()).rstrip()
         # incomplete entry
@@ -114,17 +120,17 @@ def fastqIterate(infile, remove_suffix=False):
 
         if remove_suffix:
             line1 = removeReadIDSuffix(line1)
-            
+
         yield Record(line1[1:], line2, line4)
+
 
 # End of FastqIterate()
 ###############################################################################
 ###############################################################################
 
 
-def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
-                       strict=True):
-    '''This will return an iterator that returns tuples of fastq records.
+def joinedFastqIterate(fastq_iterator1, fastq_iterator2, strict=True):
+    """This will return an iterator that returns tuples of fastq records.
     At each step it will confirm that the first field of the read name
     (before the first whitespace character) is identical between the
     two reads. The response if it is not depends on the value of
@@ -139,10 +145,10 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
     If provided iterators were created with `remove_suffix=True`, /1 and /2 will
     be removed from the end of read1 and read2, respectively before
     checking their names are identical
-    '''
+    """
 
     def getReadID(read):
-        return(read.identifier.split(' ')[0])
+        return read.identifier.split(" ")[0]
 
     for read1 in fastq_iterator1:
         read2 = next(fastq_iterator2)
@@ -156,8 +162,9 @@ def joinedFastqIterate(fastq_iterator1, fastq_iterator2,
                 read2_id = getReadID(read2)
 
         if not read2_id == read1_id:
-            raise ValueError("\nRead pairs do not match\n%s != %s" %
-                             (read1_id, read2_id))
+            raise ValueError(
+                "\nRead pairs do not match\n%s != %s" % (read1_id, read2_id)
+            )
 
         yield (read1, read2)
 
@@ -167,14 +174,13 @@ def get_average_umi_distance(umis):
     if len(umis) == 1:
         return -1
 
-    dists = [edit_distance(x, y) for
-             x, y in itertools.combinations(umis, 2)]
-    return float(sum(dists))/(len(dists))
+    dists = [edit_distance(x, y) for x, y in itertools.combinations(umis, 2)]
+    return float(sum(dists)) / (len(dists))
 
 
 class random_read_generator:
-    ''' class to generate umis at random based on the
-    distributon of umis in a bamfile '''
+    """class to generate umis at random based on the
+    distributon of umis in a bamfile"""
 
     def __init__(self, bamfile, chrom, barcode_getter):
         inbam = pysam.Samfile(bamfile)
@@ -191,17 +197,17 @@ class random_read_generator:
         self.fill()
 
     def refill_random(self):
-        ''' refill the list of random_umis '''
+        """refill the list of random_umis"""
         self.random_umis = np.random.choice(
-            list(self.umis.keys()), self.random_fill_size, p=self.prob)
+            list(self.umis.keys()), self.random_fill_size, p=self.prob
+        )
         self.random_ix = 0
 
     def fill(self):
-        ''' parse the BAM to obtain the frequency for each UMI'''
+        """parse the BAM to obtain the frequency for each UMI"""
         self.frequency2umis = collections.defaultdict(list)
 
         for read in self.inbam:
-
             if read.is_unmapped:
                 continue
 
@@ -224,16 +230,16 @@ class random_read_generator:
         self.refill_random()
 
     def getUmis(self, n):
-        ''' return n umis from the random_umis atr.'''
+        """return n umis from the random_umis atr."""
         if n < (self.random_fill_size - self.random_ix):
-            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
+            barcodes = self.random_umis[self.random_ix : self.random_ix + n]
         else:
             # could use the end of the random_umis but
             # let's just make a new random_umis
             if n > self.random_fill_size:  # ensure random_umis is long enough
                 self.random_fill_size = n * 2
             self.refill_random()
-            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
+            barcodes = self.random_umis[self.random_ix : self.random_ix + n]
 
         self.random_ix += n
         return barcodes

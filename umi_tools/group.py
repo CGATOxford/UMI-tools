@@ -84,6 +84,7 @@ group-specific options
 
 
 '''
+
 import sys
 import collections
 import os
@@ -102,16 +103,20 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
-__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
+__doc__ = (
+    __doc__
+    + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
+    + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
+)
 
-usage = '''
+usage = """
 group - Group reads based on their UMI
 
 Usage: umi_tools group --output-bam [OPTIONS] [--stdin=INFILE.bam] [--stdout=OUTFILE.bam]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
-             redirect log with --log=LOGFILE or --log2stderr '''
+             redirect log with --log=LOGFILE or --log2stderr """
 
 
 def main(argv=None):
@@ -124,35 +129,50 @@ def main(argv=None):
         argv = sys.argv
 
     # setup command line parser
-    parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage,
-                            description=globals()["__doc__"])
+    parser = U.OptionParser(
+        version="%prog version: $Id$", usage=usage, description=globals()["__doc__"]
+    )
 
     if len(argv) == 1:
         parser.print_usage()
-        print ("Required options missing, see --help for more details")
+        print("Required options missing, see --help for more details")
         return 1
 
     group = U.OptionGroup(parser, "group-specific options")
 
-    group.add_option("--group-out", dest="tsv", type="string",
-                     help="Outfile name for file mapping read id to read group",
-                     default=None)
+    group.add_option(
+        "--group-out",
+        dest="tsv",
+        type="string",
+        help="Outfile name for file mapping read id to read group",
+        default=None,
+    )
 
-    group.add_option("--output-bam", dest="output_bam", action="store_true",
-                     default=False,
-                     help=("output a bam file with read groups tagged using the UG tag"
-                           "[default=%default]"))
+    group.add_option(
+        "--output-bam",
+        dest="output_bam",
+        action="store_true",
+        default=False,
+        help=(
+            "output a bam file with read groups tagged using the UG tag"
+            "[default=%default]"
+        ),
+    )
 
-    parser.add_option("--umi-group-tag", dest="umi_group_tag",
-                      type="string", help="tag for the outputted umi group",
-                      default='BX')
+    parser.add_option(
+        "--umi-group-tag",
+        dest="umi_group_tag",
+        type="string",
+        help="tag for the outputted umi group",
+        default="BX",
+    )
 
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_group_sam_options=True,
-                              add_s_b_cram_format_options=True)
+    (options, args) = U.Start(
+        parser, argv=argv, add_group_sam_options=True, add_s_b_cram_format_options=True
+    )
 
     U.validateSamOptions(options, group=True)
 
@@ -164,18 +184,21 @@ def main(argv=None):
 
     if options.stdout != sys.stdout:
         assert options.output_bam, (
-            "To output a bam you must include --output-bam option")
+            "To output a bam you must include --output-bam option"
+        )
 
     in_format = U.determine_format(in_name, options.in_sam, options.in_format)
     infile = U.open_input_alignments(in_name, in_format, options)
 
     if options.output_bam or options.in_format:
-        out_name, out_format, sorted_out_name, sorted_out_format = U.output_names_and_formats(
-            options.stdout,
-            options.out_sam,
-            options.out_format,
-            options.no_sort_output,
-            options.tmpdir
+        out_name, out_format, sorted_out_name, sorted_out_format = (
+            U.output_names_and_formats(
+                options.stdout,
+                options.out_sam,
+                options.out_format,
+                options.no_sort_output,
+                options.tmpdir,
+            )
         )
         outfile = U.open_output_alignments(out_name, out_format, infile, options)
     else:
@@ -183,9 +206,22 @@ def main(argv=None):
 
     if options.tsv:
         mapping_outfile = U.openFile(options.tsv, "w")
-        mapping_outfile.write("%s\n" % "\t".join(
-            ["read_id", "contig", "position", "gene", "umi", "umi_count",
-             "final_umi", "final_umi_count", "unique_id"]))
+        mapping_outfile.write(
+            "%s\n"
+            % "\t".join(
+                [
+                    "read_id",
+                    "contig",
+                    "position",
+                    "gene",
+                    "umi",
+                    "umi_count",
+                    "final_umi",
+                    "final_umi_count",
+                    "unique_id",
+                ]
+            )
+        )
 
     nInput, nOutput, unique_id, input_reads, output_reads = 0, 0, 0, 0, 0
 
@@ -202,7 +238,8 @@ def main(argv=None):
     else:
         if options.per_gene and options.gene_transcript_map:
             metacontig2contig = sam_methods.getMetaContig2contig(
-                infile, options.gene_transcript_map)
+                infile, options.gene_transcript_map
+            )
             metatag = "MC"
             inreads = sam_methods.metafetcher(infile, metacontig2contig, metatag)
             gene_tag = metatag
@@ -215,16 +252,16 @@ def main(argv=None):
         all_reads=True,
         return_read2=True,
         return_unmapped=output_unmapped,
-        metacontig_contig=metacontig2contig)
+        metacontig_contig=metacontig2contig,
+    )
 
     # set up UMIClusterer functor with methods specific to
     # specified options.method
     processor = network.UMIClusterer(options.method)
 
     for bundle, key, status in bundle_iterator(inreads):
-
         # write out read2s and unmapped/chimeric (if these options are set)
-        if status == 'single_read':
+        if status == "single_read":
             # bundle is just a single read here
             nInput += 1
 
@@ -248,9 +285,7 @@ def main(argv=None):
             U.info("Parsed %i input reads" % input_reads)
 
         # group the umis
-        groups = processor(
-            counts,
-            threshold=options.threshold)
+        groups = processor(counts, threshold=options.threshold)
 
         for umi_group in groups:
             top_umi = umi_group[0]
@@ -258,11 +293,11 @@ def main(argv=None):
             group_count = sum(counts[umi] for umi in umi_group)
 
             for umi in umi_group:
-                reads = bundle[umi]['read']
+                reads = bundle[umi]["read"]
                 for read in reads:
                     if outfile:
                         # Add the 'UG' tag to the read
-                        read.set_tag('UG', unique_id)
+                        read.set_tag("UG", unique_id)
                         read.set_tag(options.umi_group_tag, top_umi)
                         outfile.write(read)
 
@@ -274,16 +309,27 @@ def main(argv=None):
                                 gene = read.get_tag(gene_tag)
                         else:
                             gene = "NA"
-                        mapping_outfile.write("%s\n" % "\t".join(map(str, (
-                            read.query_name, read.reference_name,
-                            sam_methods.get_read_position(
-                                read, options.soft_clip_threshold)[1],
-                            gene,
-                            umi.decode(),
-                            counts[umi],
-                            top_umi.decode(),
-                            group_count,
-                            unique_id))))
+                        mapping_outfile.write(
+                            "%s\n"
+                            % "\t".join(
+                                map(
+                                    str,
+                                    (
+                                        read.query_name,
+                                        read.reference_name,
+                                        sam_methods.get_read_position(
+                                            read, options.soft_clip_threshold
+                                        )[1],
+                                        gene,
+                                        umi.decode(),
+                                        counts[umi],
+                                        top_umi.decode(),
+                                        group_count,
+                                        unique_id,
+                                    ),
+                                )
+                            )
+                        )
 
                     nOutput += 1
 
@@ -292,35 +338,41 @@ def main(argv=None):
     if outfile:
         outfile.close()
         if not options.no_sort_output:
-            U.sort_output(sorted_out_name,
-                          out_name,
-                          format=sorted_out_format,
-                          format_options = options.output_options,
-                          reference_filename=options.reference_filename)
+            U.sort_output(
+                sorted_out_name,
+                out_name,
+                format=sorted_out_format,
+                format_options=options.output_options,
+                reference_filename=options.reference_filename,
+            )
 
     if options.tsv:
         mapping_outfile.close()
 
     # write footer and output benchmark information.
     U.info(
-        "Reads: %s" % ", ".join(["%s: %s" % (x[0], x[1]) for x in
-                                 bundle_iterator.read_events.most_common()]))
-    U.info("Number of reads out: %i, Number of groups: %i" %
-           (nOutput, unique_id))
+        "Reads: %s"
+        % ", ".join(
+            ["%s: %s" % (x[0], x[1]) for x in bundle_iterator.read_events.most_common()]
+        )
+    )
+    U.info("Number of reads out: %i, Number of groups: %i" % (nOutput, unique_id))
 
-    U.info("Total number of positions deduplicated: %i" %
-           processor.positions)
+    U.info("Total number of positions deduplicated: %i" % processor.positions)
     if processor.positions > 0:
-        U.info("Mean number of unique UMIs per position: %.2f" %
-               (float(processor.total_umis_per_position) /
-                processor.positions))
-        U.info("Max. number of unique UMIs per position: %i" %
-               processor.max_umis_per_position)
+        U.info(
+            "Mean number of unique UMIs per position: %.2f"
+            % (float(processor.total_umis_per_position) / processor.positions)
+        )
+        U.info(
+            "Max. number of unique UMIs per position: %i"
+            % processor.max_umis_per_position
+        )
     else:
-        U.warn("The BAM did not contain any valid "
-               "reads/read pairs for deduplication")
+        U.warn("The BAM did not contain any valid reads/read pairs for deduplication")
 
     U.Stop()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

@@ -131,6 +131,7 @@ sequence quality, provide ``--either-read-resolve=quality.``
 
 
 '''
+
 from __future__ import absolute_import
 import sys
 import regex
@@ -153,7 +154,7 @@ import umi_tools.whitelist_methods as whitelist_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_WE
-usage = '''
+usage = """
 extract - Extract UMI from fastq
 
 Usage:
@@ -169,7 +170,7 @@ Usage:
          standard out, please redirect log with --log=LOGFILE or
          --log2stderr. Input/Output will be (de)compressed if a
          filename provided to -S/-I/--read2-in/read2-out ends in .gz
-         '''
+         """
 
 
 def main(argv=None):
@@ -182,137 +183,220 @@ def main(argv=None):
         argv = sys.argv
 
     # setup command line parser
-    parser = U.OptionParser(version="%prog version: $Id$",
-                            usage=usage,
-                            description=globals()["__doc__"])
+    parser = U.OptionParser(
+        version="%prog version: $Id$", usage=usage, description=globals()["__doc__"]
+    )
 
     if len(argv) == 1:
         parser.print_usage()
-        print ("Required options missing, see --help for more details")
+        print("Required options missing, see --help for more details")
         return 1
 
     group = U.OptionGroup(parser, "extract-specific options")
 
     # (Experimental option) Retain the UMI in the sequence read"
-    group.add_option("--retain-umi", dest="retain_umi", action="store_true",
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--read2-out", dest="read2_out", type="string",
-                     help="file to output processed paired read to")
-    group.add_option("--read2-stdout", dest="read2_stdout",
-                     action="store_true",
-                     help="Paired reads, send read2 to stdout, discarding read1")
-    group.add_option("--quality-filter-threshold",
-                     dest="quality_filter_threshold", type="int",
-                     help=("Remove reads where any UMI base quality score "
-                           "falls below this threshold"))
-    group.add_option("--quality-filter-mask",
-                     dest="quality_filter_mask", type="int",
-                     help=("If a UMI base has a quality below this threshold, "
-                           "replace the base with 'N'"))
-    group.add_option("--quality-encoding",
-                     dest="quality_encoding", type="choice",
-                     choices=["phred33", "phred64", "solexa"],
-                     help=("Quality score encoding. Choose from 'phred33'"
-                           "[33-77] 'phred64' [64-106] or 'solexa' [59-106]"))
-    group.add_option("--filter-cell-barcode",
-                     dest="filter_cell_barcode",
-                     action="store_true",
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--error-correct-cell",
-                     dest="error_correct_cell",
-                     action="store_true",
-                     help=("Correct errors in the cell barcode"))
-    group.add_option("--whitelist",
-                     dest="whitelist", type="string",
-                     help=("A whitelist of accepted cell barcodes"))
-    group.add_option("--blacklist",
-                     dest="blacklist", type="string",
-                     help=("A blacklist of rejected cell barcodes"))
-    group.add_option("--filter-umi",
-                     dest="filter_umi",
-                     action="store_true",
-                     #help="Filter the UMIs"
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--umi-whitelist", dest="umi_whitelist",
-                     type="string", default=None,
-                     #help="A whitelist of accepted UMIs [default=%default]"
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--umi-whitelist-paired", dest="umi_whitelist_paired",
-                     type="string", default=None,
-                     #help="A whitelist of accepted UMIs for read2[default=%default]"
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--correct-umi-threshold", dest="correct_umi_threshold",
-                     type="int", default=0,
-                     #help="Correct errors in UMIs to the whitelist(s) provided"
-                     #"if within threshold [default=%default]"
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--umi-correct-log", dest="umi_correct_log",
-                     type="string", default=None,
-                     #help="File logging UMI error correction",
-                     help=optparse.SUPPRESS_HELP)
-    group.add_option("--subset-reads", "--reads-subset",
-                     dest="reads_subset", type="int",
-                     help=("Only extract from the first N reads. If N is "
-                           "greater than the number of reads, all reads will "
-                           "be used"))
-    group.add_option("--reconcile-pairs",
-                     dest="reconcile", action="store_true",
-                     help=("Allow the presences of reads in read2 input that "
-                           "are not present in read1 input. This allows cell "
-                           "barcode filtering of read1s without "
-                           "considering read2s"))
-    group.add_option("--umi-separator",
-                     dest="umi_separator", type="string",
-                     help=("Separator to use to add UMI to the read name. Default: _"))
+    group.add_option(
+        "--retain-umi",
+        dest="retain_umi",
+        action="store_true",
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--read2-out",
+        dest="read2_out",
+        type="string",
+        help="file to output processed paired read to",
+    )
+    group.add_option(
+        "--read2-stdout",
+        dest="read2_stdout",
+        action="store_true",
+        help="Paired reads, send read2 to stdout, discarding read1",
+    )
+    group.add_option(
+        "--quality-filter-threshold",
+        dest="quality_filter_threshold",
+        type="int",
+        help=(
+            "Remove reads where any UMI base quality score falls below this threshold"
+        ),
+    )
+    group.add_option(
+        "--quality-filter-mask",
+        dest="quality_filter_mask",
+        type="int",
+        help=(
+            "If a UMI base has a quality below this threshold, "
+            "replace the base with 'N'"
+        ),
+    )
+    group.add_option(
+        "--quality-encoding",
+        dest="quality_encoding",
+        type="choice",
+        choices=["phred33", "phred64", "solexa"],
+        help=(
+            "Quality score encoding. Choose from 'phred33'"
+            "[33-77] 'phred64' [64-106] or 'solexa' [59-106]"
+        ),
+    )
+    group.add_option(
+        "--filter-cell-barcode",
+        dest="filter_cell_barcode",
+        action="store_true",
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--error-correct-cell",
+        dest="error_correct_cell",
+        action="store_true",
+        help=("Correct errors in the cell barcode"),
+    )
+    group.add_option(
+        "--whitelist",
+        dest="whitelist",
+        type="string",
+        help=("A whitelist of accepted cell barcodes"),
+    )
+    group.add_option(
+        "--blacklist",
+        dest="blacklist",
+        type="string",
+        help=("A blacklist of rejected cell barcodes"),
+    )
+    group.add_option(
+        "--filter-umi",
+        dest="filter_umi",
+        action="store_true",
+        # help="Filter the UMIs"
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--umi-whitelist",
+        dest="umi_whitelist",
+        type="string",
+        default=None,
+        # help="A whitelist of accepted UMIs [default=%default]"
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--umi-whitelist-paired",
+        dest="umi_whitelist_paired",
+        type="string",
+        default=None,
+        # help="A whitelist of accepted UMIs for read2[default=%default]"
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--correct-umi-threshold",
+        dest="correct_umi_threshold",
+        type="int",
+        default=0,
+        # help="Correct errors in UMIs to the whitelist(s) provided"
+        # "if within threshold [default=%default]"
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--umi-correct-log",
+        dest="umi_correct_log",
+        type="string",
+        default=None,
+        # help="File logging UMI error correction",
+        help=optparse.SUPPRESS_HELP,
+    )
+    group.add_option(
+        "--subset-reads",
+        "--reads-subset",
+        dest="reads_subset",
+        type="int",
+        help=(
+            "Only extract from the first N reads. If N is "
+            "greater than the number of reads, all reads will "
+            "be used"
+        ),
+    )
+    group.add_option(
+        "--reconcile-pairs",
+        dest="reconcile",
+        action="store_true",
+        help=(
+            "Allow the presences of reads in read2 input that "
+            "are not present in read1 input. This allows cell "
+            "barcode filtering of read1s without "
+            "considering read2s"
+        ),
+    )
+    group.add_option(
+        "--umi-separator",
+        dest="umi_separator",
+        type="string",
+        help=("Separator to use to add UMI to the read name. Default: _"),
+    )
     parser.add_option_group(group)
 
     group = U.OptionGroup(parser, "[EXPERIMENTAl] barcode extraction options")
 
-    group.add_option("--either-read", dest="either_read", action="store_true",
-                     help="UMI may be on either read (see "
-                     "--either-read-resolve) for options to resolve cases where"
-                     "UMI is on both reads")
-    group.add_option("--either-read-resolve",
-                     dest="either_read_resolve", type="choice",
-                     choices=["discard", "quality"],
-                     help=("How to resolve instances where both reads "
-                           "contain a UMI but using --either-read."
-                           "Choose from 'discard' or 'quality'"
-                           "(use highest quality). default=dicard"))
+    group.add_option(
+        "--either-read",
+        dest="either_read",
+        action="store_true",
+        help="UMI may be on either read (see "
+        "--either-read-resolve) for options to resolve cases where"
+        "UMI is on both reads",
+    )
+    group.add_option(
+        "--either-read-resolve",
+        dest="either_read_resolve",
+        type="choice",
+        choices=["discard", "quality"],
+        help=(
+            "How to resolve instances where both reads "
+            "contain a UMI but using --either-read."
+            "Choose from 'discard' or 'quality'"
+            "(use highest quality). default=dicard"
+        ),
+    )
 
     parser.add_option_group(group)
 
-    parser.set_defaults(extract_method="string",
-                        filter_cell_barcodes=False,
-                        whitelist=None,
-                        blacklist=None,
-                        error_correct_cell=False,
-                        pattern=None,
-                        pattern2=None,
-                        read2_in=None,
-                        read2_out=False,
-                        read2_only=False,
-                        read2_stdout=False,
-                        quality_filter_threshold=None,
-                        quality_encoding=None,
-                        reconcile=False,
-                        either_read=False,
-                        either_read_resolve="discard",
-                        umi_separator="_",
-                        ignore_suffix=False)
+    parser.set_defaults(
+        extract_method="string",
+        filter_cell_barcodes=False,
+        whitelist=None,
+        blacklist=None,
+        error_correct_cell=False,
+        pattern=None,
+        pattern2=None,
+        read2_in=None,
+        read2_out=False,
+        read2_only=False,
+        read2_stdout=False,
+        quality_filter_threshold=None,
+        quality_encoding=None,
+        reconcile=False,
+        either_read=False,
+        either_read_resolve="discard",
+        umi_separator="_",
+        ignore_suffix=False,
+    )
 
     # add common options (-h/--help, ...) and parse command line
 
-    (options, args) = U.Start(parser, argv=argv,
-                              add_extract_options=True,
-                              add_group_dedup_options=False,
-                              add_umi_grouping_options=False,
-                              add_sam_options=False)
+    (options, args) = U.Start(
+        parser,
+        argv=argv,
+        add_extract_options=True,
+        add_group_dedup_options=False,
+        add_umi_grouping_options=False,
+        add_sam_options=False,
+    )
 
     if options.filter_cell_barcode:
-        U.info('Use of --whitelist ensures cell barcodes are filtered. '
-               '--filter-cell-barcode is no longer required and may be '
-               'removed in future versions.')
+        U.info(
+            "Use of --whitelist ensures cell barcodes are filtered. "
+            "--filter-cell-barcode is no longer required and may be "
+            "removed in future versions."
+        )
 
     if options.whitelist is not None:
         options.filter_cell_barcode = True
@@ -320,66 +404,88 @@ def main(argv=None):
     if options.retain_umi and not options.extract_method == "regex":
         U.error("option --retain-umi only works with --extract-method=regex")
 
-    if (options.filtered_out and not options.extract_method == "regex" and
-        options.whitelist is None):
-        U.error("Reads will not be filtered unless extract method is"
-                "set to regex (--extract-method=regex) or cell"
-                "barcodes are filtered (--whitelist)")
+    if (
+        options.filtered_out
+        and not options.extract_method == "regex"
+        and options.whitelist is None
+    ):
+        U.error(
+            "Reads will not be filtered unless extract method is"
+            "set to regex (--extract-method=regex) or cell"
+            "barcodes are filtered (--whitelist)"
+        )
 
     if options.quality_filter_threshold or options.quality_filter_mask:
         if not options.quality_encoding:
-            U.error("must provide a quality encoding (--quality-"
-                    "encoding) to filter UMIs by quality (--quality"
-                    "-filter-threshold) or mask low quality bases "
-                    "with (--quality-filter-mask)")
+            U.error(
+                "must provide a quality encoding (--quality-"
+                "encoding) to filter UMIs by quality (--quality"
+                "-filter-threshold) or mask low quality bases "
+                "with (--quality-filter-mask)"
+            )
 
     extract_cell, extract_umi = U.validateExtractOptions(options)
 
     if options.either_read:
         if extract_cell:
-            U.error("Option to extract from either read (--either-read) "
-                    "is not currently compatible with cell barcode extraction")
+            U.error(
+                "Option to extract from either read (--either-read) "
+                "is not currently compatible with cell barcode extraction"
+            )
         if not options.extract_method == "regex":
-            U.error("Option to extract from either read (--either-read)"
-                    "requires --extract-method=regex")
+            U.error(
+                "Option to extract from either read (--either-read)"
+                "requires --extract-method=regex"
+            )
         if not options.pattern or not options.pattern2:
-            U.error("Option to extract from either read (--either-read)"
-                    "requires --bc-pattern=[PATTERN1] and"
-                    "--bc-pattern2=[PATTERN2]")
+            U.error(
+                "Option to extract from either read (--either-read)"
+                "requires --bc-pattern=[PATTERN1] and"
+                "--bc-pattern2=[PATTERN2]"
+            )
 
     if options.filter_umi:
-
         if not options.umi_whitelist:
-                U.error("must provide a UMI whitelist (--umi-whitelist) if using "
-                        "--filter-umi option")
+            U.error(
+                "must provide a UMI whitelist (--umi-whitelist) if using "
+                "--filter-umi option"
+            )
         if options.pattern2 and not options.umi_whitelist_paired:
-                U.error("must provide a UMI whitelist for paired end "
-                        "(--umi-whitelist-paired) if using --filter-umi option"
-                        "with paired end data")
+            U.error(
+                "must provide a UMI whitelist for paired end "
+                "(--umi-whitelist-paired) if using --filter-umi option"
+                "with paired end data"
+            )
         if not extract_umi:
             if options.extract_method == "string":
-                U.error("barcode pattern(s) do not include any umi bases "
-                        "(marked with 'Ns') %s, %s" % (
-                            options.pattern, options.pattern2))
+                U.error(
+                    "barcode pattern(s) do not include any umi bases "
+                    "(marked with 'Ns') %s, %s" % (options.pattern, options.pattern2)
+                )
             elif options.extract_method == "regex":
-                U.error("barcode regex(es) do not include any umi groups "
-                        "(starting with 'umi_') %s, %s" % (
-                            options.pattern, options.pattern2))
+                U.error(
+                    "barcode regex(es) do not include any umi groups "
+                    "(starting with 'umi_') %s, %s"
+                    % (options.pattern, options.pattern2)
+                )
 
     if options.whitelist:
-
         if not extract_cell:
             if options.extract_method == "string":
-                U.error("barcode pattern(s) do not include any cell bases "
-                        "(marked with 'Cs') %s, %s" % (
-                            options.pattern, options.pattern2))
+                U.error(
+                    "barcode pattern(s) do not include any cell bases "
+                    "(marked with 'Cs') %s, %s" % (options.pattern, options.pattern2)
+                )
             elif options.extract_method == "regex":
-                U.error("barcode regex(es) do not include any cell groups "
-                        "(starting with 'cell_') %s, %s" % (
-                            options.pattern, options.pattern2))
+                U.error(
+                    "barcode regex(es) do not include any cell groups "
+                    "(starting with 'cell_') %s, %s"
+                    % (options.pattern, options.pattern2)
+                )
 
-    read1s = umi_methods.fastqIterate(options.stdin,
-                                      remove_suffix=options.ignore_suffix)
+    read1s = umi_methods.fastqIterate(
+        options.stdin, remove_suffix=options.ignore_suffix
+    )
 
     # set up read extractor
     ReadExtractor = extract_methods.ExtractFilterAndUpdate(
@@ -396,14 +502,16 @@ def main(argv=None):
         options.retain_umi,
         options.either_read,
         options.either_read_resolve,
-        options.umi_separator)
+        options.umi_separator,
+    )
 
     if options.filter_umi:
         umi_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
             options.umi_whitelist,
             options.umi_whitelist_paired,
             deriveErrorCorrection=True,
-            threshold=options.correct_umi_threshold)
+            threshold=options.correct_umi_threshold,
+        )
 
         U.info("Length of whitelist: %i" % len(umi_whitelist))
         U.info("Length of 'correctable' whitelist: %i" % len(false_to_true_map))
@@ -411,12 +519,13 @@ def main(argv=None):
         ReadExtractor.umi_whitelist = umi_whitelist
         ReadExtractor.umi_false_to_true_map = false_to_true_map
         ReadExtractor.umi_whitelist_counts = collections.defaultdict(
-            lambda: collections.Counter())
+            lambda: collections.Counter()
+        )
 
     if options.whitelist:
         cell_whitelist, false_to_true_map = whitelist_methods.getUserDefinedBarcodes(
-            options.whitelist,
-            getErrorCorrection=options.error_correct_cell)
+            options.whitelist, getErrorCorrection=options.error_correct_cell
+        )
 
         ReadExtractor.cell_whitelist = cell_whitelist
         ReadExtractor.false_to_true_map = false_to_true_map
@@ -438,7 +547,6 @@ def main(argv=None):
 
     if options.read2_in is None:
         for read in read1s:
-
             # incrementing count for monitoring progress
             progCount += 1
 
@@ -449,8 +557,7 @@ def main(argv=None):
             new_read = ReadExtractor(read)
 
             if options.reads_subset:
-                if (ReadExtractor.read_counts['Input Reads'] >
-                    options.reads_subset):
+                if ReadExtractor.read_counts["Input Reads"] > options.reads_subset:
                     break
 
             if not new_read:
@@ -461,12 +568,12 @@ def main(argv=None):
             options.stdout.write(str(new_read) + "\n")
 
     else:
-
         if options.filtered_out2:
             filtered_out2 = U.openFile(options.filtered_out2, "w")
 
-        read2s = umi_methods.fastqIterate(U.openFile(options.read2_in),
-                                          remove_suffix=options.ignore_suffix)
+        read2s = umi_methods.fastqIterate(
+            U.openFile(options.read2_in), remove_suffix=options.ignore_suffix
+        )
 
         if options.read2_out:
             read2_out = U.openFile(options.read2_out, "w")
@@ -476,9 +583,7 @@ def main(argv=None):
         else:
             strict = True
 
-        for read1, read2 in umi_methods.joinedFastqIterate(
-                read1s, read2s, strict):
-
+        for read1, read2 in umi_methods.joinedFastqIterate(read1s, read2s, strict):
             # incrementing count for monitoring progress
             progCount += 1
 
@@ -490,8 +595,7 @@ def main(argv=None):
             reads = ReadExtractor(read1, read2)
 
             if options.reads_subset:
-                if (ReadExtractor.read_counts['Input Reads'] >
-                    options.reads_subset):
+                if ReadExtractor.read_counts["Input Reads"] > options.reads_subset:
                     break
 
             if not reads:
@@ -525,11 +629,11 @@ def main(argv=None):
         with U.openFile(options.umi_correct_log, "w") as outf:
             outf.write("umi\tcount_no_errors\tcount_errors\n")
             for umi, counts in ReadExtractor.umi_whitelist_counts.items():
-                outf.write("%s\t%i\t%i\n" % (
-                    umi, counts["no_error"], counts["error"]))
+                outf.write("%s\t%i\t%i\n" % (umi, counts["no_error"], counts["error"]))
         outf.close()
 
     U.Stop()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

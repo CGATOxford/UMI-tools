@@ -1,4 +1,4 @@
-'''
+"""
 umi_tools.py - Tools for UMI analyses
 =====================================
 
@@ -22,7 +22,7 @@ To get help on a specific tool, type:
 To use a specific tool, type::
 
     umi_tools <tool> [tool options] [tool arguments]
-'''
+"""
 
 from __future__ import absolute_import
 import os
@@ -34,9 +34,11 @@ from umi_tools import __version__
 def main():
     argv = sys.argv
 
-    if len(argv) <2 or argv[1] == "--help" or argv[1] == "-h":
-        print("For full UMI-tools documentation, see: "
-              "https://umi-tools.readthedocs.io/en/latest/\n")
+    if len(argv) < 2 or argv[1] == "--help" or argv[1] == "-h":
+        print(
+            "For full UMI-tools documentation, see: "
+            "https://umi-tools.readthedocs.io/en/latest/\n"
+        )
         print(globals()["__doc__"])
         return 0
 
@@ -55,8 +57,10 @@ def main():
         module = importlib.import_module("umi_tools." + command, "umi_tools")
     except ImportError:
         print("'%s' is not a UMI-tools command. See 'umi_tools -h'.\n" % command)
-        print("For full UMI-tools documentation, see: "
-              "https://umi-tools.readthedocs.io/en/latest/\n")
+        print(
+            "For full UMI-tools documentation, see: "
+            "https://umi-tools.readthedocs.io/en/latest/\n"
+        )
         print(globals()["__doc__"])
 
         return 1
