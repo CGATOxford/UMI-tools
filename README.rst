@@ -27,7 +27,7 @@ fastq containg UMIs +/- cell barcodes for alignment.
       barcode, for example a library barcode, is left on the read. Can
       also filter reads by quality or against a whitelist (see above)
 
-The remaining commands, ``group``, ``dedup`` and ``count``/``count_tab``, are used to
+The commands, ``group``, ``dedup`` and ``count``/``count_tab``, are used to
 identify PCR duplicates using the UMIs and perform different levels of
 analysis depending on the needs of the user. A number of different UMI
 deduplication schemes are enabled - The recommended method is
@@ -49,6 +49,10 @@ deduplication schemes are enabled - The recommended method is
 
 * count_tab:
    **As per count except input is a flatfile**
+
+Finally, the command ``prepare_for_em`` will take the output of ``group`` or 
+``dedup`` (after it has been name sorted or collated) and make the output
+compatible with EM tools like Salmon or RSEM. 
 
 See `QUICK_START.md <./doc/QUICK_START.md>`_ for a quick tutorial on
 the most common usage pattern.

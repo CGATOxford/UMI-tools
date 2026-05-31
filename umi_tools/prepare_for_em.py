@@ -32,13 +32,13 @@ group and correct UMI tags added by _group_)
 
 In order for this to work correctly, your input file must be sorted by read name. 
 Generally the protocol would be
-1. Align reads with your favourite aligner
+1. Align reads to the transcriptome with your favourite aligner
 2. Position sort the resulting BAM file
 3. Run `dedup` on the position sorted name file
 4. Use `samtools sort -n` or `samtools collate` to sort by read name
 5. Use `prepare_for_rsem` to create a file that has exactly one mate
    per read and that pairs are adjecent in the output.
-6. Run your downstream tools - RSEM/Salmon on the output. 
+6. Run your downstream tools - RSEM/Salmon/Kalisto on the output. 
 
 prepare-for-em specific options
 -------------------------------
@@ -47,7 +47,8 @@ prepare-for-em specific options
 --tags=TAG[,TAG....]
 ====================
 List of SAM tags that are transfered from read1 to read2. The default
-is UG and BX
+is UG and BX, which is the numeric UMI group, and the infered true UMI
+respectively. 
 
 
 '''
@@ -169,8 +170,8 @@ def main(argv=None):
     else:
         out_name = "-"
 
-    outformat = U.determine_format(out_name, options.sam, options.out_format)
-    outbam = U.open_output_alignments(out_name, outformat, options)
+    outformat = U.determine_format(out_name, options.out_sam, options.out_format)
+    outbam = U.open_output_alignments(out_name, outformat, inbam, options)
 
     options.tags = options.tags.split(",")
 

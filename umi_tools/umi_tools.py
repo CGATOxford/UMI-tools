@@ -2,7 +2,7 @@
 umi_tools.py - Tools for UMI analyses
 =====================================
 
-:Author: Tom Smith & Ian Sudbury, CGAT
+:Author: Tom Smith & Ian Sudbery, CGAT
 :Tags: Genomics UMI
 
 There are 6 tools:
@@ -13,6 +13,7 @@ There are 6 tools:
   - dedup
   - count
   - count_tab
+  - prepare_for_em
 
 To get help on a specific tool, type:
 
@@ -45,6 +46,10 @@ def main():
         return 0
 
     command = argv[1]
+
+    # substitute old name
+    if command == "prepare-for-rsem":
+        command = "prepare-for-em"
 
     try:
         module = importlib.import_module("umi_tools." + command, "umi_tools")
