@@ -66,6 +66,7 @@ import umi_tools.sam_methods as sam_methods
 
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
 
 usage = '''
 count_tab - Count reads per gene from flatfile using UMIs
@@ -112,7 +113,8 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv, add_group_dedup_options=False,
-                              add_sam_options=False)
+                              add_sam_options=False,
+                              add_s_b_cram_format_options=True, exclude_output_format=True)
 
     nInput, nOutput = 0, 0
 

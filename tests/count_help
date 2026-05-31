@@ -67,12 +67,8 @@ Options:
                         File mapping transcripts to genes (tab separated)
     --per-cell          group/dedup/count per cell
 
-  SAM/BAM options:
+  Input/Output format options:
     --in-format=IN_FORMAT
-                        File format of the input file. Format is usually
-                        implied from the extension of the filename, but maybe
-                        overridden with this option. Default=bam
-    --out-format=OUT_FORMAT
                         File format of the input file. Format is usually
                         implied from the extension of the filename, but maybe
                         overridden with this option. Default=bam
@@ -80,16 +76,16 @@ Options:
                         Format string provided to htslib for reading. Mostly
                         useful for CRAM formatted files. See samtools
                         documentation
-    --output-options=OUTPUT_OPTIONS
-                        Format string provided to htslib for writing. Mostly
-                        useful for CRAM formatted files. See samtools
-                        documentation
+    -i, --in-sam        [Deprecated] Input file is in sam format
+                        [default=False]
     --reference-filename=REFERENCE_FILENAME
                         File path or URL to the genome reference to be used
                         when reading or writing CRAM files. By default, when
                         reading a CRAM file, the reference recorded in the
                         input file will be used unless this is specified. When
                         writing, specifying a reference location is required.
+
+  SAM/BAM filtering options:
     --mapping-quality=MAPPING_QUALITY
                         Minimum mapping quality for a read to be retained
                         [default=0]
@@ -98,9 +94,7 @@ Options:
                         read1, whether or not the template length is the same
     --chrom=CHROM       Restrict to one chromosome
     --subset=SUBSET     Use only a fraction of reads, specified by subset
-    -i, --in-sam        Input file is in sam format [default=False]
     --paired            paired input BAM. [default=False]
-    -o, --out-sam       Output alignments in sam format [default=False]
     --no-sort-output    Don't Sort the output
 
   Dedup and Count SAM/BAM options:
@@ -114,7 +108,7 @@ Options:
                         How to handle unpaired reads. Options are 'discard'or
                         'use' [default=use]
 
-  input/output options:
+  Input/Output pipe options:
     -I FILE, --stdin=FILE
                         file to read stdin from [default = stdin].
     -L FILE, --log=FILE

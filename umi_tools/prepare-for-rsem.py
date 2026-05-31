@@ -1,7 +1,18 @@
 '''
 ==============================================================================
-prepare_for_rsem - make the output from dedup compatible with RSEM
+prepare_for_em - make the output from dedup compatible with EM tools
 ===============================================================================
+prepare_for_rsem - make output from dedup or group compatible with RSEM or 
+                   Salmon
+
+Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If --stdout is ommited, standard out is output. To
+             generate a valid BAM/SAM/CRAM file on standard out, please
+             redirect log with --log=LOGFILE or --log2stderr
+
+
+
 The SAM format specification states that the mnext and mpos fields should point
 to the primary alignment of a read's mate. However, not all aligners adhere to
 this standard. 
@@ -29,13 +40,25 @@ Generally the protocol would be
    per read and that pairs are adjecent in the output.
 6. Run your downstream tools - RSEM/Salmon on the output. 
 
-'''
+prepare-for-em specific options
+-------------------------------
 
+====================
+--tags=TAG[,TAG....]
+====================
+List of SAM tags that are transfered from read1 to read2. The default
+is UG and BX
+
+
+'''
 
 from umi_tools import Utilities as U
 from collections import defaultdict, Counter
 import pysam
 import sys
+from umi_tools import Documentation
+
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 
 usage = '''
 prepare_for_rsem - make output from dedup or group compatible with RSEM
@@ -124,6 +147,7 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv,
+                              add_s_b_cram_format_options=True,
                               add_group_dedup_options=False,
                               add_umi_grouping_options=False,
                               add_sam_options=False)
