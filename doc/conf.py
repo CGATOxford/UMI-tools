@@ -30,12 +30,6 @@ MOCK_MODULES = [ 'numpy',
                  "umi_tools.whitelist_methods"]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-from recommonmark.parser import CommonMarkParser
-
-source_parsers = {
-    '.md': CommonMarkParser,
-}
-
 # -- Project information -----------------------------------------------------
 
 project = 'UMI-tools'
@@ -60,7 +54,8 @@ release = ''
 extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.autodoc',
-    'sphinx_markdown_tables'
+    'sphinx_markdown_tables',
+    'myst_parser'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
