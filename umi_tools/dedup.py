@@ -126,11 +126,8 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
-__doc__ = (
-    __doc__
-    + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT
-    + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
-)
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT 
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 
 usage = """
 dedup - Deduplicate reads using UMI and mapping coordinates

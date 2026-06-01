@@ -1,59 +1,65 @@
-"""
-==============================================================================
+'''
+====================================================================
 prepare_for_em - make the output from dedup compatible with EM tools
-===============================================================================
-prepare_for_rsem - make output from dedup or group compatible with RSEM or
+====================================================================
+
+prepare_for_em - make output from dedup or group compatible with RSEM or 
                    Salmon
 
-Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+Usage::
 
-       note: If --stdout is ommited, standard out is output. To
+    umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If ``--stdout`` is ommited, standard out is output. To
              generate a valid BAM/SAM/CRAM file on standard out, please
-             redirect log with --log=LOGFILE or --log2stderr
-
-
+             redirect log with ``--log=LOGFILE`` or ``--log2stderr``
 
 The SAM format specification states that the mnext and mpos fields should point
 to the primary alignment of a read's mate. However, not all aligners adhere to
-this standard.
+this standard. 
 
 In general (except in a few edge cases) UMI tools outputs only the read2 to that
 corresponds to the read specified in the mnext and mpos positions of a selected
 read1, and only outputs this read once, even if multiple read1s point to it.
 
-This makes UMI-tools outputs incompatible with some downstream tools, noteably
+This makes UMI-tools outputs incompatible with some downstream tools, noteably 
 RSEM and Salmon (although we recommend using Alevin if you want to quantify
 single cell RNA-seq from protocols that Alevin supports). This script takes the output
 from dedup or group and ensures that each read1 has exactly one read2 (and vice
-versa), that read2 always appears directly after read1, and that pairs point to
+versa), that read2 always appears directly after read1, and that pairs point to 
 each other (note this is technically not valid SAM format). Copy any specified
 tags from read1 to read2 if they are present (by default, UG and BX, the unique
 group and correct UMI tags added by _group_)
 
-In order for this to work correctly, your input file must be sorted by read name.
-Generally the protocol would be
-1. Align reads to the transcriptome with your favourite aligner
-2. Position sort the resulting BAM file
-3. Run `dedup` on the position sorted name file
-4. Use `samtools sort -n` or `samtools collate` to sort by read name
+In order for this to work correctly, your input file must be sorted by read name. 
+Generally the protocol would be:
+
+1. Align reads to the transcriptome with your favourite aligner.
+
+2. Position sort the resulting BAM file.
+
+3. Run `dedup` on the position sorted name file.
+
+4. Use `samtools sort -n` or `samtools collate` to sort by read name.
+
 5. Use `prepare_for_rsem` to create a file that has exactly one mate
    per read and that pairs are adjecent in the output.
-6. Run your downstream tools - RSEM/Salmon/Kalisto on the output.
 
-prepare-for-em specific options
+6. Run your downstream tools - RSEM/Salmon/Kalisto on the output. 
+
+prepare_for_em specific options
 -------------------------------
-
-====================
---tags=TAG[,TAG....]
-====================
+"""""""""""""""""""""""""
+``--tags =TAG[,TAG....]``
+"""""""""""""""""""""""""
 List of SAM tags that are transfered from read1 to read2. The default
 is UG and BX, which is the numeric UMI group, and the infered true UMI
-respectively.
+respectively. 
+'''
 
-
-"""
 
 from umi_tools import Utilities as U
+from umi_tools import Documentation
 from collections import defaultdict, Counter
 import pysam
 import sys
@@ -65,14 +71,14 @@ __doc__ = (
     + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 )
 
-usage = """
-prepare_for_rsem - make output from dedup or group compatible with RSEM
+usage = '''
+prepare_for_em - make output from dedup or group compatible with EM tools
 
-Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+Usage: umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
-             redirect log with --log=LOGFILE or --log2stderr """
+             redirect log with --log=LOGFILE or --log2stderr '''
 
 
 def chunk_bam(bamfile):
