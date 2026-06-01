@@ -1,17 +1,16 @@
 '''
-==============================================================================
+====================================================================
 prepare_for_em - make the output from dedup compatible with EM tools
-===============================================================================
-prepare_for_rsem - make output from dedup or group compatible with RSEM or 
+====================================================================
+
+prepare_for_em - make output from dedup or group compatible with RSEM or 
                    Salmon
 
-Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+Usage: umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM/SAM/CRAM file on standard out, please
              redirect log with --log=LOGFILE or --log2stderr
-
-
 
 The SAM format specification states that the mnext and mpos fields should point
 to the primary alignment of a read's mate. However, not all aligners adhere to
@@ -42,10 +41,9 @@ Generally the protocol would be
 
 prepare-for-em specific options
 -------------------------------
-
-====================
---tags=TAG[,TAG....]
-====================
+"""""""""""""""""""""""""
+``--tags =TAG[,TAG....]``
+"""""""""""""""""""""""""
 List of SAM tags that are transfered from read1 to read2. The default
 is UG and BX, which is the numeric UMI group, and the infered true UMI
 respectively. 
@@ -54,17 +52,17 @@ respectively.
 '''
 
 from umi_tools import Utilities as U
+from umi_tools import Documentation
 from collections import defaultdict, Counter
 import pysam
 import sys
-from umi_tools import Documentation
 
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 
 usage = '''
-prepare_for_rsem - make output from dedup or group compatible with RSEM
+prepare_for_em - make output from dedup or group compatible with EM tools
 
-Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+Usage: umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
