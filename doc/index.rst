@@ -61,7 +61,7 @@ for alignment.
       barcode, for example a library barcode, is left on the read. Can
       also filter reads by quality or against a whitelist (see above)
 
-The remaining commands, ``group``, ``dedup`` and
+The commands, ``group``, ``dedup`` and
 ``count``/``count_tab``, are used to identify PCR duplicates using the
 UMIs and perform different levels of analysis depending on the needs
 of the user. A number of different UMI deduplication schemes are
@@ -87,6 +87,10 @@ deduplication schemes see :doc:`the_methods`
 * count_tab:
    **As per count except input is a flatfile**
 
+Finally the command ``prepare_for_em`` takes the output of dedup or group and ensures
+that the order of reads and the matching of pairs is compatible with EM algorithms
+such as RSEM and Salmon. 
+
 .. toctree::
    :maxdepth: 1
    :caption: Commands:
@@ -97,6 +101,7 @@ deduplication schemes see :doc:`the_methods`
    dedup <reference/dedup>
    count <reference/count>
    count_tab <reference/count_tab>
+   prepare_for_em <reference/prepare_for_em>
 
 Each tool has a set of :doc:`common_options` for input/output,
 profiling and debugging.
@@ -140,7 +145,7 @@ Enter repository and run:
 
 .. code:: bash
 
-   $ python setup.py install
+   $ pip install .
 
 For more detail see :doc:`INSTALL`
 

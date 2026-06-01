@@ -102,6 +102,7 @@ import umi_tools.sam_methods as sam_methods
 # add the generic docstring text
 __doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_GDC
 __doc__ = __doc__ + Documentation.GROUP_DEDUP_GENERIC_OPTIONS
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 
 usage = '''
 group - Group reads based on their UMI
@@ -150,7 +151,8 @@ def main(argv=None):
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
-    (options, args) = U.Start(parser, argv=argv, add_group_sam_options=True)
+    (options, args) = U.Start(parser, argv=argv, add_group_sam_options=True,
+                              add_s_b_cram_format_options=True)
 
     U.validateSamOptions(options, group=True)
 
@@ -167,7 +169,7 @@ def main(argv=None):
     in_format = U.determine_format(in_name, options.in_sam, options.in_format)
     infile = U.open_input_alignments(in_name, in_format, options)
 
-    if options.output_bam:
+    if options.output_bam or options.in_format:
         out_name, out_format, sorted_out_name, sorted_out_format = U.output_names_and_formats(
             options.stdout,
             options.out_sam,

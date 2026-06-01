@@ -1,37 +1,76 @@
 '''
-==============================================================================
-prepare_for_rsem - make the output from dedup or group compatible with RSEM
-===============================================================================
+====================================================================
+prepare_for_em - make the output from dedup compatible with EM tools
+====================================================================
+
+prepare_for_em - make output from dedup or group compatible with RSEM or 
+                   Salmon
+
+Usage::
+
+    umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+
+       note: If ``--stdout`` is ommited, standard out is output. To
+             generate a valid BAM/SAM/CRAM file on standard out, please
+             redirect log with ``--log=LOGFILE`` or ``--log2stderr``
+
 The SAM format specification states that the mnext and mpos fields should point
 to the primary alignment of a read's mate. However, not all aligners adhere to
-this standard. In addition, the RSEM software requires that the mate of a read1
-appears directly after it in its input BAM. This requires that there is exactly
-one read1 alignment for every read2 and vice versa.
+this standard. 
 
 In general (except in a few edge cases) UMI tools outputs only the read2 to that 
 corresponds to the read specified in the mnext and mpos positions of a selected
-read1, and only outputs this read once, even if multiple read1s point to it. 
-This makes UMI-tools outputs incompatible with RSEM. This script takes the output
-from dedup or groups and ensures that each read1 has exactly one read2 (and vice
-versa), that read2 always appears directly after read1,and that pairs point to 
+read1, and only outputs this read once, even if multiple read1s point to it.
+
+This makes UMI-tools outputs incompatible with some downstream tools, noteably 
+RSEM and Salmon (although we recommend using Alevin if you want to quantify
+single cell RNA-seq from protocols that Alevin supports). This script takes the output
+from dedup or group and ensures that each read1 has exactly one read2 (and vice
+versa), that read2 always appears directly after read1, and that pairs point to 
 each other (note this is technically not valid SAM format). Copy any specified
 tags from read1 to read2 if they are present (by default, UG and BX, the unique
 group and correct UMI tags added by _group_)
 
-Input must to name sorted.
+In order for this to work correctly, your input file must be sorted by read name. 
+Generally the protocol would be:
+
+1. Align reads to the transcriptome with your favourite aligner.
+
+2. Position sort the resulting BAM file.
+
+3. Run `dedup` on the position sorted name file.
+
+4. Use `samtools sort -n` or `samtools collate` to sort by read name.
+
+5. Use `prepare_for_rsem` to create a file that has exactly one mate
+   per read and that pairs are adjecent in the output.
+
+6. Run your downstream tools - RSEM/Salmon/Kalisto on the output. 
+
+prepare_for_em specific options
+-------------------------------
+"""""""""""""""""""""""""
+``--tags =TAG[,TAG....]``
+"""""""""""""""""""""""""
+List of SAM tags that are transfered from read1 to read2. The default
+is UG and BX, which is the numeric UMI group, and the infered true UMI
+respectively. 
+
 
 '''
 
-
 from umi_tools import Utilities as U
+from umi_tools import Documentation
 from collections import defaultdict, Counter
 import pysam
 import sys
 
-usage = '''
-prepare_for_rsem - make output from dedup or group compatible with RSEM
+__doc__ = __doc__ + Documentation.GENERIC_DOCSTRING_SBCRAM_INPUT + Documentation.GENERIC_DOCSTRING_SBCRAM_OUTPUT
 
-Usage: umi_tools prepare_for_rsem [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
+usage = '''
+prepare_for_em - make output from dedup or group compatible with EM tools
+
+Usage: umi_tools prepare_for_em [OPTIONS] [--stdin=IN_BAM] [--stdout=OUT_BAM]
 
        note: If --stdout is ommited, standard out is output. To
              generate a valid BAM file on standard out, please
@@ -115,6 +154,7 @@ def main(argv=None):
 
     # add common options (-h/--help, ...) and parse command line
     (options, args) = U.Start(parser, argv=argv,
+                              add_s_b_cram_format_options=True,
                               add_group_dedup_options=False,
                               add_umi_grouping_options=False,
                               add_sam_options=False)
@@ -136,8 +176,8 @@ def main(argv=None):
     else:
         out_name = "-"
 
-    outformat = U.determine_format(out_name, options.sam, options.out_format)
-    outbam = U.open_output_alignments(out_name, outformat, options)
+    outformat = U.determine_format(out_name, options.out_sam, options.out_format)
+    outbam = U.open_output_alignments(out_name, outformat, inbam, options)
 
     options.tags = options.tags.split(",")
 

@@ -424,8 +424,17 @@ SAM/BAM Options
       Only consider a single chromosome. This is useful for
       debugging/testing purposes
 
+""""""""""""
+``--paired``
+""""""""""""
+       BAM is paired end - output both read pairs. This will also
+       force the use of the template length to determine reads with
+       the same mapping coordinates.
 
-Input/Output Options
+'''
+
+GENERIC_DOCSTRING_SBCRAM_INPUT='''
+Input/Output Format Options
 ---------------------
 
 The following options deal with input and output format, and are useful for
@@ -443,13 +452,6 @@ the reference will be embedded in the file.
       implied from the extension of the filename, but maybe
       overridden with this option. Default=bam
 
-""""""""""""""""""""""""""" 
-``--out-format=OUT_FORMAT``
-"""""""""""""""""""""""""""
-      File format of the input file. Format is usually
-      implied from the extension of the filename, but maybe
-      overridden with this option. Default=bam
-
 """"""""""""""""""""""""""""""""" 
 ``--input-options=INPUT_OPTIONS``
 """""""""""""""""""""""""""""""""
@@ -458,12 +460,12 @@ the reference will be embedded in the file.
       useful for CRAM formatted files. See samtools
       documentation
 
-"""""""""""""""""""""""""""""""""""
-``--output-options=OUTPUT_OPTIONS``
-"""""""""""""""""""""""""""""""""""
-      Format string provided to htslib for writing. Mostly
-      useful for CRAM formatted files. See samtools
-      documentation
+"""""""""""""""""""""""
+``--in-sam``
+"""""""""""""""""""""""
+      [DEPRECATED] USE ``--in-format`` . By default, inputs are assumed to be 
+      in BAM format. Use this option to specify the use of SAM format for
+      input.
 
 """"""""""""""""""""""""""""""""""""""""""" 
 ``--reference-filename=REFERENCE_FILENAME``
@@ -476,22 +478,26 @@ the reference will be embedded in the file.
       from input files, however. When writing, specifying a
       reference location is required unless specified in input.
 
+'''
 
-"""""""""""""""""""""""
-``--in-sam, --out-sam``
-"""""""""""""""""""""""
-      By default, inputs are assumed to be in BAM format and outputs are written
-      in BAM format. Use these options to specify the use of SAM format for
-      input or output.
+GENERIC_DOCSTRING_SBCRAM_OUTPUT='''
+""""""""""""""""""""""""""" 
+``--out-format=OUT_FORMAT``
+"""""""""""""""""""""""""""
+      File format of the input file. Format is usually
+      implied from the extension of the filename, but maybe
+      overridden with this option. Default=bam
 
-""""""""""""
-``--paired``
-""""""""""""
-       BAM is paired end - output both read pairs. This will also
-       force the use of the template length to determine reads with
-       the same mapping coordinates.
+
+"""""""""""""""""""""""""""""""""""
+``--output-options=OUTPUT_OPTIONS``
+"""""""""""""""""""""""""""""""""""
+      Format string provided to htslib for writing. Mostly
+      useful for CRAM formatted files. See samtools
+      documentation
 
 '''
+
 
 
 # generic docstring for dedup/group

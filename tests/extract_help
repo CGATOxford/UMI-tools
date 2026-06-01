@@ -79,7 +79,7 @@ Options:
     --ignore-read-pair-suffixes
                         Ignore '\1' and '\2' read name suffixes
 
-  input/output options:
+  Input/Output pipe options:
     -I FILE, --stdin=FILE
                         file to read stdin from [default = stdin].
     -L FILE, --log=FILE

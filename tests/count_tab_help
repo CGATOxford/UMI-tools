@@ -34,7 +34,25 @@ Options:
     --read-length       use read length in addition to position and UMI to
                         identify possible duplicates [default=False]
 
-  input/output options:
+  Input/Output format options:
+    --in-format=IN_FORMAT
+                        File format of the input file. Format is usually
+                        implied from the extension of the filename, but maybe
+                        overridden with this option. Default=bam
+    --input-options=INPUT_OPTIONS
+                        Format string provided to htslib for reading. Mostly
+                        useful for CRAM formatted files. See samtools
+                        documentation
+    -i, --in-sam        [Deprecated] Input file is in sam format
+                        [default=False]
+    --reference-filename=REFERENCE_FILENAME
+                        File path or URL to the genome reference to be used
+                        when reading or writing CRAM files. By default, when
+                        reading a CRAM file, the reference recorded in the
+                        input file will be used unless this is specified. When
+                        writing, specifying a reference location is required.
+
+  Input/Output pipe options:
     -I FILE, --stdin=FILE
                         file to read stdin from [default = stdin].
     -L FILE, --log=FILE

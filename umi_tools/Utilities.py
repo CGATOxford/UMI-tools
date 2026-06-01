@@ -602,6 +602,8 @@ def Start(parser=None,
           add_dedup_count_sam_options=False,
           add_group_sam_options=False,
           add_umi_grouping_options=True,
+          add_s_b_cram_format_options=False,
+          exclude_output_format=False,
           return_parser=False):
     """set up an experiment.
 
@@ -877,17 +879,10 @@ def Start(parser=None,
         parser.add_option_group(group)
 
     # options added separately here to maintain better output order
-    if add_sam_options:
-        group = OptionGroup(parser, "SAM/BAM options")
-
+    if add_s_b_cram_format_options:
+   
+        group = OptionGroup(parser, "Input/Output format options")
         group.add_option("--in-format", dest="in_format",
-                         type="choice",
-                         choices=("sam", "bam", "cram"),
-                         default=None,
-                         help="File format of the input file. Format is usually" \
-                         " implied from the extension of the filename, but" \
-                         " maybe overridden with this option. Default=bam")
-        group.add_option("--out-format", dest="out_format",
                          type="choice",
                          choices=("sam", "bam", "cram"),
                          default=None,
@@ -899,11 +894,27 @@ def Start(parser=None,
                          default=None,
                          help="Format string provided to htslib for reading. Mostly" \
                          " useful for CRAM formatted files. See samtools documentation")
-        group.add_option("--output-options", dest="output_options", action="store",
+        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
+                         help="[Deprecated] Input file is in sam format [default=%default]",
+                         default=False)
+        
+        if not exclude_output_format:
+            group.add_option("--out-format", dest="out_format",
+                         type="choice",
+                         choices=("sam", "bam", "cram"),
+                         default=None,
+                         help="File format of the input file. Format is usually" \
+                         " implied from the extension of the filename, but" \
+                         " maybe overridden with this option. Default=bam")
+            group.add_option("--output-options", dest="output_options", action="store",
                          type="str",
                          default=None,
                          help="Format string provided to htslib for writing. Mostly" \
                          " useful for CRAM formatted files. See samtools documentation")
+            group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
+                         help="[Deprecated] Output alignments in sam format [default=%default]",
+                         default=False)
+            
         group.add_option("--reference-filename", dest="reference_filename",
                         action="store",
                         default=None,
@@ -912,6 +923,11 @@ def Start(parser=None,
                         " a CRAM file, the reference recorded in the input file will be" \
                         " used unless this is specified. When writing, specifying a" \
                         " reference location is required.")
+
+        parser.add_option_group(group)
+
+    if add_sam_options:
+        group = OptionGroup(parser, "SAM/BAM filtering options")
         group.add_option("--mapping-quality", dest="mapping_quality",
                          type="int",
                          help="Minimum mapping quality for a read to be retained"
@@ -938,17 +954,9 @@ def Start(parser=None,
                          help="Use only a fraction of reads, specified by subset",
                          default=None)
 
-        group.add_option("-i", "--in-sam", dest="in_sam", action="store_true",
-                         help="Input file is in sam format [default=%default]",
-                         default=False)
-
         group.add_option("--paired", dest="paired", action="store_true",
                          default=False,
                          help="paired input BAM. [default=%default]")
-
-        group.add_option("-o", "--out-sam", dest="out_sam", action="store_true",
-                         help="Output alignments in sam format [default=%default]",
-                         default=False)
 
         group.add_option("--no-sort-output", dest="no_sort_output",
                          action="store_true", default=False,
@@ -1007,7 +1015,7 @@ def Start(parser=None,
         parser.add_option_group(group)
 
     if add_pipe_options:
-        group = OptionGroup(parser, "input/output options")
+        group = OptionGroup(parser, "Input/Output pipe options")
         group.add_option("-I", "--stdin", dest="stdin", type="string",
                          help="file to read stdin from [default = stdin].",
                          metavar="FILE")
