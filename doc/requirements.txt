@@ -4,4 +4,5 @@ sphinx-markdown-tables
 commonmark
 recommonmark
 sphinx-rtd-theme
+myst-parser
 
