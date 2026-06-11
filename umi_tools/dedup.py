@@ -345,8 +345,8 @@ def main(argv=None):
                 # above are cheap and always collected from all positions.
                 if np.random.random() < options.stats_sample_fraction:
 
-                    # A single-UMI position has no pairs, so average
-                    # distance is -1 by convention; skip the O(N^2) call.
+                    # Single-UMI positions have no pairs; result and null
+                    # are both -1 by convention, with no null draw needed.
                     pre_size = len(bundle)
                     if pre_size == 1:
                         pre_cluster_stats.append(-1)
