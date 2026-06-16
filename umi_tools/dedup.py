@@ -200,7 +200,7 @@ def main(argv=None):
                      help="Specify location to output stats")
 
     group.add_option("--stats-sample-fraction", dest="stats_sample_fraction",
-                     type="float", default=1.0,
+                     type="float", default=1.0, metavar="FRACTION",
                      help="Fraction of positions to use when computing edit "
                      "distance statistics (0.0-1.0). Reduces run time for "
                      "large BAMs. Per-UMI count statistics are unaffected "
@@ -386,6 +386,11 @@ def main(argv=None):
         all_umis = list(umi_total_counts.keys())
         total = sum(umi_total_counts.values())
         probs = np.array([umi_total_counts[u] / total for u in all_umis])
+
+        # Re-seed so null draws start from a known state independent of
+        # how many random numbers the main loop consumed.
+        if options.random_seed:
+            np.random.seed(options.random_seed)
 
         for size in pre_cluster_sizes:
             pre_cluster_stats_null.append(
