@@ -198,11 +198,16 @@ only expect to see 33 such bases.
 The statistics options signficantly reduce the speed at which
 deduplication is performed and increase the memory usage. If time or
 memory usage is an issue, there are a few alternatives to omitting
-`--output-stats` entirely: restrict stats to a single contig with
-`--chrom` (e.g. `--chrom=chr22`), or use `--stats-sample-fraction` to
-compute edit distance statistics on a random subset of positions (e.g.
-`--stats-sample-fraction=0.1` for 10%). The `_per_umi.tsv` and `_per_umi_per_position.tsv` output files are
-unaffected and always computed from all positions.
+`--output-stats` entirely:
+
+- Restrict stats to a single contig with `--chrom` (e.g. `--chrom=chr22`).
+- Use `--stats-sample-fraction` to compute edit distance statistics on a
+  random subset of positions (e.g. `--stats-sample-fraction=0.1` for 10%).
+  The `_per_umi_per_position.tsv` output file is unaffected and always
+  computed from all positions.
+- The per-UMI summary table (`_per_umi.tsv`) is not written by default as
+  it can be slow and memory-intensive on large BAMs. Pass `--per-umi-stats`
+  explicitly if you need it.
 
 Common variations
 ------------------

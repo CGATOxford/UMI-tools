@@ -206,6 +206,12 @@ def main(argv=None):
                      "large BAMs. Per-UMI count statistics are unaffected "
                      "and always computed from all positions. Default: 1.0")
 
+    group.add_option("--per-umi-stats", dest="per_umi_stats",
+                     action="store_true", default=False,
+                     help="Write a per-UMI summary table (*_per_umi.tsv) in "
+                     "addition to the other stats files. Requires "
+                     "--output-stats. Can be slow on large BAMs.")
+
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
@@ -235,6 +241,9 @@ def main(argv=None):
     if options.stats and options.ignore_umi:
         raise ValueError("'--output-stats' and '--ignore-umi' options"
                          " cannot be used together")
+
+    if options.per_umi_stats and not options.stats:
+        raise ValueError("'--per-umi-stats' requires '--output-stats'")
 
     infile = U.open_input_alignments(in_name, in_format, options)
     outfile = U.open_output_alignments(out_name, out_format, infile, options)
@@ -392,15 +401,30 @@ def main(argv=None):
         if options.random_seed:
             np.random.seed(options.random_seed)
 
+        # Draw null UMIs in large batches (one np.random.choice call per
+        # buffer-fill) rather than once per position. Each position still gets
+        # its own independent slice, preserving the null distribution.
+        _NULL_BUFFER_SIZE = 100000
+        _random_buf = np.random.choice(all_umis, size=_NULL_BUFFER_SIZE, p=probs)
+        _buf_ix = 0
+
+        def _get_null_umis(n):
+            nonlocal _random_buf, _buf_ix
+            if _buf_ix + n > len(_random_buf):
+                _random_buf = np.random.choice(
+                    all_umis, size=_NULL_BUFFER_SIZE, p=probs)
+                _buf_ix = 0
+            umis = _random_buf[_buf_ix:_buf_ix + n].tolist()
+            _buf_ix += n
+            return umis
+
         for size in pre_cluster_sizes:
             pre_cluster_stats_null.append(
-                umi_methods.get_average_umi_distance(
-                    list(np.random.choice(all_umis, size=size, p=probs))))
+                umi_methods.get_average_umi_distance(_get_null_umis(size)))
 
         for size in post_cluster_sizes:
             post_cluster_stats_null.append(
-                umi_methods.get_average_umi_distance(
-                    list(np.random.choice(all_umis, size=size, p=probs))))
+                umi_methods.get_average_umi_distance(_get_null_umis(size)))
 
     if options.stats:
         # generate the stats dataframe
@@ -418,24 +442,25 @@ def main(argv=None):
                 values = (count, pre_counts[count], post_counts[count])
                 outf.write("\t".join(map(str, values)) + "\n")
 
-        # aggregate stats pre/post per UMI
-        agg_pre_df = aggregateStatsDF(stats_pre_df)
-        agg_post_df = aggregateStatsDF(stats_post_df)
+        if options.per_umi_stats:
+            # aggregate stats pre/post per UMI
+            agg_pre_df = aggregateStatsDF(stats_pre_df)
+            agg_post_df = aggregateStatsDF(stats_post_df)
 
-        agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
-                          left_index=True, right_index=True,
-                          sort=True, suffixes=["_pre", "_post"])
+            agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
+                              left_index=True, right_index=True,
+                              sort=True, suffixes=["_pre", "_post"])
 
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        agg_df = agg_df.fillna(0).astype(int)
+            # TS - if count value not observed either pre/post-dedup,
+            # merge will leave an empty cell and the column will be cast as a float
+            # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+            # --> Missing data casting rules and indexing
+            # so, back fill with zeros and convert back to int
+            agg_df = agg_df.fillna(0).astype(int)
 
-        agg_df.index = [x.decode() for x in agg_df.index]
-        agg_df.index.name = 'UMI'
-        agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
+            agg_df.index = [x.decode() for x in agg_df.index]
+            agg_df.index.name = 'UMI'
+            agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
         # bin distances into integer bins
         max_ed = int(max(map(max, [pre_cluster_stats,

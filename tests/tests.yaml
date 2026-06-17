@@ -236,7 +236,7 @@ dedup_single_stats:
       stdin: chr19.bam
       outputs: [stdout, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
       references: [single_cluster_py3.sam, single_stats_py3_per_umi_per_position.tsv, single_stats_py3_per_umi.tsv, single_stats_py3_edit_distance.tsv]
-      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats_py3
+      options: dedup -L test.log --out-sam --method=cluster --random-seed=123456789  --output-stats=single_stats_py3 --per-umi-stats
 
 dedup_single_dir_edit_dist:
       stdin: chr19.bam
