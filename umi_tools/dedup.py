@@ -199,6 +199,20 @@ def main(argv=None):
                      default=False,
                      help="Specify location to output stats")
 
+    group.add_option("--stats-sample-fraction", dest="stats_sample_fraction",
+                     type="float", default=1.0, metavar="FRACTION",
+                     help="Fraction of positions to use when computing edit "
+                     "distance statistics (0.0-1.0). Reduces run time for "
+                     "large BAMs. Per-UMI count statistics are unaffected "
+                     "and always computed from all positions. Default: 1.0")
+
+    group.add_option("--no-per-umi-stats", dest="per_umi_stats",
+                     action="store_false", default=True,
+                     help="Suppress the per-UMI summary table (*_per_umi.tsv) "
+                     "that is written by default when --output-stats is used. "
+                     "Useful when many distinct UMI sequences are observed "
+                     "(e.g. long UMIs or high sequencing depth).")
+
     parser.add_option_group(group)
 
     # add common options (-h/--help, ...) and parse command line
@@ -228,6 +242,7 @@ def main(argv=None):
     if options.stats and options.ignore_umi:
         raise ValueError("'--output-stats' and '--ignore-umi' options"
                          " cannot be used together")
+
 
     infile = U.open_input_alignments(in_name, in_format, options)
     outfile = U.open_output_alignments(out_name, out_format, infile, options)
@@ -286,11 +301,10 @@ def main(argv=None):
         post_cluster_stats = []
         pre_cluster_stats_null = []
         post_cluster_stats_null = []
+        pre_cluster_sizes = []   # sizes of multi-UMI bundles; used post-loop to draw null distributions
+        post_cluster_sizes = []
         topology_counts = collections.Counter()
         node_counts = collections.Counter()
-        read_gn = umi_methods.random_read_generator(
-            infile.filename, chrom=options.chrom,
-            barcode_getter=bundle_iterator.barcode_getter)
 
     for bundle, key, status in bundle_iterator(inreads):
 
@@ -326,31 +340,39 @@ def main(argv=None):
 
             if options.stats:
 
-                # generate pre-dudep stats
-                average_distance = umi_methods.get_average_umi_distance(bundle.keys())
-
-                pre_cluster_stats.append(average_distance)
-                cluster_size = len(bundle)
-                random_umis = read_gn.getUmis(cluster_size)
-                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-                pre_cluster_stats_null.append(average_distance_null)
-
                 stats_pre_df_dict['UMI'].extend(bundle)
                 stats_pre_df_dict['counts'].extend(
                     [bundle[UMI]['count'] for UMI in bundle])
 
-                # collect post-dudupe stats
-                post_cluster_umis = [bundle_iterator.barcode_getter(x)[0] for x in reads]
                 stats_post_df_dict['UMI'].extend(umis)
                 stats_post_df_dict['counts'].extend(umi_counts)
 
-                average_distance = umi_methods.get_average_umi_distance(post_cluster_umis)
-                post_cluster_stats.append(average_distance)
+                # Edit distance computation is O(N^2) per position and
+                # dominates run time on large BAMs. Sample a fraction of
+                # positions to keep this tractable; per-UMI count stats
+                # above are cheap and always collected from all positions.
+                if np.random.random() < options.stats_sample_fraction:
 
-                cluster_size = len(post_cluster_umis)
-                random_umis = read_gn.getUmis(cluster_size)
-                average_distance_null = umi_methods.get_average_umi_distance(random_umis)
-                post_cluster_stats_null.append(average_distance_null)
+                    # Single-UMI positions have no pairs; result and null
+                    # are both -1 by convention, with no null draw needed.
+                    pre_size = len(bundle)
+                    if pre_size == 1:
+                        pre_cluster_stats.append(-1)
+                        pre_cluster_stats_null.append(-1)
+                    else:
+                        pre_cluster_stats.append(
+                            umi_methods.get_average_umi_distance(bundle.keys()))
+                        pre_cluster_sizes.append(pre_size)
+
+                    post_cluster_umis = [bundle_iterator.barcode_getter(x)[0] for x in reads]
+                    post_size = len(post_cluster_umis)
+                    if post_size <= 1:
+                        post_cluster_stats.append(-1)
+                        post_cluster_stats_null.append(-1)
+                    else:
+                        post_cluster_stats.append(
+                            umi_methods.get_average_umi_distance(post_cluster_umis))
+                        post_cluster_sizes.append(post_size)
 
     outfile.close()
 
@@ -359,6 +381,49 @@ def main(argv=None):
         U.sort_output(sorted_out_name, out_name, sorted_out_format, 
                       options.output_options,
                       options.reference_filename)
+
+    if options.stats:
+        # Build the UMI frequency distribution from data already collected
+        # during the main loop, then draw null edit distances in one pass.
+        # Drawing nulls here rather than per-position avoids repeated
+        # construction of the frequency table.
+        umi_total_counts = collections.Counter()
+        for umi, count in zip(stats_pre_df_dict['UMI'], stats_pre_df_dict['counts']):
+            umi_total_counts[umi] += count
+
+        all_umis = list(umi_total_counts.keys())
+        total = sum(umi_total_counts.values())
+        probs = np.array([umi_total_counts[u] / total for u in all_umis])
+
+        # Re-seed so null draws start from a known state independent of
+        # how many random numbers the main loop consumed.
+        if options.random_seed:
+            np.random.seed(options.random_seed)
+
+        # Draw null UMIs in large batches (one np.random.choice call per
+        # buffer-fill) rather than once per position. Each position still gets
+        # its own independent slice, preserving the null distribution.
+        _NULL_BUFFER_SIZE = 100000
+        _random_buf = np.random.choice(all_umis, size=_NULL_BUFFER_SIZE, p=probs)
+        _buf_ix = 0
+
+        def _get_null_umis(n):
+            nonlocal _random_buf, _buf_ix
+            if _buf_ix + n > len(_random_buf):
+                _random_buf = np.random.choice(
+                    all_umis, size=_NULL_BUFFER_SIZE, p=probs)
+                _buf_ix = 0
+            umis = _random_buf[_buf_ix:_buf_ix + n].tolist()
+            _buf_ix += n
+            return umis
+
+        for size in pre_cluster_sizes:
+            pre_cluster_stats_null.append(
+                umi_methods.get_average_umi_distance(_get_null_umis(size)))
+
+        for size in post_cluster_sizes:
+            post_cluster_stats_null.append(
+                umi_methods.get_average_umi_distance(_get_null_umis(size)))
 
     if options.stats:
         # generate the stats dataframe
@@ -376,24 +441,25 @@ def main(argv=None):
                 values = (count, pre_counts[count], post_counts[count])
                 outf.write("\t".join(map(str, values)) + "\n")
 
-        # aggregate stats pre/post per UMI
-        agg_pre_df = aggregateStatsDF(stats_pre_df)
-        agg_post_df = aggregateStatsDF(stats_post_df)
+        if options.per_umi_stats:
+            # aggregate stats pre/post per UMI
+            agg_pre_df = aggregateStatsDF(stats_pre_df)
+            agg_post_df = aggregateStatsDF(stats_post_df)
 
-        agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
-                          left_index=True, right_index=True,
-                          sort=True, suffixes=["_pre", "_post"])
+            agg_df = pd.merge(agg_pre_df, agg_post_df, how='left',
+                              left_index=True, right_index=True,
+                              sort=True, suffixes=["_pre", "_post"])
 
-        # TS - if count value not observed either pre/post-dedup,
-        # merge will leave an empty cell and the column will be cast as a float
-        # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
-        # --> Missing data casting rules and indexing
-        # so, back fill with zeros and convert back to int
-        agg_df = agg_df.fillna(0).astype(int)
+            # TS - if count value not observed either pre/post-dedup,
+            # merge will leave an empty cell and the column will be cast as a float
+            # see http://pandas.pydata.org/pandas-docs/dev/missing_data.html
+            # --> Missing data casting rules and indexing
+            # so, back fill with zeros and convert back to int
+            agg_df = agg_df.fillna(0).astype(int)
 
-        agg_df.index = [x.decode() for x in agg_df.index]
-        agg_df.index.name = 'UMI'
-        agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
+            agg_df.index = [x.decode() for x in agg_df.index]
+            agg_df.index.name = 'UMI'
+            agg_df.to_csv(options.stats + "_per_umi.tsv", sep="\t")
 
         # bin distances into integer bins
         max_ed = int(max(map(max, [pre_cluster_stats,

@@ -5,7 +5,10 @@
    1. UMI length (shorter => fewer possible UMIs => increased connectivity between UMIs => larger networks => longer run time)
    2. Sequencing error rate (higher => more error UMIs => larger networks => longer run time)
    3. Sequencing depth (higher = greater proportion of possible UMIs observed => larger network => longer run time)
-   4. Running `umi_tools dedup --output-stats` requires a considerable amount of time and memory to generate the null distributions. If you want these stats, consider obtaining stats for just a single contig, eg. `--chrom=chr22`.
+   4. Running `umi_tools dedup --output-stats` requires a considerable amount of time and memory to generate the null distributions. If you want these stats but are concerned about run time, there are a few options:
+      - Restrict stats to a single contig (e.g. `--chrom=chr22`).
+      - Use `--stats-sample-fraction` to compute edit distance statistics on a random subset of positions (e.g. `--stats-sample-fraction=0.1` uses 10% of positions). The `_per_umi_per_position.tsv` output file is unaffected and always computed from all positions.
+      - Pass `--no-per-umi-stats`. By default, the per-UMI summary table (`_per_umi.tsv`) is written alongside the other stats files. This can be slow and memory-intensive when many distinct UMI sequences are observed — for example with long UMIs or high sequencing depth. Use `--no-per-umi-stats` to suppress it in these cases.
    5. If you are doing single-cell RNA-seq and you have reads from more than one cell in your BAM file, make sure you are running with the `--per-cell` swtich.
 &nbsp;
 
