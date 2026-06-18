@@ -205,9 +205,11 @@ memory usage is an issue, there are a few alternatives to omitting
   random subset of positions (e.g. `--stats-sample-fraction=0.1` for 10%).
   The `_per_umi_per_position.tsv` output file is unaffected and always
   computed from all positions.
-- The per-UMI summary table (`_per_umi.tsv`) is not written by default as
-  it can be slow and memory-intensive on large BAMs. Pass `--per-umi-stats`
-  explicitly if you need it.
+- The per-UMI summary table (`_per_umi.tsv`) is written by default alongside
+  the other stats files. This can be slow and memory-intensive when many
+  distinct UMI sequences are observed (e.g. long UMIs or high sequencing
+  depth). Pass `--no-per-umi-stats` to suppress it in
+  these cases.
 
 Common variations
 ------------------

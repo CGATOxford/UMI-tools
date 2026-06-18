@@ -206,11 +206,12 @@ def main(argv=None):
                      "large BAMs. Per-UMI count statistics are unaffected "
                      "and always computed from all positions. Default: 1.0")
 
-    group.add_option("--per-umi-stats", dest="per_umi_stats",
-                     action="store_true", default=False,
-                     help="Write a per-UMI summary table (*_per_umi.tsv) in "
-                     "addition to the other stats files. Requires "
-                     "--output-stats. Can be slow on large BAMs.")
+    group.add_option("--no-per-umi-stats", dest="per_umi_stats",
+                     action="store_false", default=True,
+                     help="Suppress the per-UMI summary table (*_per_umi.tsv) "
+                     "that is written by default when --output-stats is used. "
+                     "Useful when many distinct UMI sequences are observed "
+                     "(e.g. long UMIs or high sequencing depth).")
 
     parser.add_option_group(group)
 
@@ -242,8 +243,6 @@ def main(argv=None):
         raise ValueError("'--output-stats' and '--ignore-umi' options"
                          " cannot be used together")
 
-    if options.per_umi_stats and not options.stats:
-        raise ValueError("'--per-umi-stats' requires '--output-stats'")
 
     infile = U.open_input_alignments(in_name, in_format, options)
     outfile = U.open_output_alignments(out_name, out_format, infile, options)
