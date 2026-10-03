@@ -36,4 +36,4 @@ jobs:
           # This explicitly overrides the hardcoded RedHat paths inside the package
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
-          pytest -v tests/test_umi_tools.py
+          pytest -v tests/test_umi_tools.py tests/test_network.py
