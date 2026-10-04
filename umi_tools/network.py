@@ -102,12 +102,15 @@ def iter_nearest_neighbours(umis, substr_idx):
     use substring dict to get (approximately) all the nearest neighbours to
     each in a set of umis.
     '''
-    for i, u in enumerate(umis, 1):
+    # Keep a set so excluding earlier UMIs does not scan the entire prefix.
+    seen = set()
+    for u in umis:
+        seen.add(u)
         neighbours = set()
         for idx, substr_map in substr_idx.items():
             u_sub = u[slice(*idx)]
             neighbours = neighbours.union(substr_map[u_sub])
-        neighbours.difference_update(umis[:i])
+        neighbours.difference_update(seen)
         for nbr in neighbours:
             yield u, nbr
 
@@ -151,8 +154,12 @@ class UMIClusterer:
         sorted_nodes = sorted(cluster, key=lambda x: counts[x],
                               reverse=True)
 
-        for i in range(len(sorted_nodes) - 1):
-            if len(remove_umis(adj_list, cluster, sorted_nodes[:i+1])) == 0:
+        # Extend the covered prefix without revisiting its earlier neighbours.
+        remaining = set(cluster)
+        for i, node in enumerate(sorted_nodes[:-1]):
+            remaining.discard(node)
+            remaining.difference_update(adj_list[node])
+            if not remaining:
                 return sorted_nodes[:i+1]
 
     def _get_best_percentile(self, cluster, counts):
