@@ -27,7 +27,7 @@ We pass this to our cluster, and it will return to us a list of lists, with each
 
 `ATAT` and `GTAT` are only a single base apart, and the count of
 `ATAT` is >= 2n-1, where n is the count of `GTAT`. `CCAT` is two base
-edits away from the others and so is in a seperate cluster. The order
+edits away from the others and so is in a separate cluster. The order
 of the UMIs in the groups is meaningful: we predict that `ATAT` was
 the "true" UMI and so it is listed first.
 
