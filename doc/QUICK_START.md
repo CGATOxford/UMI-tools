@@ -197,8 +197,19 @@ only expect to see 33 such bases.
 
 The statistics options signficantly reduce the speed at which
 deduplication is performed and increase the memory usage. If time or
-memory usage is an issue, try running without the `--output-stats`
-option.
+memory usage is an issue, there are a few alternatives to omitting
+`--output-stats` entirely:
+
+- Restrict stats to a single contig with `--chrom` (e.g. `--chrom=chr22`).
+- Use `--stats-sample-fraction` to compute edit distance statistics on a
+  random subset of positions (e.g. `--stats-sample-fraction=0.1` for 10%).
+  The `_per_umi_per_position.tsv` output file is unaffected and always
+  computed from all positions.
+- The per-UMI summary table (`_per_umi.tsv`) is written by default alongside
+  the other stats files. This can be slow and memory-intensive when many
+  distinct UMI sequences are observed (e.g. long UMIs or high sequencing
+  depth). Pass `--no-per-umi-stats` to suppress it in
+  these cases.
 
 Common variations
 ------------------

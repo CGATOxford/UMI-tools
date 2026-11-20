@@ -7,7 +7,6 @@ umi_methods.py - Methods for dealing with UMIs
 from __future__ import absolute_import
 import itertools
 import collections
-import pysam
 import numpy as np
 
 # required to make iteritems python2 and python3 compatible
@@ -170,70 +169,3 @@ def get_average_umi_distance(umis):
     dists = [edit_distance(x, y) for
              x, y in itertools.combinations(umis, 2)]
     return float(sum(dists))/(len(dists))
-
-
-class random_read_generator:
-    ''' class to generate umis at random based on the
-    distributon of umis in a bamfile '''
-
-    def __init__(self, bamfile, chrom, barcode_getter):
-        inbam = pysam.Samfile(bamfile)
-
-        if chrom:
-            self.inbam = inbam.fetch(reference=chrom)
-        else:
-            self.inbam = inbam.fetch()
-
-        self.umis = collections.defaultdict(int)
-        self.barcode_getter = barcode_getter
-        self.random_fill_size = 100000  # Higher = faster, more memory
-        self.first_kerror = 1
-        self.fill()
-
-    def refill_random(self):
-        ''' refill the list of random_umis '''
-        self.random_umis = np.random.choice(
-            list(self.umis.keys()), self.random_fill_size, p=self.prob)
-        self.random_ix = 0
-
-    def fill(self):
-        ''' parse the BAM to obtain the frequency for each UMI'''
-        self.frequency2umis = collections.defaultdict(list)
-
-        for read in self.inbam:
-
-            if read.is_unmapped:
-                continue
-
-            if read.is_read2:
-                continue
-
-            try:
-                self.umis[self.barcode_getter(read)[0]] += 1
-            except KeyError:
-                continue
-
-        self.umis_counter = collections.Counter(self.umis)
-        total_umis = sum(self.umis_counter.values())
-        U.info("total_umis %i" % total_umis)
-        U.info("#umis %i" % len(self.umis_counter))
-
-        self.prob = self.umis_counter.values()
-        sum_prob = sum(self.prob)
-        self.prob = [float(x) / sum_prob for x in self.prob]
-        self.refill_random()
-
-    def getUmis(self, n):
-        ''' return n umis from the random_umis atr.'''
-        if n < (self.random_fill_size - self.random_ix):
-            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
-        else:
-            # could use the end of the random_umis but
-            # let's just make a new random_umis
-            if n > self.random_fill_size:  # ensure random_umis is long enough
-                self.random_fill_size = n * 2
-            self.refill_random()
-            barcodes = self.random_umis[self.random_ix: self.random_ix+n]
-
-        self.random_ix += n
-        return barcodes

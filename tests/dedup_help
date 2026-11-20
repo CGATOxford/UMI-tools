@@ -15,6 +15,15 @@ Options:
   dedup-specific options:
     --output-stats=STATS
                         Specify location to output stats
+    --stats-sample-fraction=FRACTION
+                        Fraction of positions to use when computing edit
+                        distance statistics (0.0-1.0). Reduces run time for
+                        large BAMs. Per-UMI count statistics are unaffected
+                        and always computed from all positions. Default: 1.0
+    --no-per-umi-stats  Suppress the per-UMI summary table (*_per_umi.tsv)
+                        that is written by default when --output-stats is
+                        used. Useful when many distinct UMI sequences are
+                        observed (e.g. long UMIs or high sequencing depth).
 
   Barcode extraction options:
     --extract-umi-method=GET_UMI_METHOD
